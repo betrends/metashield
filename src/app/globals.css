@@ -1,0 +1,257 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #101b29;
+
+  /* Brand — violet/indigo scale, matching the reference. 100/200 are the
+     tint used for backgrounds/badges; 600 is the accessible, deeper
+     violet used for buttons, links and anything that sits on white. */
+  --color-brand-50: #f5f3ff;
+  --color-brand-100: #ede9fe;
+  --color-brand-200: #ddd6fe;
+  --color-brand-300: #c4b5fd;
+  --color-brand-400: #a78bfa;
+  --color-brand-500: #8b5cf6;
+  --color-brand-600: #7c3aed;
+  --color-brand-700: #6d28d9;
+  --color-brand-800: #5b21b6;
+  --color-brand-900: #4c1d95;
+
+  /* Ink — deep navy scale for headings, body text and dark surfaces. */
+  --color-ink-50: #f5f8fb;
+  --color-ink-100: #e7edf3;
+  --color-ink-200: #cbd8e4;
+  --color-ink-300: #a9bcce;
+  --color-ink-400: #7c93ac;
+  --color-ink-500: #57708c;
+  --color-ink-600: #3e5670;
+  --color-ink-700: #2b3f57;
+  --color-ink-800: #1c2c3f;
+  --color-ink-900: #101b29;
+  --color-ink-950: #0a1220;
+
+  /* Risk / status colors used across the health check, case status pills */
+  --color-risk-low: #1a9c6b;
+  --color-risk-low-bg: #e7f8f1;
+  --color-risk-medium: #b8860b;
+  --color-risk-medium-bg: #fdf5e2;
+  --color-risk-high: #c8402c;
+  --color-risk-high-bg: #fbe9e7;
+
+  /* Accent icon-badge colors used on feature cards throughout. Brand
+     (violet) already covers one card; these keep the other three
+     visually distinct from it and from each other. */
+  --color-accent-green: #17a672;
+  --color-accent-green-bg: #e7f8f1;
+  --color-accent-orange: #e28a1f;
+  --color-accent-orange-bg: #fdf2e2;
+  --color-accent-blue: #2f7fe0;
+  --color-accent-blue-bg: #e6f1fd;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-brand-50: var(--color-brand-50);
+  --color-brand-100: var(--color-brand-100);
+  --color-brand-200: var(--color-brand-200);
+  --color-brand-300: var(--color-brand-300);
+  --color-brand-400: var(--color-brand-400);
+  --color-brand-500: var(--color-brand-500);
+  --color-brand-600: var(--color-brand-600);
+  --color-brand-700: var(--color-brand-700);
+  --color-brand-800: var(--color-brand-800);
+  --color-brand-900: var(--color-brand-900);
+
+  --color-ink-50: var(--color-ink-50);
+  --color-ink-100: var(--color-ink-100);
+  --color-ink-200: var(--color-ink-200);
+  --color-ink-300: var(--color-ink-300);
+  --color-ink-400: var(--color-ink-400);
+  --color-ink-500: var(--color-ink-500);
+  --color-ink-600: var(--color-ink-600);
+  --color-ink-700: var(--color-ink-700);
+  --color-ink-800: var(--color-ink-800);
+  --color-ink-900: var(--color-ink-900);
+  --color-ink-950: var(--color-ink-950);
+
+  --color-risk-low: var(--color-risk-low);
+  --color-risk-low-bg: var(--color-risk-low-bg);
+  --color-risk-medium: var(--color-risk-medium);
+  --color-risk-medium-bg: var(--color-risk-medium-bg);
+  --color-risk-high: var(--color-risk-high);
+  --color-risk-high-bg: var(--color-risk-high-bg);
+
+  --color-accent-green: var(--color-accent-green);
+  --color-accent-green-bg: var(--color-accent-green-bg);
+  --color-accent-orange: var(--color-accent-orange);
+  --color-accent-orange-bg: var(--color-accent-orange-bg);
+  --color-accent-blue: var(--color-accent-blue);
+  --color-accent-blue-bg: var(--color-accent-blue-bg);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Prevent horizontal overflow on all screen sizes */
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+/* Subtle scrollbar-gutter to stop layout shift when dropdowns/menus open */
+html {
+  scrollbar-gutter: stable;
+}
+
+.container-page {
+  width: 100%;
+  max-width: 80rem;
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .container-page {
+    padding-inline: 2rem;
+  }
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+/* Soft violet hero / section backdrop */
+.bg-brand-glow {
+  background:
+    radial-gradient(60% 55% at 15% 10%, var(--color-brand-100) 0%, transparent 60%),
+    radial-gradient(50% 50% at 100% 0%, var(--color-brand-200) 0%, transparent 55%),
+    #ffffff;
+}
+
+/* ---- Animation keyframes, used across the homepage hero + icon graphics ---- */
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes float-delayed {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-14px);
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.6;
+  }
+  70% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dash-flow {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+
+/* Flowing dots for the "How it works" connector — animates the
+   repeating-gradient background-position rather than an SVG stroke, so it
+   scales cleanly with the element's own width instead of a viewBox. */
+@keyframes connector-flow {
+  to {
+    background-position: 28px 0;
+  }
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 38s linear infinite;
+}
+
+.marquee-mask {
+  -webkit-mask-image: linear-gradient(90deg, transparent, black 8%, black 92%, transparent);
+  mask-image: linear-gradient(90deg, transparent, black 8%, black 92%, transparent);
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+  animation: float-delayed 7s ease-in-out infinite;
+  animation-delay: 0.5s;
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 2.4s cubic-bezier(0.2, 0.6, 0.4, 1) infinite;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out both;
+}
+
+.animate-dash-flow {
+  stroke-dasharray: 6 6;
+  animation: dash-flow 1.2s linear infinite;
+}
+
+.animate-connector-flow {
+  animation: connector-flow 1s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float,
+  .animate-float-delayed,
+  .animate-pulse-ring,
+  .animate-fade-in-up,
+  .animate-dash-flow,
+  .animate-connector-flow,
+  .animate-marquee {
+    animation: none;
+  }
+}

@@ -1,0 +1,566 @@
+// Beautiful HTML email templates for client recovery notifications.
+// Each template uses inline styles for maximum email client compatibility.
+
+const BRAND_PURPLE = "#6d28d9";
+const BRAND_LIGHT = "#ede9fe";
+const BRAND_DARK = "#1e1b4b";
+const BG = "#f5f3ff";
+const WHITE = "#ffffff";
+const TEXT_DARK = "#1e293b";
+const TEXT_MID = "#475569";
+const TEXT_LIGHT = "#94a3b8";
+const GREEN = "#16a34a";
+const GREEN_BG = "#dcfce7";
+
+function wrapper(content: string) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>MetaShield</title>
+</head>
+<body style="margin:0;padding:0;background:${BG};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:${BG};padding:32px 16px;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+
+        <!-- Header -->
+        <tr>
+          <td style="background:${BRAND_PURPLE};border-radius:16px 16px 0 0;padding:28px 40px;text-align:center;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td align="center">
+                  <div style="display:inline-block;background:rgba(255,255,255,0.15);border-radius:12px;padding:10px 14px;margin-bottom:12px;">
+                    <span style="color:${WHITE};font-size:20px;">🛡️</span>
+                  </div>
+                  <div style="color:${WHITE};font-size:22px;font-weight:700;letter-spacing:-0.3px;">MetaShield</div>
+                  <div style="color:rgba(255,255,255,0.75);font-size:13px;margin-top:4px;">Account Recovery &amp; Protection</div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Body -->
+        <tr>
+          <td style="background:${WHITE};padding:40px;border-left:1px solid #e2e8f0;border-right:1px solid #e2e8f0;">
+            ${content}
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="background:#f8fafc;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 16px 16px;padding:24px 40px;text-align:center;">
+            <p style="margin:0;color:${TEXT_LIGHT};font-size:12px;line-height:1.6;">
+              This email was sent by MetaShield on behalf of your recovery team.<br/>
+              We will <strong>never</strong> ask for your social media password.
+            </p>
+            <p style="margin:12px 0 0;color:${TEXT_LIGHT};font-size:11px;">
+              © ${new Date().getFullYear()} MetaShield · All rights reserved
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+function statusBadge(label: string, color: string, bg: string) {
+  return `<span style="display:inline-block;background:${bg};color:${color};font-size:11px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;padding:4px 12px;border-radius:999px;">${label}</span>`;
+}
+
+function ctaButton(text: string, href: string) {
+  return `<table cellpadding="0" cellspacing="0" style="margin:24px 0;">
+    <tr>
+      <td style="background:${BRAND_PURPLE};border-radius:10px;padding:0;">
+        <a href="${href}" style="display:inline-block;color:${WHITE};font-size:15px;font-weight:600;padding:14px 28px;text-decoration:none;letter-spacing:-0.2px;">
+          ${text} →
+        </a>
+      </td>
+    </tr>
+  </table>`;
+}
+
+function divider() {
+  return `<hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0;"/>`;
+}
+
+function infoRow(label: string, value: string) {
+  return `<tr>
+    <td style="padding:8px 0;color:${TEXT_MID};font-size:13px;width:40%;">${label}</td>
+    <td style="padding:8px 0;color:${TEXT_DARK};font-size:13px;font-weight:600;">${value}</td>
+  </tr>`;
+}
+
+const PORTAL_URL = process.env.NEXT_PUBLIC_APP_URL || "https://account-recovery-platform.vercel.app";
+
+// ─── Document submission email (team notification) ─────────────────────────
+
+// 6. Team notification — client submitted documents
+export function documentsSubmittedEmail(opts: {
+  clientName: string;
+  clientEmail: string;
+  fileCount: number;
+  fileNames: string[];
+  caseTitle?: string | null;
+}) {
+  const { clientName, clientEmail, fileCount, fileNames, caseTitle } = opts;
+  const adminUrl = `${PORTAL_URL}/admin`;
+  return wrapper(`
+    <div style="margin-bottom:8px;">${statusBadge("Documents Submitted", BRAND_PURPLE, BRAND_LIGHT)}</div>
+    <h1 style="margin:16px 0 8px;color:${BRAND_DARK};font-size:24px;font-weight:700;line-height:1.3;">
+      📎 ${fileCount} document${fileCount !== 1 ? "s" : ""} submitted by ${clientName}
+    </h1>
+    <p style="margin:0 0 24px;color:${TEXT_MID};font-size:15px;line-height:1.7;">
+      A client has submitted documents through the portal. These are now available to download and review.
+    </p>
+
+    <div style="background:#f8fafc;border-radius:12px;padding:20px 24px;margin-bottom:24px;">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        ${infoRow("Client", clientName)}
+        ${infoRow("Email", clientEmail)}
+        ${caseTitle ? infoRow("Case", caseTitle) : ""}
+        ${infoRow("Files submitted", String(fileCount))}
+      </table>
+    </div>
+
+    ${fileNames.length > 0 ? `
+    <h2 style="margin:0 0 10px;color:${TEXT_DARK};font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Files</h2>
+    <ul style="margin:0 0 24px;padding:0;list-style:none;">
+      ${fileNames.map(name => `
+      <li style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f1f5f9;">
+        <span style="color:${BRAND_PURPLE};font-size:16px;">📄</span>
+        <span style="color:${TEXT_DARK};font-size:13px;">${name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>
+      </li>`).join("")}
+    </ul>
+    ` : ""}
+
+    ${ctaButton("View in Admin Dashboard", adminUrl)}
+
+    <p style="margin:0;color:${TEXT_LIGHT};font-size:12px;">
+      This is an internal notification. You can reply to the client from the admin messaging panel.
+    </p>
+  `);
+}
+
+// ─── Contact form emails ────────────────────────────────────────────────────
+
+// 6. Team notification — new contact/inquiry received
+export function contactNotificationEmail(opts: {
+  source: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+  message?: string | null;
+  platform?: string | null;
+  screenshotUrl?: string | null;
+}) {
+  const { source, name, email, phone, message, platform, screenshotUrl } = opts;
+  const sourceLabel: Record<string, string> = {
+    contact_form: "Contact Form",
+    health_check: "Account Health Check",
+    recovery_eligibility: "Recovery Eligibility Checker",
+    payment_receipt: "Payment Receipt",
+  };
+  const label = sourceLabel[source] ?? source;
+
+  return wrapper(`
+    <div style="margin-bottom:8px;">${statusBadge("New Inquiry", BRAND_PURPLE, BRAND_LIGHT)}</div>
+    <h1 style="margin:16px 0 8px;color:${BRAND_DARK};font-size:24px;font-weight:700;line-height:1.3;">
+      📩 New submission via ${label}
+    </h1>
+    <p style="margin:0 0 24px;color:${TEXT_MID};font-size:15px;line-height:1.7;">
+      Someone has reached out through the website. Reply directly from this email (reply-to is set to their address).
+    </p>
+
+    <div style="background:#f8fafc;border-radius:12px;padding:20px 24px;margin-bottom:24px;">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        ${infoRow("Name", name)}
+        ${infoRow("Email", email)}
+        ${phone ? infoRow("Phone / WhatsApp", phone) : ""}
+        ${platform ? infoRow("Platform", platform) : ""}
+        ${infoRow("Source", label)}
+      </table>
+    </div>
+
+    ${message ? `
+    <h2 style="margin:0 0 10px;color:${TEXT_DARK};font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Their message</h2>
+    <div style="background:#fffbeb;border-left:4px solid #f59e0b;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
+      <p style="margin:0;color:${TEXT_DARK};font-size:14px;line-height:1.8;white-space:pre-wrap;">${message.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
+    </div>
+    ` : ""}
+
+    ${screenshotUrl ? `
+    <h2 style="margin:0 0 10px;color:${TEXT_DARK};font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Error Screenshot</h2>
+    <div style="margin-bottom:24px;">
+      <a href="${screenshotUrl}" target="_blank" style="display:block;">
+        <img src="${screenshotUrl}" alt="Client error screenshot" style="max-width:100%;border-radius:8px;border:1px solid #e2e8f0;display:block;" />
+      </a>
+      <p style="margin:8px 0 0;font-size:12px;color:${TEXT_LIGHT};">
+        <a href="${screenshotUrl}" target="_blank" style="color:${BRAND_PURPLE};">Open full image →</a>
+      </p>
+    </div>
+    ` : ""}
+
+    ${ctaButton(`Reply to ${name}`, `mailto:${email}?subject=Re: Your MetaShield inquiry`)}
+
+    <p style="margin:0;color:${TEXT_LIGHT};font-size:12px;">
+      This is an internal notification. Do not forward to the client.
+    </p>
+  `);
+}
+
+// 7. Client auto-reply — confirms we received their message
+export function contactAutoReplyEmail(opts: {
+  name: string;
+}) {
+  const { name } = opts;
+  return wrapper(`
+    <div style="margin-bottom:8px;">${statusBadge("Message Received", GREEN, GREEN_BG)}</div>
+    <h1 style="margin:16px 0 8px;color:${BRAND_DARK};font-size:24px;font-weight:700;line-height:1.3;">
+      ✅ We've got your message, ${name.split(" ")[0]}!
+    </h1>
+    <p style="margin:0 0 24px;color:${TEXT_MID};font-size:15px;line-height:1.7;">
+      Thanks for reaching out to <strong>MetaShield</strong>. Your message has been received and a member of our team will follow up with you within <strong>24 hours</strong>.
+    </p>
+
+    <div style="background:${BRAND_LIGHT};border-left:4px solid ${BRAND_PURPLE};border-radius:8px;padding:16px 20px;margin-bottom:24px;">
+      <p style="margin:0;color:${BRAND_PURPLE};font-size:14px;font-weight:600;">What happens next?</p>
+      <p style="margin:6px 0 0;color:#4c1d95;font-size:13px;line-height:1.7;">
+        Our team will review your message and get back to you with an assessment of your situation. You do not need to send another message.
+      </p>
+    </div>
+
+    <table cellpadding="0" cellspacing="0" width="100%">
+      ${[
+        ["⏱️", "Response time", "Typically within 24 hours, often faster."],
+        ["🔒", "Your privacy", "We will never ask for your social media password."],
+        ["📊", "While you wait", "Check your account health score for free using our online tool."],
+      ].map(([icon, title, desc]) => `
+        <tr>
+          <td style="padding:10px 0;vertical-align:top;width:36px;"><span style="font-size:20px;">${icon}</span></td>
+          <td style="padding:10px 0 10px 12px;">
+            <div style="color:${TEXT_DARK};font-size:14px;font-weight:600;margin-bottom:2px;">${title}</div>
+            <div style="color:${TEXT_MID};font-size:13px;line-height:1.6;">${desc}</div>
+          </td>
+        </tr>
+      `).join("")}
+    </table>
+
+    ${ctaButton("Check My Account Health — Free", `${PORTAL_URL}/check-my-account`)}
+
+    <p style="margin:0;color:${TEXT_LIGHT};font-size:12px;">
+      If you sent this by mistake, no action is needed — simply ignore this email.
+    </p>
+  `);
+}
+
+// 1. Case submitted + agent assigned
+export function caseSubmittedEmail(opts: {
+  clientName: string;
+  caseTitle: string;
+  agentName?: string | null;
+  agentPhone?: string | null;
+}) {
+  const { clientName, caseTitle, agentName, agentPhone } = opts;
+  return wrapper(`
+    <div style="margin-bottom:8px;">${statusBadge("Case Received", BRAND_PURPLE, BRAND_LIGHT)}</div>
+    <h1 style="margin:16px 0 8px;color:${BRAND_DARK};font-size:24px;font-weight:700;line-height:1.3;">
+      Your recovery case is in! 🎉
+    </h1>
+    <p style="margin:0 0 24px;color:${TEXT_MID};font-size:15px;line-height:1.7;">
+      Hi <strong>${clientName}</strong>, we've received your case and our team is on it.
+      Here's a summary of what happens next.
+    </p>
+
+    <div style="background:${BG};border-radius:12px;padding:20px 24px;margin-bottom:24px;">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        ${infoRow("Case", caseTitle)}
+        ${agentName ? infoRow("Assigned agent", agentName) : ""}
+        ${agentPhone ? infoRow("Agent phone", agentPhone) : ""}
+        ${infoRow("Status", "Awaiting payment")}
+      </table>
+    </div>
+
+    ${divider()}
+
+    <h2 style="margin:0 0 16px;color:${TEXT_DARK};font-size:16px;font-weight:700;">What happens next?</h2>
+    <table cellpadding="0" cellspacing="0" width="100%">
+      ${[
+        ["💳", "Pay the recovery fee", "Head to your portal and pay the case fee to unlock recovery work."],
+        ["🔍", "Agent begins work", `${agentName || "Your agent"} will start the recovery process immediately after payment is confirmed.`],
+        ["📲", "Stay updated", "You'll receive email updates at every stage. Track live in your portal."],
+      ].map(([icon, title, desc]) => `
+        <tr>
+          <td style="padding:10px 0;vertical-align:top;width:36px;">
+            <span style="font-size:20px;">${icon}</span>
+          </td>
+          <td style="padding:10px 0 10px 12px;">
+            <div style="color:${TEXT_DARK};font-size:14px;font-weight:600;margin-bottom:2px;">${title}</div>
+            <div style="color:${TEXT_MID};font-size:13px;line-height:1.6;">${desc}</div>
+          </td>
+        </tr>
+      `).join("")}
+    </table>
+
+    ${ctaButton("Go to my portal", `${PORTAL_URL}/portal`)}
+
+    <p style="margin:0;color:${TEXT_LIGHT};font-size:12px;">
+      Questions? Reply to this email or message your agent directly in the portal.
+    </p>
+  `);
+}
+
+// 2. Payment / receipt received
+export function receiptReceivedEmail(opts: { clientName: string; caseTitle: string }) {
+  const { clientName, caseTitle } = opts;
+  return wrapper(`
+    <div style="margin-bottom:8px;">${statusBadge("Payment Received", GREEN, GREEN_BG)}</div>
+    <h1 style="margin:16px 0 8px;color:${BRAND_DARK};font-size:24px;font-weight:700;line-height:1.3;">
+      Payment receipt received ✅
+    </h1>
+    <p style="margin:0 0 24px;color:${TEXT_MID};font-size:15px;line-height:1.7;">
+      Hi <strong>${clientName}</strong>, we've received your payment receipt for <strong>${caseTitle}</strong>.
+      Our team is reviewing and confirming it now — this usually takes just a few minutes.
+    </p>
+
+    <div style="background:${GREEN_BG};border-left:4px solid ${GREEN};border-radius:8px;padding:16px 20px;margin-bottom:24px;">
+      <p style="margin:0;color:${GREEN};font-size:14px;font-weight:600;">
+        ✅ Receipt submitted successfully
+      </p>
+      <p style="margin:6px 0 0;color:#166534;font-size:13px;line-height:1.6;">
+        You'll receive another email as soon as your payment is confirmed and recovery work begins.
+      </p>
+    </div>
+
+    ${divider()}
+
+    <h2 style="margin:0 0 12px;color:${TEXT_DARK};font-size:15px;font-weight:700;">What happens after confirmation?</h2>
+    <p style="margin:0 0 24px;color:${TEXT_MID};font-size:14px;line-height:1.7;">
+      Once your payment is confirmed, your assigned agent will begin active work on recovering your account.
+      You'll receive a notification and can track all progress live in your client portal.
+    </p>
+
+    ${ctaButton("Track my case", `${PORTAL_URL}/portal/cases`)}
+  `);
+}
+
+// 3. Agent assigned
+export function agentAssignedEmail(opts: {
+  clientName: string;
+  caseTitle: string;
+  agentName: string;
+  agentPhone?: string | null;
+}) {
+  const { clientName, caseTitle, agentName, agentPhone } = opts;
+  return wrapper(`
+    <div style="margin-bottom:8px;">${statusBadge("Agent Assigned", "#7c3aed", "#ede9fe")}</div>
+    <h1 style="margin:16px 0 8px;color:${BRAND_DARK};font-size:24px;font-weight:700;line-height:1.3;">
+      Meet your recovery agent 👋
+    </h1>
+    <p style="margin:0 0 24px;color:${TEXT_MID};font-size:15px;line-height:1.7;">
+      Hi <strong>${clientName}</strong>, great news! <strong>${agentName}</strong> has been assigned
+      to your case and will be handling your recovery personally.
+    </p>
+
+    <div style="background:${BRAND_LIGHT};border-radius:12px;padding:20px 24px;margin-bottom:24px;text-align:center;">
+      <div style="width:52px;height:52px;background:${BRAND_PURPLE};border-radius:999px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px;">
+        <span style="color:white;font-size:22px;font-weight:700;">${agentName[0]}</span>
+      </div>
+      <div style="color:${BRAND_DARK};font-size:16px;font-weight:700;">${agentName}</div>
+      <div style="color:${TEXT_MID};font-size:13px;margin-top:4px;">Recovery Specialist · MetaShield</div>
+      ${agentPhone ? `<div style="margin-top:8px;color:${BRAND_PURPLE};font-size:13px;font-weight:600;">📞 ${agentPhone}</div>` : ""}
+    </div>
+
+    <table cellpadding="0" cellspacing="0" width="100%">
+      ${infoRow("Case", caseTitle)}
+      ${infoRow("Agent", agentName)}
+      ${agentPhone ? infoRow("Direct contact", agentPhone) : ""}
+    </table>
+
+    ${divider()}
+
+    <p style="margin:0 0 24px;color:${TEXT_MID};font-size:14px;line-height:1.7;">
+      You can message ${agentName} directly from your portal at any time. They'll keep you updated
+      as your recovery progresses.
+    </p>
+
+    ${ctaButton("Message my agent", `${PORTAL_URL}/portal/messages`)}
+  `);
+}
+
+// 4. Stage changed
+export function stageChangedEmail(opts: {
+  clientName: string;
+  caseTitle: string;
+  stage: string;
+  agentName?: string | null;
+}) {
+  const { clientName, caseTitle, stage, agentName } = opts;
+
+  const stageConfig: Record<string, { emoji: string; color: string; bg: string; message: string }> = {
+    "Getting Started": { emoji: "🚀", color: "#7c3aed", bg: "#ede9fe", message: "Your case is now active and recovery work is beginning." },
+    "Under Review": { emoji: "🔍", color: "#d97706", bg: "#fef3c7", message: "Our team is reviewing your case details and platform evidence." },
+    "Recovery Process": { emoji: "⚙️", color: "#2563eb", bg: "#dbeafe", message: "Active recovery work is underway. Your agent is working on it now." },
+    "Awaiting Platform Response": { emoji: "⏳", color: "#7c3aed", bg: "#ede9fe", message: "We're waiting for the platform to respond. This can take a few days." },
+    "Recovered": { emoji: "🎉", color: GREEN, bg: GREEN_BG, message: "Excellent news — your account has been successfully recovered!" },
+    "Closed": { emoji: "📁", color: "#64748b", bg: "#f1f5f9", message: "Your case has been closed. Contact us if you need further support." },
+  };
+
+  const cfg = stageConfig[stage] ?? { emoji: "📋", color: BRAND_PURPLE, bg: BRAND_LIGHT, message: "Your case has been updated." };
+
+  return wrapper(`
+    <div style="margin-bottom:8px;">${statusBadge("Case Update", cfg.color, cfg.bg)}</div>
+    <h1 style="margin:16px 0 8px;color:${BRAND_DARK};font-size:24px;font-weight:700;line-height:1.3;">
+      ${cfg.emoji} Case update: ${stage}
+    </h1>
+    <p style="margin:0 0 24px;color:${TEXT_MID};font-size:15px;line-height:1.7;">
+      Hi <strong>${clientName}</strong>, here's the latest on your recovery case.
+    </p>
+
+    <div style="background:${cfg.bg};border-left:4px solid ${cfg.color};border-radius:8px;padding:16px 20px;margin-bottom:24px;">
+      <div style="color:${cfg.color};font-size:15px;font-weight:700;margin-bottom:4px;">${stage}</div>
+      <p style="margin:0;color:${TEXT_MID};font-size:14px;line-height:1.6;">${cfg.message}</p>
+    </div>
+
+    <div style="background:#f8fafc;border-radius:12px;padding:20px 24px;margin-bottom:24px;">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        ${infoRow("Case", caseTitle)}
+        ${infoRow("New stage", stage)}
+        ${agentName ? infoRow("Your agent", agentName) : ""}
+      </table>
+    </div>
+
+    ${stage === "Recovered" ? `
+      <div style="background:${GREEN_BG};border-radius:12px;padding:20px 24px;margin-bottom:24px;text-align:center;">
+        <div style="font-size:40px;margin-bottom:8px;">🎊</div>
+        <div style="color:${GREEN};font-size:18px;font-weight:700;">Account Successfully Recovered!</div>
+        <p style="margin:8px 0 0;color:#166534;font-size:14px;line-height:1.6;">
+          Your account has been restored. Thank you for trusting MetaShield.
+        </p>
+      </div>
+    ` : ""}
+
+    ${ctaButton("View full case details", `${PORTAL_URL}/portal/cases`)}
+
+    <p style="margin:0;color:${TEXT_LIGHT};font-size:12px;">
+      ${agentName ? `Questions? Message ${agentName} directly in the portal.` : "Questions? Message us in the portal."}
+    </p>
+  `);
+}
+
+// 5. Payment confirmed — recovery work starting
+export function paymentConfirmedEmail(opts: {
+  clientName: string;
+  caseTitle: string;
+  agentName?: string | null;
+}) {
+  const { clientName, caseTitle, agentName } = opts;
+  return wrapper(`
+    <div style="margin-bottom:8px;">${statusBadge("Payment Confirmed", GREEN, GREEN_BG)}</div>
+    <h1 style="margin:16px 0 8px;color:${BRAND_DARK};font-size:24px;font-weight:700;line-height:1.3;">
+      Payment confirmed — recovery starts now! 🚀
+    </h1>
+    <p style="margin:0 0 24px;color:${TEXT_MID};font-size:15px;line-height:1.7;">
+      Hi <strong>${clientName}</strong>, your payment has been confirmed!
+      ${agentName ? `<strong>${agentName}</strong> is now actively working on your case.` : "Your agent is now actively working on your case."}
+    </p>
+
+    <div style="background:${GREEN_BG};border-left:4px solid ${GREEN};border-radius:8px;padding:16px 20px;margin-bottom:24px;">
+      <p style="margin:0;color:${GREEN};font-size:14px;font-weight:600;">✅ Payment confirmed &amp; recovery underway</p>
+      <p style="margin:6px 0 0;color:#166534;font-size:13px;line-height:1.6;">
+        Case: <strong>${caseTitle}</strong>
+      </p>
+    </div>
+
+    <h2 style="margin:0 0 16px;color:${TEXT_DARK};font-size:15px;font-weight:700;">What to expect:</h2>
+    <table cellpadding="0" cellspacing="0" width="100%">
+      ${[
+        ["📬", "Regular updates", "You'll receive email updates at every stage of the recovery process."],
+        ["💬", "Direct messaging", `Message ${agentName || "your agent"} anytime from your portal.`],
+        ["📊", "Live tracking", "Track every step in real-time from your client dashboard."],
+        ["⏱️", "Timeline", "Recovery typically takes 3–14 days depending on the platform and case complexity."],
+      ].map(([icon, title, desc]) => `
+        <tr>
+          <td style="padding:10px 0;vertical-align:top;width:36px;"><span style="font-size:20px;">${icon}</span></td>
+          <td style="padding:10px 0 10px 12px;">
+            <div style="color:${TEXT_DARK};font-size:14px;font-weight:600;margin-bottom:2px;">${title}</div>
+            <div style="color:${TEXT_MID};font-size:13px;line-height:1.6;">${desc}</div>
+          </td>
+        </tr>
+      `).join("")}
+    </table>
+
+    ${ctaButton("Track my recovery", `${PORTAL_URL}/portal/cases`)}
+  `);
+}
+
+// ─── Subscription welcome email ─────────────────────────────────────────────
+
+export function subscriptionWelcomeEmail(opts: {
+  clientName: string;
+  planName: string;
+  planPrice: string;
+  priceSuffix: string;
+  features: string[];
+  renewsOn: string | null;
+}) {
+  const { clientName, planName, planPrice, priceSuffix, features, renewsOn } = opts;
+  const firstName = clientName.split(" ")[0];
+  return wrapper(`
+    <div style="margin-bottom:8px;">${statusBadge("Account Protection Active", GREEN, GREEN_BG)}</div>
+    <h1 style="margin:16px 0 8px;color:${BRAND_DARK};font-size:24px;font-weight:700;line-height:1.3;">
+      Welcome to Account Protection, ${firstName}! 🛡️
+    </h1>
+    <p style="margin:0 0 24px;color:${TEXT_MID};font-size:15px;line-height:1.7;">
+      You're now on the <strong>${planName} Plan</strong>. Your accounts are being actively monitored — here's what's included.
+    </p>
+
+    <div style="background:${BRAND_LIGHT};border-radius:12px;padding:20px 24px;margin-bottom:24px;">
+      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:16px;">
+        <span style="color:${BRAND_PURPLE};font-size:22px;font-weight:700;">${planPrice}</span>
+        <span style="color:#6d28d9;font-size:14px;">${priceSuffix}</span>
+      </div>
+      <ul style="margin:0;padding:0;list-style:none;">
+        ${features.map(f => `
+        <li style="display:flex;align-items:center;gap:10px;padding:6px 0;color:#4c1d95;font-size:14px;">
+          <span style="color:${GREEN};font-weight:700;font-size:16px;">✓</span>
+          ${f}
+        </li>`).join("")}
+      </ul>
+    </div>
+
+    ${renewsOn ? `
+    <p style="margin:0 0 24px;color:${TEXT_MID};font-size:14px;">
+      📅 Next billing date: <strong>${new Date(renewsOn).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</strong>
+    </p>
+    ` : ""}
+
+    <table cellpadding="0" cellspacing="0" width="100%">
+      ${[
+        ["🔍", "Proactive monitoring", "We watch your accounts for policy violations and risk signals before they become problems."],
+        ["⚡", "Priority support", "If anything goes wrong, you jump to the front of the queue."],
+        ["📊", "Monthly reports", "Get a clear picture of your account health every month."],
+        ["💬", "Direct access", "Message your account manager anytime from your portal."],
+      ].map(([icon, title, desc]) => `
+        <tr>
+          <td style="padding:10px 0;vertical-align:top;width:36px;"><span style="font-size:20px;">${icon}</span></td>
+          <td style="padding:10px 0 10px 12px;">
+            <div style="color:${TEXT_DARK};font-size:14px;font-weight:600;margin-bottom:2px;">${title}</div>
+            <div style="color:${TEXT_MID};font-size:13px;line-height:1.6;">${desc}</div>
+          </td>
+        </tr>
+      `).join("")}
+    </table>
+
+    ${ctaButton("Go to my portal", `${PORTAL_URL}/portal`)}
+
+    <p style="margin:0;color:${TEXT_LIGHT};font-size:12px;">
+      You can manage or cancel your subscription anytime from the Billing section of your portal.
+    </p>
+  `);
+}

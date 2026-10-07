@@ -1,0 +1,88 @@
+// How It Works and Resources pages.
+export const howitworks: Record<string, string> = {
+  "The full case journey from new lead to resolution — with clear status updates at every stage, so you're never left guessing.":
+    "Le parcours complet d'un dossier, de la première demande à la résolution — avec des mises à jour claires à chaque étape, pour ne jamais rester dans le flou.",
+  "New Lead": "Nouvelle demande",
+  "You submit a case or complete the eligibility checker.": "Vous soumettez un dossier ou remplissez le vérificateur d'éligibilité.",
+  "Assessment Pending": "Évaluation en cours",
+  "Our team reviews the details you've provided.": "Notre équipe examine les informations que vous avez fournies.",
+  "Payment Pending": "Paiement en attente",
+  "Once assessed, you'll receive a quote and next steps.": "Après l'évaluation, vous recevez un devis et les prochaines étapes.",
+  "Documents Required": "Documents requis",
+  "We request any evidence or documentation needed.": "Nous demandons les preuves ou documents nécessaires.",
+  "Under Review": "En cours d'examen",
+  "Your case and documents are reviewed against platform requirements.":
+    "Votre dossier et vos documents sont examinés au regard des exigences de la plateforme.",
+  "Recovery Process": "Procédure de récupération",
+  "We prepare and submit your appeal or recovery request.": "Nous préparons et soumettons votre recours ou votre demande de récupération.",
+  "Awaiting Platform Response": "En attente de la plateforme",
+  "We monitor for a response and follow up where needed.": "Nous surveillons la réponse et relançons si nécessaire.",
+  "Resolved / Unresolved": "Résolu / Non résolu",
+  "You're notified of the outcome, with next steps either way.": "Vous êtes informé du résultat, avec les prochaines étapes dans tous les cas.",
+  "Aug 18": "18 août",
+  "Aug 19": "19 août",
+  "Aug 20": "20 août",
+  "Aug 21": "21 août",
+  "Case submitted": "Dossier soumis",
+  "Documents received": "Documents reçus",
+  "Initial assessment": "Évaluation initiale",
+  "Appeal submitted": "Recours soumis",
+  "Awaiting response": "En attente de réponse",
+  "Live case tracking": "Suivi du dossier en direct",
+  "See exactly which stage your case is at, without having to message us for an update.":
+    "Voyez exactement à quelle étape en est votre dossier, sans avoir à nous écrire pour une mise à jour.",
+  "Secure messaging": "Messagerie sécurisée",
+  "Send and receive documents, screenshots and updates in one place — no scattered chats.":
+    "Envoyez et recevez documents, captures d'écran et mises à jour au même endroit — fini les conversations éparpillées.",
+  "Document center": "Centre de documents",
+  "Upload evidence securely. We will never ask for your social media password.":
+    "Envoyez vos preuves en toute sécurité. Nous ne vous demanderons jamais le mot de passe de vos réseaux sociaux.",
+  "A clear process, from": "Un processus clair, du",
+  "first message": "premier message",
+  "to resolution.": "à la résolution.",
+  "You shouldn't have to chase updates. Every case moves through the same defined stages — and you'll know exactly where things stand at each step.":
+    "Vous ne devriez pas avoir à courir après les nouvelles. Chaque dossier suit les mêmes étapes définies — et vous savez exactement où vous en êtes à chaque instant.",
+  "Start Your Case": "Ouvrir mon dossier",
+  "Ask a Question": "Poser une question",
+  "Case #AG-10482": "Dossier n° AG-10482",
+  "Instagram Account Recovery": "Récupération de compte Instagram",
+  "🔔 You'll get an email when anything changes.": "🔔 Vous recevez un e-mail à chaque changement.",
+  "✅ No guessing": "✅ Aucune incertitude",
+  "Always informed": "Toujours informé",
+  "Case workflow": "Déroulement d'un dossier",
+  "Every case follows the same eight stages": "Chaque dossier suit les mêmes huit étapes",
+  "No surprises, no ambiguity — you know exactly what's happening at each step.":
+    "Pas de surprises, pas d'ambiguïté — vous savez exactement ce qui se passe à chaque étape.",
+  "What you'll see in your portal": "Ce que vous verrez dans votre espace client",
+  "Log in instead of sending “any update?”": "Connectez-vous au lieu d'écrire « du nouveau ? »",
+  "Every recovery case gets a running timeline so you always know what's happened and what's next — no chasing required.":
+    "Chaque dossier de récupération a sa chronologie à jour, pour toujours savoir ce qui s'est passé et ce qui vient ensuite — sans relancer.",
+  "Create Your Portal Account": "Créer mon espace client",
+  "Ready to get started?": "Prêt à commencer ?",
+  "Answer a few questions and we'll tell you whether your case is a good fit for professional recovery support — free, no obligation.":
+    "Répondez à quelques questions et nous vous dirons si votre dossier se prête à un accompagnement professionnel — gratuitement et sans engagement.",
+
+  // Resources
+  "Guides on account security, platform policy and staying compliant to reduce the risk of restrictions.":
+    "Des guides sur la sécurité des comptes, les règles des plateformes et la conformité pour réduire le risque de restrictions.",
+  Prevention: "Prévention",
+  "What tends to draw platform attention, and how to avoid it.": "Ce qui attire généralement l'attention des plateformes, et comment l'éviter.",
+  "Setting up two-factor authentication the right way": "Bien configurer l'authentification à deux facteurs",
+  "A practical walkthrough for personal and business accounts.": "Un guide pratique pour les comptes personnels et professionnels.",
+  "A pre-launch checklist for new ad accounts": "Une liste de contrôle avant le lancement d'un nouveau compte publicitaire",
+  "Reduce early flags before you start spending.": "Réduisez les premiers signalements avant de commencer à dépenser.",
+  "Platform policy": "Règles des plateformes",
+  "Understanding Meta's account integrity system": "Comprendre le système d'intégrité des comptes de Meta",
+  "A plain-language explainer of how enforcement generally works.": "Une explication simple du fonctionnement habituel des sanctions.",
+  "Business Manager verification, explained": "La vérification du Business Manager, expliquée",
+  "What verification actually checks, and common failure points.": "Ce que la vérification contrôle vraiment, et les causes d'échec fréquentes.",
+  "If something's already wrong": "Si le problème est déjà là",
+  "What to do in the first hour after a disable notice": "Que faire dans l'heure qui suit un avis de désactivation",
+  "The steps that matter most before you appeal.": "Les étapes les plus importantes avant de faire un recours.",
+  "Preparing evidence for a stronger appeal": "Préparer ses preuves pour un recours plus solide",
+  "What to gather, and how to present it clearly.": "Quoi rassembler, et comment le présenter clairement.",
+  "Practical guidance on account security & platform policy.": "Des conseils pratiques sur la sécurité des comptes et les règles des plateformes.",
+  "Free guides to help you reduce risk on your own — and to give you context before you ever need a recovery case.":
+    "Des guides gratuits pour réduire le risque par vous-même — et comprendre le contexte avant d'avoir besoin d'un dossier de récupération.",
+  "Coming soon": "Bientôt disponible",
+};

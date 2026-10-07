@@ -1,0 +1,42 @@
+{
+  "name": "MetaShield",
+  "short_name": "MetaShield",
+  "description": "Digital account recovery and protection — recover disabled accounts, check your risk score, and manage your cases from one place.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#7c3aed",
+  "orientation": "portrait-primary",
+  "categories": ["business", "productivity", "utilities"],
+  "lang": "en",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Check My Account",
+      "short_name": "Health Check",
+      "description": "Run an account health check",
+      "url": "/check-my-account",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "My Portal",
+      "short_name": "Portal",
+      "description": "Open the client portal",
+      "url": "/portal",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
