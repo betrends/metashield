@@ -62,12 +62,36 @@ export async function POST(request: Request) {
     .eq("user_id", user.id)
     .maybeSingle();
 
+  // The charge must belong to the signed-in user, so one client can't
+  // activate a plan with someone else's payment reference.
+  const chargeUserId = data.data?.metadata?.userId as string | undefined;
+  if (chargeUserId && chargeUserId !== user.id) {
+    return NextResponse.json({ error: "reference_not_yours" }, { status: 403 });
+  }
+
+  // Already recorded (e.g. the billing page verified this reference
+  // before) — report success without inserting a second invoice.
+  const { data: priorInvoice } = await admin
+    .from("invoices")
+    .select("id")
+    .eq("paystack_reference", reference)
+    .maybeSingle();
+  if (priorInvoice) {
+    return NextResponse.json({ ok: true, planId, planName: plan.name, alreadyRecorded: true });
+  }
+
   let subscriptionId: string;
   if (existing) {
-    await admin
+    const { error: updateError } = await admin
       .from("subscriptions")
       .update({ plan_id: planId, status: "active", renews_on: renewsOn, updated_at: new Date().toISOString() })
       .eq("id", existing.id);
+    if (updateError) {
+      // Previously ignored: the client was charged but the plan stayed
+      // inactive while the page said "subscribed".
+      console.error("Failed to activate subscription:", updateError);
+      return NextResponse.json({ error: "db_error" }, { status: 500 });
+    }
     subscriptionId = existing.id;
   } else {
     const { data: inserted, error } = await admin
@@ -82,7 +106,7 @@ export async function POST(request: Request) {
     subscriptionId = inserted.id;
   }
 
-  await admin.from("invoices").insert({
+  const { error: invoiceError } = await admin.from("invoices").insert({
     user_id: user.id,
     subscription_id: subscriptionId,
     amount_kobo: plan.priceKobo,
@@ -90,6 +114,11 @@ export async function POST(request: Request) {
     status: "paid",
     paystack_reference: reference,
   });
+  if (invoiceError) {
+    // The plan is active; only the history row is missing. Log it for
+    // reconciliation rather than telling a paying client it failed.
+    console.error("Subscription activated but invoice insert failed:", invoiceError, { reference });
+  }
 
   // Send welcome email to the client
   const resendKey = process.env.RESEND_API_KEY;

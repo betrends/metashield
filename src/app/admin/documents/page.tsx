@@ -11,6 +11,7 @@ type ClientDocument = {
   uploadedAt: string;
   clientEmail: string;
   clientName: string;
+  caseTitle?: string | null;
   url?: string;
 };
 
@@ -116,7 +117,12 @@ export default function AdminDocumentsPage() {
                 <tbody>
                   {client.docs.map((doc) => (
                     <tr key={doc.id} className="border-t border-ink-100 hover:bg-ink-50">
-                      <td className="px-4 py-3 font-mono text-xs text-ink-700">{doc.filename}</td>
+                      <td className="px-4 py-3 font-mono text-xs text-ink-700">
+                        {doc.filename}
+                        {doc.caseTitle ? (
+                          <span className="mt-0.5 block font-sans text-[11px] text-ink-400">{doc.caseTitle}</span>
+                        ) : null}
+                      </td>
                       <td className="px-4 py-3 text-ink-600">{doc.category || "—"}</td>
                       <td className="px-4 py-3 text-ink-600">
                         {new Date(doc.uploadedAt).toLocaleDateString()} {new Date(doc.uploadedAt).toLocaleTimeString()}

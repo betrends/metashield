@@ -20,6 +20,8 @@ type ThreadMessage = {
   author_name: string;
   body: string;
   created_at: string;
+  attachment_name?: string | null;
+  attachment_url?: string | null;
 };
 
 export default function AdminMessagesPage() {
@@ -28,29 +30,52 @@ export default function AdminMessagesPage() {
   const [thread, setThread] = useState<ThreadMessage[] | "loading">("loading");
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
-      const res = await fetch("/api/admin/messages");
+      const res = await fetch("/api/admin/messages", { cache: "no-store" });
       if (res.status === 403) {
         setConversations("unauthorized");
         return;
       }
+      if (!res.ok) return;
       const data = await res.json();
       setConversations(data.conversations ?? []);
     }
     load();
+    // New client messages show up without a manual reload.
+    const interval = setInterval(load, 20_000);
+    return () => clearInterval(interval);
   }, []);
+
+  async function loadThread(c: Conversation) {
+    const params = new URLSearchParams({ userId: c.userId });
+    if (c.caseId) params.set("caseId", c.caseId);
+    const res = await fetch(`/api/admin/messages/thread?${params.toString()}`, { cache: "no-store" });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return (data.messages ?? []) as ThreadMessage[];
+  }
 
   async function openConversation(c: Conversation) {
     setSelected(c);
+    setSendError(null);
     setThread("loading");
-    const params = new URLSearchParams({ userId: c.userId });
-    if (c.caseId) params.set("caseId", c.caseId);
-    const res = await fetch(`/api/admin/messages/thread?${params.toString()}`);
-    const data = await res.json();
-    setThread(data.messages ?? []);
+    const messages = await loadThread(c);
+    setThread(messages ?? []);
   }
+
+  // Refresh the open thread so replies from the client (or another staff
+  // member) appear while it's open.
+  useEffect(() => {
+    if (!selected) return;
+    const interval = setInterval(async () => {
+      const messages = await loadThread(selected);
+      if (messages) setThread(messages);
+    }, 15_000);
+    return () => clearInterval(interval);
+  }, [selected]);
 
   async function handleReply() {
     if (!selected || !reply.trim()) return;
@@ -70,6 +95,11 @@ export default function AdminMessagesPage() {
         const data = await res.json();
         setThread((prev) => (Array.isArray(prev) ? [...prev, data.message] : prev));
         setReply("");
+        setSendError(null);
+      } else {
+        setSendError(
+          res.status === 403 ? "You can't reply in this conversation." : "Couldn't send — please try again."
+        );
       }
     } finally {
       setSending(false);
@@ -140,10 +170,27 @@ export default function AdminMessagesPage() {
                     >
                       <p className="text-[11px] font-semibold opacity-70">{m.author_name}</p>
                       <p className="mt-0.5">{m.body}</p>
+                      {m.attachment_name ? (
+                        m.attachment_url ? (
+                          <a
+                            href={m.attachment_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-1.5 block text-xs font-semibold underline"
+                          >
+                            📎 {m.attachment_name}
+                          </a>
+                        ) : (
+                          <p className="mt-1.5 text-xs opacity-70">📎 {m.attachment_name} (file not uploaded)</p>
+                        )
+                      ) : null}
                     </div>
                   ))
                 )}
               </div>
+              {sendError ? (
+                <p className="border-t border-ink-100 px-4 pt-2 text-xs font-medium text-risk-high">{sendError}</p>
+              ) : null}
               <div className="flex items-center gap-2 border-t border-ink-100 px-4 py-3">
                 <input
                   value={reply}

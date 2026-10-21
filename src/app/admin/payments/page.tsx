@@ -36,6 +36,7 @@ function StatusBadge({ status }: { status: AdminCaseRow["paymentStatus"] }) {
 export default function AdminPaymentsPage() {
   const [cases, setCases] = useState<AdminCaseRow[] | "loading" | "unauthorized">("loading");
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [confirmError, setConfirmError] = useState<{ caseId: string; message: string } | null>(null);
 
   async function load() {
     const res = await fetch("/api/admin/payments");
@@ -54,8 +55,17 @@ export default function AdminPaymentsPage() {
     load();
   }, []);
 
-  async function handleConfirm(caseId: string) {
+  async function handleConfirm(caseId: string, hasReceipt: boolean) {
+    if (
+      !hasReceipt &&
+      !window.confirm(
+        "No receipt has been uploaded for this case. Only confirm if you've checked the bank account and the payment has arrived."
+      )
+    ) {
+      return;
+    }
     setConfirmingId(caseId);
+    setConfirmError(null);
     try {
       const res = await fetch("/api/admin/payments/confirm", {
         method: "POST",
@@ -64,7 +74,15 @@ export default function AdminPaymentsPage() {
       });
       if (res.ok) {
         setCases((prev) => (Array.isArray(prev) ? prev.filter((c) => c.id !== caseId) : prev));
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setConfirmError({
+          caseId,
+          message: data.detail || data.error || "Couldn't confirm this payment — please try again.",
+        });
       }
+    } catch {
+      setConfirmError({ caseId, message: "Network error — the payment was not confirmed. Please try again." });
     } finally {
       setConfirmingId(null);
     }
@@ -126,12 +144,15 @@ export default function AdminPaymentsPage() {
                     </a>
                   ) : null}
                   <button
-                    disabled={c.paymentStatus !== "pending_review" || confirmingId === c.id}
-                    onClick={() => handleConfirm(c.id)}
+                    disabled={confirmingId === c.id}
+                    onClick={() => handleConfirm(c.id, !!c.receiptUrl)}
                     className="inline-flex items-center justify-center gap-2 rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     {confirmingId === c.id ? "Confirming…" : "Confirm Payment"}
                   </button>
+                  {confirmError?.caseId === c.id ? (
+                    <p className="max-w-[220px] text-right text-xs font-medium text-risk-high">{confirmError.message}</p>
+                  ) : null}
                 </div>
               </div>
             </div>

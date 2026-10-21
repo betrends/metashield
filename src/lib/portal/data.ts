@@ -18,6 +18,7 @@ import {
 } from "@/lib/portal/local-records";
 import { pickAgent } from "@/lib/portal/agents";
 import { getFollowerRangeFeeKobo, formatNaira, type FollowerRange } from "@/lib/portal/case-fees";
+import { pickDefaultCaseId, safeStorageName } from "@/lib/portal/case-rules";
 
 export type PortalAccount = {
   id: string;
@@ -52,7 +53,9 @@ export type PortalMessage = {
   authorName: string;
   body: string;
   date: string;
+  caseId?: string;
   attachment?: string;
+  attachmentPath?: string;
 };
 
 export type PortalDocument = {
@@ -62,7 +65,16 @@ export type PortalDocument = {
   uploadedDate: string;
   sizeLabel: string;
   storagePath: string | null;
+  caseId: string | null;
 };
+
+// PostgREST error for a column that doesn't exist yet — i.e. migration
+// 010_phase1_case_links.sql hasn't been run. Writes retry without the new
+// column so uploads and messages keep working in the meantime.
+function isMissingColumnError(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  return error.code === "PGRST204" || error.code === "42703" || /column .* does not exist|schema cache/i.test(error.message ?? "");
+}
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -433,6 +445,8 @@ type MessageRow = {
   author_name: string;
   body: string;
   attachment_name: string | null;
+  attachment_path?: string | null;
+  case_id: string | null;
   created_at: string;
 };
 
@@ -443,8 +457,31 @@ function mapMessage(row: MessageRow): PortalMessage {
     authorName: row.author_name,
     body: row.body,
     date: formatDateTime(row.created_at),
+    caseId: row.case_id ?? undefined,
     attachment: row.attachment_name ?? undefined,
+    attachmentPath: row.attachment_path ?? undefined,
   };
+}
+
+// Messages and documents sent without an explicit case go to the client's
+// newest open case, so they land in the same thread/case the assigned
+// agent is looking at instead of an unlinked "General" bucket that agents
+// can't see.
+async function defaultCaseId(supabase: SupabaseClient, preferStage?: CaseStage): Promise<string | null> {
+  const { data } = await supabase
+    .from("cases")
+    .select("id, stage")
+    .order("created_at", { ascending: false });
+  return pickDefaultCaseId((data ?? []) as { id: string; stage: CaseStage }[], preferStage);
+}
+
+// Short-lived link to a file in the "documents" bucket. Storage policies
+// only let a client sign files inside their own "<user-id>/…" folder.
+export async function getFileUrl(storagePath: string): Promise<string | null> {
+  const supabase = createClient();
+  const { data, error } = await supabase.storage.from("documents").createSignedUrl(storagePath, 60 * 10);
+  if (error) return null;
+  return data?.signedUrl ?? null;
 }
 
 export async function fetchMessages(): Promise<PortalMessage[]> {
@@ -461,21 +498,39 @@ export async function sendMessage(input: {
   body: string;
   caseId?: string | null;
   attachmentName?: string | null;
+  attachmentFile?: File | null;
 }): Promise<PortalMessage> {
   const supabase = createClient();
   const user = await requireUser(supabase);
-  const { data, error } = await supabase
-    .from("messages")
-    .insert({
-      user_id: user.id,
-      case_id: input.caseId ?? null,
-      from_role: "client",
-      author_name: (user.user_metadata?.full_name as string | undefined) || "You",
-      body: input.body,
-      attachment_name: input.attachmentName ?? null,
-    })
-    .select()
-    .single();
+  const caseId = input.caseId ?? (await defaultCaseId(supabase));
+
+  // Upload the attachment itself — previously only its file name was
+  // saved, so agents and the admin had nothing to open.
+  let attachmentPath: string | null = null;
+  const attachmentName = input.attachmentFile?.name ?? input.attachmentName ?? null;
+  if (input.attachmentFile) {
+    attachmentPath = `${user.id}/attachments/${Date.now()}-${safeStorageName(input.attachmentFile.name)}`;
+    const { error: uploadError } = await supabase.storage
+      .from("documents")
+      .upload(attachmentPath, input.attachmentFile);
+    if (uploadError) throw uploadError;
+  }
+
+  const row = {
+    user_id: user.id,
+    case_id: caseId,
+    from_role: "client",
+    author_name: (user.user_metadata?.full_name as string | undefined) || "You",
+    body: input.body,
+    attachment_name: attachmentName,
+    attachment_path: attachmentPath,
+  };
+  let { data, error } = await supabase.from("messages").insert(row).select().single();
+  if (isMissingColumnError(error)) {
+    const { attachment_path: _omit, ...legacyRow } = row;
+    void _omit;
+    ({ data, error } = await supabase.from("messages").insert(legacyRow).select().single());
+  }
   if (error) throw error;
   return mapMessage(data as MessageRow);
 }
@@ -488,6 +543,7 @@ type DocumentRow = {
   category: string;
   size_bytes: number | null;
   storage_path: string | null;
+  case_id?: string | null;
   created_at: string;
 };
 
@@ -499,6 +555,7 @@ function mapDocument(row: DocumentRow): PortalDocument {
     uploadedDate: formatDate(row.created_at),
     sizeLabel: formatSize(row.size_bytes),
     storagePath: row.storage_path,
+    caseId: row.case_id ?? null,
   };
 }
 
@@ -512,9 +569,18 @@ export async function fetchDocuments(): Promise<PortalDocument[]> {
   return (data as DocumentRow[]).map(mapDocument);
 }
 
+// Which case a Document Center upload belongs to when the page didn't
+// pass one: the client's case waiting on documents, else their newest
+// open case.
+export async function resolveDocumentCaseId(caseId?: string | null): Promise<string | null> {
+  if (caseId) return caseId;
+  return defaultCaseId(createClient(), "Documents Required");
+}
+
 export async function uploadDocument(
   file: File,
-  category = "Uploaded document"
+  category = "Uploaded document",
+  caseId: string | null = null
 ): Promise<PortalDocument> {
   const supabase = createClient();
   const user = await requireUser(supabase);
@@ -523,17 +589,20 @@ export async function uploadDocument(
   const { error: uploadError } = await supabase.storage.from("documents").upload(path, file);
   if (uploadError) throw uploadError;
 
-  const { data, error } = await supabase
-    .from("documents")
-    .insert({
-      user_id: user.id,
-      name: file.name,
-      category,
-      storage_path: path,
-      size_bytes: file.size,
-    })
-    .select()
-    .single();
+  const row = {
+    user_id: user.id,
+    name: file.name,
+    category,
+    storage_path: path,
+    size_bytes: file.size,
+    case_id: caseId,
+  };
+  let { data, error } = await supabase.from("documents").insert(row).select().single();
+  if (isMissingColumnError(error)) {
+    const { case_id: _omit, ...legacyRow } = row;
+    void _omit;
+    ({ data, error } = await supabase.from("documents").insert(legacyRow).select().single());
+  }
   if (error) throw error;
   return mapDocument(data as DocumentRow);
 }

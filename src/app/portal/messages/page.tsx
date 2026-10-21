@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { fetchMessages, sendMessage, type PortalMessage } from "@/lib/portal/data";
+import { fetchMessages, getFileUrl, sendMessage, type PortalMessage } from "@/lib/portal/data";
 import { createClient } from "@/lib/supabase/client";
 
 function initials(name: string) {
@@ -43,8 +43,9 @@ function ClientAvatar({ name }: { name: string }) {
 export default function PortalMessagesPage() {
   const [messages, setMessages] = useState<PortalMessage[] | "loading">("loading");
   const [draft, setDraft] = useState("");
-  const [attachment, setAttachment] = useState<string | null>(null);
+  const [attachment, setAttachment] = useState<File | null>(null);
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [userName, setUserName] = useState("You");
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -64,11 +65,28 @@ export default function PortalMessagesPage() {
 
   useEffect(() => {
     let cancelled = false;
-    fetchMessages().then((result) => {
-      if (!cancelled) setMessages(result);
-    });
+    function load() {
+      fetchMessages()
+        .then((result) => {
+          // Only replace when something changed, so polling doesn't
+          // re-scroll the conversation every few seconds.
+          if (cancelled) return;
+          setMessages((prev) =>
+            prev !== "loading" &&
+            prev.length === result.length &&
+            prev[prev.length - 1]?.id === result[result.length - 1]?.id
+              ? prev
+              : result
+          );
+        })
+        .catch(() => {});
+    }
+    load();
+    // Agent replies show up without a manual reload.
+    const interval = setInterval(load, 15_000);
     return () => {
       cancelled = true;
+      clearInterval(interval);
     };
   }, []);
 
@@ -76,18 +94,30 @@ export default function PortalMessagesPage() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
+  async function openAttachment(path: string) {
+    const url = await getFileUrl(path);
+    if (url) window.open(url, "_blank", "noopener,noreferrer");
+  }
+
   async function handleSend(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if ((!draft.trim() && !attachment) || sending) return;
     setSending(true);
+    setSendError(null);
     try {
+      // ?case=<id> when opened from a case page; otherwise sendMessage
+      // links it to the client's newest open case.
+      const caseId = new URLSearchParams(window.location.search).get("case");
       const message = await sendMessage({
         body: draft.trim() || "Sent an attachment.",
-        attachmentName: attachment,
+        caseId,
+        attachmentFile: attachment,
       });
       setMessages((prev) => (prev === "loading" ? [message] : [...prev, message]));
       setDraft("");
       setAttachment(null);
+    } catch (err) {
+      setSendError(err instanceof Error ? err.message : "Couldn't send — please try again.");
     } finally {
       setSending(false);
     }
@@ -143,8 +173,11 @@ export default function PortalMessagesPage() {
                     >
                       <p className="leading-relaxed">{m.body}</p>
                       {m.attachment ? (
-                        <div
-                          className={`mt-2 flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs ${
+                        <button
+                          type="button"
+                          disabled={!m.attachmentPath}
+                          onClick={() => m.attachmentPath && openAttachment(m.attachmentPath)}
+                          className={`mt-2 flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs enabled:hover:underline ${
                             isClient ? "bg-white/15" : "bg-white"
                           }`}
                         >
@@ -157,7 +190,7 @@ export default function PortalMessagesPage() {
                             />
                           </svg>
                           {m.attachment}
-                        </div>
+                        </button>
                       ) : null}
                     </div>
                   </div>
@@ -184,14 +217,17 @@ export default function PortalMessagesPage() {
             <input
               type="file"
               className="hidden"
-              onChange={(e) => setAttachment(e.target.files?.[0]?.name ?? null)}
+              onChange={(e) => {
+                setAttachment(e.target.files?.[0] ?? null);
+                e.target.value = "";
+              }}
             />
           </label>
           <input
             type="text"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder={attachment ? `Attached: ${attachment}` : "Type a message…"}
+            placeholder={attachment ? `Attached: ${attachment.name}` : "Type a message…"}
             className="flex-1 rounded-full border border-ink-200 px-4 py-2.5 text-sm text-ink-900 outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
           />
           <Button type="submit" size="sm" disabled={sending}>
@@ -199,6 +235,12 @@ export default function PortalMessagesPage() {
           </Button>
         </form>
       </Card>
+
+      {sendError ? (
+        <p className="mt-3 rounded-xl bg-risk-high-bg px-3.5 py-2.5 text-xs font-medium text-risk-high">
+          {sendError}
+        </p>
+      ) : null}
 
       <p className="mt-3 text-xs text-ink-400">
         We will never ask for your social media password over messages.

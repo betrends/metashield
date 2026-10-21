@@ -1,5 +1,8 @@
 // Lists conversations — grouped by client + case — newest first.
-// Admins see all conversations; agents see only conversations on their cases.
+// Admins see all conversations; agents see conversations on their cases,
+// plus the unlinked "General" conversation of any client they handle
+// (client messages used to be saved without a case_id, which hid every
+// client reply from agents).
 
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
@@ -12,33 +15,48 @@ export async function GET() {
   const admin = createAdminClient();
 
   let caseFilter: string[] | null = null;
+  let clientFilter: string[] = [];
   if (role.type === "agent") {
     const { data: agentCases } = await admin
       .from("cases")
-      .select("id")
+      .select("id, user_id")
       .eq("agent_id", role.agentId);
     caseFilter = (agentCases ?? []).map((c) => c.id);
+    clientFilter = Array.from(new Set((agentCases ?? []).map((c) => c.user_id as string)));
   }
 
-  let messagesQuery = admin
-    .from("messages")
-    .select("id, user_id, case_id, from_role, author_name, body, created_at")
-    .order("created_at", { ascending: false });
+  const select = "id, user_id, case_id, from_role, author_name, body, attachment_name, created_at";
+  const baseQuery = () => admin.from("messages").select(select).order("created_at", { ascending: false });
 
+  let messagesQuery;
   if (caseFilter !== null) {
     if (caseFilter.length === 0) {
       return NextResponse.json({ conversations: [] });
     }
-    messagesQuery = messagesQuery.in("case_id", caseFilter);
+    messagesQuery = Promise.all([
+      baseQuery().in("case_id", caseFilter),
+      baseQuery().is("case_id", null).in("user_id", clientFilter),
+    ]).then(([byCase, general]) => ({
+      data: [...(byCase.data ?? []), ...(general.data ?? [])],
+      error: byCase.error ?? general.error,
+    }));
+  } else {
+    messagesQuery = baseQuery();
   }
 
-  const [{ data: messages }, { data: cases }] = await Promise.all([
+  const [{ data: messages, error: messagesError }, { data: cases }] = await Promise.all([
     messagesQuery,
     admin.from("cases").select("id, title"),
   ]);
+  if (messagesError) {
+    console.error("Failed to list messages:", messagesError);
+    return NextResponse.json({ error: "query_failed" }, { status: 500 });
+  }
 
   const caseTitleById = new Map((cases ?? []).map((c) => [c.id, c.title]));
-  const rows = messages ?? [];
+  const rows = [...(messages ?? [])].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
 
   type Conversation = {
     key: string;
@@ -59,7 +77,7 @@ export async function GET() {
         userId: m.user_id,
         caseId: m.case_id,
         caseTitle: m.case_id ? caseTitleById.get(m.case_id) ?? null : null,
-        lastMessage: m.body,
+        lastMessage: m.attachment_name ? `📎 ${m.attachment_name} — ${m.body}` : m.body,
         lastFromRole: m.from_role,
         lastAt: m.created_at,
       });

@@ -1,11 +1,18 @@
-// Moves a case to a new stage on the admin's behalf (the client-side
+// Moves a case to a new stage on staff's behalf (the client-side
 // updateCaseStage in lib/portal/data.ts only works for the case's own
-// owner via RLS — this is the admin-on-anyone's-case equivalent). Every
+// owner via RLS — this is the staff-on-anyone's-case equivalent). Every
 // stage change logs a timeline event, a message from the agent, and
 // emails the client — recovery should never advance silently.
+//
+// The admin may move any case; an agent only cases assigned to them.
+// Nobody can move an unpaid case past "Payment Pending" — confirm the
+// payment first (see /api/admin/payments/confirm).
 
 import { NextResponse } from "next/server";
-import { createClient as createServerClient, createAdminClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
+import { canAccessCase, getAdminRole } from "@/lib/admin/auth";
+import { canMoveToStage, type PaymentStatus } from "@/lib/portal/case-rules";
+import type { CaseStage } from "@/lib/portal/mock-data";
 
 const VALID_STAGES = [
   "New Lead",
@@ -19,12 +26,8 @@ const VALID_STAGES = [
 ];
 
 export async function POST(request: Request) {
-  const supabase = await createServerClient();
-  const {
-    data: { user: adminUser },
-  } = await supabase.auth.getUser();
-  const adminEmail = process.env.ADMIN_EMAIL;
-  if (!adminUser || !adminEmail || adminUser.email !== adminEmail) {
+  const role = await getAdminRole();
+  if (!role) {
     return NextResponse.json({ error: "not_authorized" }, { status: 403 });
   }
 
@@ -40,7 +43,33 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid_input" }, { status: 400 });
   }
 
+  if (!(await canAccessCase(role, caseId))) {
+    return NextResponse.json({ error: "not_authorized" }, { status: 403 });
+  }
+
   const admin = createAdminClient();
+
+  const { data: current, error: readError } = await admin
+    .from("cases")
+    .select("stage, payment_status")
+    .eq("id", caseId)
+    .maybeSingle();
+  if (readError || !current) {
+    return NextResponse.json({ error: "case_not_found" }, { status: 404 });
+  }
+  if (current.stage === stage) {
+    return NextResponse.json({ ok: true, unchanged: true, stage });
+  }
+  const allowed = canMoveToStage(stage as CaseStage, current.payment_status as PaymentStatus);
+  if (!allowed.ok) {
+    return NextResponse.json(
+      {
+        error: allowed.reason,
+        message: "Confirm this case's payment before moving it past Payment Pending.",
+      },
+      { status: 409 }
+    );
+  }
 
   const { data: updatedCase, error } = await admin
     .from("cases")
@@ -87,5 +116,5 @@ export async function POST(request: Request) {
     }).catch(() => {});
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, stage });
 }

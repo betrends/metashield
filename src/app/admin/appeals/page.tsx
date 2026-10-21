@@ -78,6 +78,9 @@ export default function AdminAppealsPage() {
       });
       if (res.ok) {
         setCases((prev) => (Array.isArray(prev) ? prev.map((c) => (c.id === caseId ? { ...c, stage } : c)) : prev));
+      } else {
+        const data = await res.json().catch(() => ({}));
+        window.alert(data.message || "Couldn't update the stage — please try again.");
       }
     } finally {
       setBusyId(null);

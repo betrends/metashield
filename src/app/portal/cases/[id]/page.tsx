@@ -18,11 +18,22 @@ export default function PortalCaseDetailPage() {
 
   useEffect(() => {
     let cancelled = false;
-    fetchCase(params.id).then((result) => {
-      if (!cancelled) setPortalCase(result);
-    });
+    function load() {
+      fetchCase(params.id)
+        .then((result) => {
+          if (!cancelled) setPortalCase(result);
+        })
+        .catch(() => {});
+    }
+    load();
+    // Re-read the case so a payment confirmed (or stage changed) by the
+    // team shows up without the client having to reload the page.
+    const interval = setInterval(load, 20_000);
+    window.addEventListener("focus", load);
     return () => {
       cancelled = true;
+      clearInterval(interval);
+      window.removeEventListener("focus", load);
     };
   }, [params.id]);
 
@@ -81,7 +92,7 @@ export default function PortalCaseDetailPage() {
             {portalCase.platform} · {portalCase.accountHandle}
           </p>
         </div>
-        <ButtonLink href="/portal/messages" variant="outline" size="sm">
+        <ButtonLink href={`/portal/messages?case=${portalCase.id}`} variant="outline" size="sm">
           {portalCase.agentName ? `Message ${portalCase.agentName.split(" ")[0]}` : "Message the team"}
         </ButtonLink>
       </div>
@@ -180,6 +191,21 @@ export default function PortalCaseDetailPage() {
               ) : null}
             </>
           )}
+        </Card>
+      ) : null}
+
+      {portalCase.paymentStatus === "paid" && portalCase.stage === "Documents Required" ? (
+        <Card className="mt-6 flex flex-col items-start gap-3 border-brand-200 bg-brand-50/60 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-brand-800">Documents needed</p>
+            <p className="mt-1 text-sm text-ink-600">
+              Payment confirmed. Upload your ID, screenshots and any emails from the platform so
+              {portalCase.agentName ? ` ${portalCase.agentName.split(" ")[0]}` : " your agent"} can start the recovery.
+            </p>
+          </div>
+          <ButtonLink href={`/portal/documents?case=${portalCase.id}`} size="sm">
+            Upload documents
+          </ButtonLink>
         </Card>
       ) : null}
 

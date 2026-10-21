@@ -42,30 +42,47 @@ export default function AdminCasesPage() {
   const [agents, setAgents] = useState<AgentOption[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [isAgent, setIsAgent] = useState(false);
+  const [actionError, setActionError] = useState<{ caseId: string; message: string } | null>(null);
+
+  async function loadCases() {
+    const casesRes = await fetch("/api/admin/cases", { cache: "no-store" });
+    if (casesRes.status === 403) {
+      setCases("unauthorized");
+      return;
+    }
+    if (!casesRes.ok) return;
+    const casesData = await casesRes.json();
+    setCases(casesData.cases ?? []);
+    if (casesData.role === "agent") setIsAgent(true);
+  }
 
   useEffect(() => {
     async function load() {
-      const [casesRes, agentsRes] = await Promise.all([
-        fetch("/api/admin/cases"),
-        fetch("/api/admin/agents"),
-      ]);
-      if (casesRes.status === 403) {
-        setCases("unauthorized");
-        return;
-      }
-      const casesData = await casesRes.json();
-      setCases(casesData.cases ?? []);
-      if (casesData.role === "agent") setIsAgent(true);
+      await loadCases();
+      const agentsRes = await fetch("/api/admin/agents");
       if (agentsRes.ok) {
         const agentsData = await agentsRes.json();
         setAgents((agentsData.agents ?? []).map((a: AgentOption) => ({ id: a.id, name: a.name, active: a.active })));
       }
     }
+    // Reading from the API (an external system) can only safely happen
+    // after mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
+    // Keep payment status and stages current (e.g. a payment the admin
+    // just confirmed elsewhere) without a manual reload.
+    const interval = setInterval(loadCases, 30_000);
+    const onFocus = () => loadCases();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+    };
   }, []);
 
   async function handleStageChange(caseId: string, stage: CaseStage) {
     setBusyId(caseId);
+    setActionError(null);
     try {
       const res = await fetch("/api/admin/cases/advance", {
         method: "POST",
@@ -76,6 +93,14 @@ export default function AdminCasesPage() {
         setCases((prev) =>
           Array.isArray(prev) ? prev.map((c) => (c.id === caseId ? { ...c, stage } : c)) : prev
         );
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setActionError({
+          caseId,
+          message:
+            data.message ||
+            (res.status === 403 ? "You can't change this case." : "Couldn't update the stage — please try again."),
+        });
       }
     } finally {
       setBusyId(null);
@@ -91,7 +116,9 @@ export default function AdminCasesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ caseId, agentId }),
       });
-      if (res.ok) {
+      if (!res.ok) {
+        setActionError({ caseId, message: "Couldn't assign that agent — please try again." });
+      } else {
         const agentName = agents.find((a) => a.id === agentId)?.name ?? null;
         setCases((prev) =>
           Array.isArray(prev) ? prev.map((c) => (c.id === caseId ? { ...c, agentName } : c)) : prev
@@ -200,6 +227,11 @@ export default function AdminCasesPage() {
                   </div>
                 </div>
               </div>
+              {actionError?.caseId === c.id ? (
+                <p className="mt-3 rounded-lg bg-risk-high-bg px-3 py-2 text-xs font-medium text-risk-high">
+                  {actionError.message}
+                </p>
+              ) : null}
             </div>
           ))}
         </div>
