@@ -10,6 +10,7 @@
 
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
+import { sendCaseUpdateEmail } from "@/lib/email/case-update";
 import { canAccessCase, getAdminRole } from "@/lib/admin/auth";
 import { canMoveToStage, type PaymentStatus } from "@/lib/portal/case-rules";
 import type { CaseStage } from "@/lib/portal/mock-data";
@@ -102,18 +103,13 @@ export async function POST(request: Request) {
   const { data: clientData } = await admin.auth.admin.getUserById(updatedCase.user_id);
   const clientEmail = clientData?.user?.email;
   if (clientEmail) {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
-    fetch(`${appUrl}/api/case-update-email`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        to: clientEmail,
-        clientName: (clientData?.user?.user_metadata?.full_name as string | undefined) || "there",
-        caseTitle: updatedCase.title,
-        kind: "stage_changed",
-        stage,
-      }),
-    }).catch(() => {});
+    await sendCaseUpdateEmail({
+      to: clientEmail,
+      kind: "stage_changed",
+      clientName: (clientData?.user?.user_metadata?.full_name as string | undefined) || "there",
+      caseTitle: updatedCase.title,
+      stage,
+    });
   }
 
   return NextResponse.json({ ok: true, stage });

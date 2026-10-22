@@ -9,6 +9,7 @@
 
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
+import { sendCaseUpdateEmail } from "@/lib/email/case-update";
 import { getAdminRole } from "@/lib/admin/auth";
 import { paymentConfirmationUpdate, type PaymentStatus } from "@/lib/portal/case-rules";
 import type { CaseStage } from "@/lib/portal/mock-data";
@@ -91,17 +92,13 @@ export async function POST(request: Request) {
   const { data: clientData } = await admin.auth.admin.getUserById(updatedCase.user_id);
   const clientEmail = clientData?.user?.email;
   if (clientEmail) {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
-    fetch(`${appUrl}/api/case-update-email`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        to: clientEmail,
-        clientName: (clientData?.user?.user_metadata?.full_name as string | undefined) || "there",
-        caseTitle: updatedCase.title,
-        kind: "payment_confirmed",
-      }),
-    }).catch(() => {});
+    await sendCaseUpdateEmail({
+      to: clientEmail,
+      kind: "payment_confirmed",
+      clientName: (clientData?.user?.user_metadata?.full_name as string | undefined) || "there",
+      caseTitle: updatedCase.title,
+      agentName: updatedCase.agent_name,
+    });
   }
 
   return NextResponse.json({

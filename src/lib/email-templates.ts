@@ -12,6 +12,33 @@ const TEXT_LIGHT = "#94a3b8";
 const GREEN = "#16a34a";
 const GREEN_BG = "#dcfce7";
 
+// Every value interpolated into these templates can come from a client
+// (names, case titles, messages, file names), so all string inputs are
+// HTML-escaped once, at the top of each template, via escapeOpts().
+export function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function escapeOpts<T extends Record<string, unknown>>(opts: T): T {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(opts)) {
+    if (typeof value === "string") out[key] = escapeHtml(value);
+    else if (Array.isArray(value)) out[key] = value.map((v) => (typeof v === "string" ? escapeHtml(v) : v));
+    else out[key] = value;
+  }
+  return out as T;
+}
+
+// Only http(s) links may be rendered as links/images.
+function safeUrl(url: string | null | undefined): string | null {
+  return url && /^https?:\/\//i.test(url) ? url : null;
+}
+
 function wrapper(content: string) {
   return `<!DOCTYPE html>
 <html lang="en">
@@ -108,7 +135,7 @@ export function documentsSubmittedEmail(opts: {
   fileNames: string[];
   caseTitle?: string | null;
 }) {
-  const { clientName, clientEmail, fileCount, fileNames, caseTitle } = opts;
+  const { clientName, clientEmail, fileCount, fileNames, caseTitle } = escapeOpts(opts);
   const adminUrl = `${PORTAL_URL}/admin`;
   return wrapper(`
     <div style="margin-bottom:8px;">${statusBadge("Documents Submitted", BRAND_PURPLE, BRAND_LIGHT)}</div>
@@ -134,7 +161,7 @@ export function documentsSubmittedEmail(opts: {
       ${fileNames.map(name => `
       <li style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f1f5f9;">
         <span style="color:${BRAND_PURPLE};font-size:16px;">📄</span>
-        <span style="color:${TEXT_DARK};font-size:13px;">${name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>
+        <span style="color:${TEXT_DARK};font-size:13px;">${name}</span>
       </li>`).join("")}
     </ul>
     ` : ""}
@@ -159,7 +186,8 @@ export function contactNotificationEmail(opts: {
   platform?: string | null;
   screenshotUrl?: string | null;
 }) {
-  const { source, name, email, phone, message, platform, screenshotUrl } = opts;
+  const { source, name, email, phone, message, platform, screenshotUrl: rawScreenshotUrl } = escapeOpts(opts);
+  const screenshotUrl = safeUrl(rawScreenshotUrl);
   const sourceLabel: Record<string, string> = {
     contact_form: "Contact Form",
     health_check: "Account Health Check",
@@ -190,7 +218,7 @@ export function contactNotificationEmail(opts: {
     ${message ? `
     <h2 style="margin:0 0 10px;color:${TEXT_DARK};font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Their message</h2>
     <div style="background:#fffbeb;border-left:4px solid #f59e0b;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
-      <p style="margin:0;color:${TEXT_DARK};font-size:14px;line-height:1.8;white-space:pre-wrap;">${message.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
+      <p style="margin:0;color:${TEXT_DARK};font-size:14px;line-height:1.8;white-space:pre-wrap;">${message}</p>
     </div>
     ` : ""}
 
@@ -218,7 +246,7 @@ export function contactNotificationEmail(opts: {
 export function contactAutoReplyEmail(opts: {
   name: string;
 }) {
-  const { name } = opts;
+  const { name } = escapeOpts(opts);
   return wrapper(`
     <div style="margin-bottom:8px;">${statusBadge("Message Received", GREEN, GREEN_BG)}</div>
     <h1 style="margin:16px 0 8px;color:${BRAND_DARK};font-size:24px;font-weight:700;line-height:1.3;">
@@ -266,7 +294,7 @@ export function caseSubmittedEmail(opts: {
   agentName?: string | null;
   agentPhone?: string | null;
 }) {
-  const { clientName, caseTitle, agentName, agentPhone } = opts;
+  const { clientName, caseTitle, agentName, agentPhone } = escapeOpts(opts);
   return wrapper(`
     <div style="margin-bottom:8px;">${statusBadge("Case Received", BRAND_PURPLE, BRAND_LIGHT)}</div>
     <h1 style="margin:16px 0 8px;color:${BRAND_DARK};font-size:24px;font-weight:700;line-height:1.3;">
@@ -317,7 +345,7 @@ export function caseSubmittedEmail(opts: {
 
 // 2. Payment / receipt received
 export function receiptReceivedEmail(opts: { clientName: string; caseTitle: string }) {
-  const { clientName, caseTitle } = opts;
+  const { clientName, caseTitle } = escapeOpts(opts);
   return wrapper(`
     <div style="margin-bottom:8px;">${statusBadge("Payment Received", GREEN, GREEN_BG)}</div>
     <h1 style="margin:16px 0 8px;color:${BRAND_DARK};font-size:24px;font-weight:700;line-height:1.3;">
@@ -356,7 +384,7 @@ export function agentAssignedEmail(opts: {
   agentName: string;
   agentPhone?: string | null;
 }) {
-  const { clientName, caseTitle, agentName, agentPhone } = opts;
+  const { clientName, caseTitle, agentName, agentPhone } = escapeOpts(opts);
   return wrapper(`
     <div style="margin-bottom:8px;">${statusBadge("Agent Assigned", "#7c3aed", "#ede9fe")}</div>
     <h1 style="margin:16px 0 8px;color:${BRAND_DARK};font-size:24px;font-weight:700;line-height:1.3;">
@@ -400,7 +428,7 @@ export function stageChangedEmail(opts: {
   stage: string;
   agentName?: string | null;
 }) {
-  const { clientName, caseTitle, stage, agentName } = opts;
+  const { clientName, caseTitle, stage, agentName } = escapeOpts(opts);
 
   const stageConfig: Record<string, { emoji: string; color: string; bg: string; message: string }> = {
     "Getting Started": { emoji: "🚀", color: "#7c3aed", bg: "#ede9fe", message: "Your case is now active and recovery work is beginning." },
@@ -459,7 +487,7 @@ export function paymentConfirmedEmail(opts: {
   caseTitle: string;
   agentName?: string | null;
 }) {
-  const { clientName, caseTitle, agentName } = opts;
+  const { clientName, caseTitle, agentName } = escapeOpts(opts);
   return wrapper(`
     <div style="margin-bottom:8px;">${statusBadge("Payment Confirmed", GREEN, GREEN_BG)}</div>
     <h1 style="margin:16px 0 8px;color:${BRAND_DARK};font-size:24px;font-weight:700;line-height:1.3;">
@@ -509,7 +537,7 @@ export function subscriptionWelcomeEmail(opts: {
   features: string[];
   renewsOn: string | null;
 }) {
-  const { clientName, planName, planPrice, priceSuffix, features, renewsOn } = opts;
+  const { clientName, planName, planPrice, priceSuffix, features, renewsOn } = escapeOpts(opts);
   const firstName = clientName.split(" ")[0];
   return wrapper(`
     <div style="margin-bottom:8px;">${statusBadge("Account Protection Active", GREEN, GREEN_BG)}</div>

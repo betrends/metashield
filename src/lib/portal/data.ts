@@ -16,8 +16,7 @@ import {
   getLocalAccount,
   getLocalCase,
 } from "@/lib/portal/local-records";
-import { pickAgent } from "@/lib/portal/agents";
-import { getFollowerRangeFeeKobo, formatNaira, type FollowerRange } from "@/lib/portal/case-fees";
+import type { FollowerRange } from "@/lib/portal/case-fees";
 import { pickDefaultCaseId, safeStorageName } from "@/lib/portal/case-rules";
 
 export type PortalAccount = {
@@ -102,22 +101,6 @@ async function requireUser(supabase: SupabaseClient) {
   } = await supabase.auth.getUser();
   if (!user) throw new Error("You need to be signed in.");
   return user;
-}
-
-// Picks a random active agent from the real roster the admin manages at
-// /admin/agents. Falls back to the hardcoded placeholder list only if
-// that table is empty or unreachable (e.g. migration not run yet), so a
-// case never fails to get an agent.
-async function pickRealAgent(
-  supabase: SupabaseClient
-): Promise<{ id: string | null; name: string; phone: string; email: string }> {
-  const { data } = await supabase.from("agents").select("id, name, phone, email").eq("active", true);
-  if (data && data.length > 0) {
-    const row = data[Math.floor(Math.random() * data.length)];
-    return { id: row.id, name: row.name, phone: row.phone ?? "", email: row.email };
-  }
-  const fallback = pickAgent();
-  return { id: null, ...fallback };
 }
 
 // ── Accounts ──────────────────────────────────────────────────────────
@@ -253,6 +236,9 @@ export async function fetchCase(id: string): Promise<PortalCase | null> {
   return mapCase(row, await fetchCaseTimeline(supabase, row.id));
 }
 
+// Case creation, stage changes and payment-status changes all happen on
+// the server (see /api/portal/cases): the fee, agent and starting stage
+// are decided there, not by the browser.
 export async function createCase(input: {
   title: string;
   platform: string;
@@ -262,138 +248,47 @@ export async function createCase(input: {
   timeline?: { event: string }[];
   screenshotUrl?: string | null;
 }): Promise<PortalCase> {
-  const supabase = createClient();
-  const user = await requireUser(supabase);
-  const agent = await pickRealAgent(supabase);
-  const feeKobo = input.followerRange ? getFollowerRangeFeeKobo(input.followerRange) : 100_000_00; // default to 0-500 if not specified
-
-  // Every new case starts here — an agent is assigned immediately, and
-  // recovery work begins once the client pays the case fee.
-  const { data: insertedCase, error } = await supabase
-    .from("cases")
-    .insert({
-      user_id: user.id,
-      title: input.title,
-      platform: input.platform,
-      account_handle: input.accountHandle,
-      stage: "Payment Pending",
-      agent_id: agent.id,
-      agent_name: agent.name,
-      agent_phone: agent.phone,
-      agent_email: agent.email,
-      issue: input.issue,
-      fee_amount_kobo: feeKobo,
-      payment_status: "unpaid",
-      screenshot_url: input.screenshotUrl ?? null,
-    })
-    .select()
-    .single();
-  if (error) throw error;
-  const row = insertedCase as CaseRow;
-
-  const timelineEvents = [
-    ...(input.timeline ?? []),
-    { event: `Assigned to ${agent.name}` },
-    { event: `Payment of ${formatNaira(feeKobo)} required to begin recovery` },
-  ];
-  await supabase
-    .from("case_timeline_events")
-    .insert(timelineEvents.map((t) => ({ case_id: row.id, event: t.event })));
-
-  // A welcome message from the assigned agent, so the case doesn't open
-  // to an empty inbox — matches the "your agent talks to you on
-  // messages" experience, and gives them the agent's name right away.
-  await supabase.from("messages").insert({
-    user_id: user.id,
-    case_id: row.id,
-    from_role: "team",
-    author_name: agent.name,
-    body: `Hi ${
-      (user.user_metadata?.full_name as string | undefined)?.split(" ")[0] || "there"
-    }, I'm ${agent.name} and I'll be handling your case (${input.title}). Once the case fee of ${formatNaira(
-      feeKobo
-    )} is paid, I'll start the recovery process right away — you can pay from this case's page any time, and reach me directly at ${agent.phone}.`,
+  const res = await fetch("/api/portal/cases", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
   });
-
-  // Let the client know by email too. Fire-and-forget — the case is
-  // already saved regardless of whether this succeeds, and it silently
-  // no-ops if RESEND_API_KEY isn't configured yet.
-  if (user.email) {
-    fetch("/api/case-update-email", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        to: user.email,
-        clientName: (user.user_metadata?.full_name as string | undefined) || "there",
-        caseTitle: input.title,
-        kind: "case_submitted",
-        agentName: agent.name,
-        agentPhone: agent.phone,
-      }),
-    }).catch(() => {});
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.id) {
+    throw new Error(res.status === 401 ? "You need to be signed in." : "Couldn't create the case — please try again.");
   }
-
-  return mapCase(row, await fetchCaseTimeline(supabase, row.id));
+  const created = await fetchCase(data.id);
+  if (!created) throw new Error("Case was created but couldn't be loaded — please refresh.");
+  return created;
 }
 
-export async function updateCaseStage(caseId: string, stage: CaseStage): Promise<void> {
-  const supabase = createClient();
-  const user = await requireUser(supabase);
-
-  const { data: updatedCase, error } = await supabase
-    .from("cases")
-    .update({ stage })
-    .eq("id", caseId)
-    .select()
-    .single();
-  if (error) throw error;
-  const row = updatedCase as CaseRow;
-
-  await supabase.from("case_timeline_events").insert({ case_id: caseId, event: `Moved to ${stage}` });
-
-  if (user.email) {
-    fetch("/api/case-update-email", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        to: user.email,
-        clientName: (user.user_metadata?.full_name as string | undefined) || "there",
-        caseTitle: row.title,
-        kind: "stage_changed",
-        stage,
-      }),
-    }).catch(() => {});
-  }
-}
-
-// Bank-transfer flow: the client uploads proof of payment, which puts the
-// case into "pending_review" until the admin confirms it (see
-// /admin/payments). Reuses the same "documents" Storage bucket as
-// the Document Center, under a receipts/ sub-path.
+// Bank-transfer flow: the client uploads proof of payment to their own
+// Storage folder, then the server records it and puts the case into
+// "pending_review" until the admin confirms it (see /admin/payments).
 export async function submitPaymentReceipt(caseId: string, file: File): Promise<PortalCase> {
   const supabase = createClient();
   const user = await requireUser(supabase);
 
-  const path = `${user.id}/receipts/${caseId}-${Date.now()}-${file.name}`;
+  const path = `${user.id}/receipts/${caseId}-${Date.now()}-${safeStorageName(file.name)}`;
   const { error: uploadError } = await supabase.storage.from("documents").upload(path, file);
   if (uploadError) throw uploadError;
 
-  const { data: updatedCase, error } = await supabase
-    .from("cases")
-    .update({ payment_status: "pending_review", receipt_storage_path: path })
-    .eq("id", caseId)
-    .select()
-    .single();
-  if (error) throw error;
-  const row = updatedCase as CaseRow;
-
-  await supabase.from("case_timeline_events").insert({
-    case_id: caseId,
-    event: "Payment receipt submitted — awaiting confirmation",
+  const res = await fetch("/api/portal/cases/receipt", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ caseId, storagePath: path }),
   });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      data.error === "already_paid"
+        ? "This case is already marked as paid."
+        : "Your receipt was uploaded but couldn't be recorded — please try again."
+    );
+  }
 
   // Let the team know a receipt needs review. Fire-and-forget — the
-  // receipt itself is already saved regardless of whether this succeeds.
+  // receipt itself is already recorded regardless of whether this succeeds.
   fetch("/api/notify", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -401,27 +296,14 @@ export async function submitPaymentReceipt(caseId: string, file: File): Promise<
       source: "payment_receipt",
       name: (user.user_metadata?.full_name as string | undefined) || "A client",
       email: user.email || "unknown",
-      message: `Receipt submitted for case "${row.title}" (${caseId}). Review it at /admin/payments.`,
-      metadata: { caseId, caseTitle: row.title, feeAmountKobo: String(row.fee_amount_kobo ?? "") },
+      message: `Receipt submitted for case "${data.title}" (${caseId}). Review it at /admin/payments.`,
+      metadata: { caseId, caseTitle: data.title, feeAmountKobo: String(data.feeAmountKobo ?? "") },
     }),
   }).catch(() => {});
 
-  // Let the client know their receipt arrived too — every step of
-  // recovery gets its own email, not just submission and confirmation.
-  if (user.email) {
-    fetch("/api/case-update-email", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        to: user.email,
-        clientName: (user.user_metadata?.full_name as string | undefined) || "there",
-        caseTitle: row.title,
-        kind: "receipt_received",
-      }),
-    }).catch(() => {});
-  }
-
-  return mapCase(row, await fetchCaseTimeline(supabase, row.id));
+  const updated = await fetchCase(caseId);
+  if (!updated) throw new Error("Receipt recorded — please refresh to see the update.");
+  return updated;
 }
 
 async function fetchCaseTimeline(supabase: SupabaseClient, caseId: string) {

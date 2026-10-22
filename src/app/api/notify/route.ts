@@ -42,8 +42,10 @@ export async function POST(request: Request) {
   }
 
   const source = typeof body.source === "string" ? body.source : "";
-  const name = typeof body.name === "string" ? body.name.trim() : "";
-  const email = typeof body.email === "string" ? body.email.trim() : "";
+  // This endpoint is public (contact form, wizards), so cap every field.
+  // Template output is HTML-escaped in lib/email-templates.ts.
+  const name = typeof body.name === "string" ? body.name.trim().slice(0, 100) : "";
+  const email = typeof body.email === "string" ? body.email.trim().slice(0, 254) : "";
 
   if (!VALID_SOURCES.includes(source as Source)) {
     return NextResponse.json({ error: "invalid_source" }, { status: 400 });
@@ -51,11 +53,16 @@ export async function POST(request: Request) {
   if (!name || !email) {
     return NextResponse.json({ error: "missing_fields" }, { status: 400 });
   }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return NextResponse.json({ error: "invalid_email" }, { status: 400 });
+  }
 
-  const phone = typeof body.phone === "string" ? body.phone.trim() : null;
-  const message = typeof body.message === "string" ? body.message.trim() : null;
+  const phone = typeof body.phone === "string" ? body.phone.trim().slice(0, 40) : null;
+  const message = typeof body.message === "string" ? body.message.trim().slice(0, 5000) : null;
   const metadata =
-    body.metadata && typeof body.metadata === "object" ? body.metadata : null;
+    body.metadata && typeof body.metadata === "object" && JSON.stringify(body.metadata).length <= 5000
+      ? body.metadata
+      : null;
 
   // Save first — this is the record of truth even if email sending fails.
   try {
