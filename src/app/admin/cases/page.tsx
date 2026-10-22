@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { caseStages, type CaseStage } from "@/lib/portal/mock-data";
+import { PaymentStatusBadge, PaymentSummaryLine } from "@/components/portal/PaymentStatusBadge";
+import type { PaymentRecord } from "@/lib/portal/payments";
 
 type AdminCase = {
   id: string;
@@ -10,6 +12,7 @@ type AdminCase = {
   accountHandle: string;
   stage: CaseStage;
   paymentStatus: "unpaid" | "pending_review" | "paid" | "failed";
+  payment: PaymentRecord;
   agentName: string | null;
   createdAt: string;
   clientName: string | null;
@@ -18,24 +21,6 @@ type AdminCase = {
 };
 
 type AgentOption = { id: string; name: string; active: boolean };
-
-function PaymentPill({ status }: { status: AdminCase["paymentStatus"] }) {
-  if (status === "paid") {
-    return (
-      <span className="rounded-full bg-risk-low-bg px-2.5 py-1 text-[11px] font-semibold text-risk-low">Paid</span>
-    );
-  }
-  if (status === "pending_review") {
-    return (
-      <span className="rounded-full bg-risk-medium-bg px-2.5 py-1 text-[11px] font-semibold text-risk-medium">
-        Receipt in review
-      </span>
-    );
-  }
-  return (
-    <span className="rounded-full bg-risk-high-bg px-2.5 py-1 text-[11px] font-semibold text-risk-high">Unpaid</span>
-  );
-}
 
 export default function AdminCasesPage() {
   const [cases, setCases] = useState<AdminCase[] | "loading" | "unauthorized">("loading");
@@ -160,7 +145,7 @@ export default function AdminCasesPage() {
                     <span className="text-[11px] font-semibold text-brand-600">
                       Case #{c.id.slice(0, 8).toUpperCase()}
                     </span>
-                    <PaymentPill status={c.paymentStatus} />
+                    <PaymentStatusBadge payment={c.payment} />
                   </div>
                   <p className="mt-1 text-sm font-semibold text-ink-900">{c.title}</p>
                   <p className="mt-0.5 text-xs text-ink-500">
@@ -170,6 +155,7 @@ export default function AdminCasesPage() {
                     {c.clientName || "Unknown client"}
                     {c.clientEmail ? ` · ${c.clientEmail}` : ""}
                   </p>
+                  <PaymentSummaryLine payment={c.payment} />
                   {c.screenshotUrl && (
                     <a
                       href={c.screenshotUrl}

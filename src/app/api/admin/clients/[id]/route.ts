@@ -2,6 +2,7 @@
 // Gated to ADMIN_EMAIL.
 
 import { NextResponse } from "next/server";
+import { PAYMENT_COLUMNS, pickPaymentRecord } from "@/lib/portal/payments";
 import { createClient as createServerClient, createAdminClient } from "@/lib/supabase/server";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -28,7 +29,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         .order("created_at", { ascending: false }),
       admin
         .from("cases")
-        .select("id, title, platform, stage, payment_status, fee_amount_kobo, agent_name, created_at")
+        .select(`id, title, platform, stage, agent_name, created_at, ${PAYMENT_COLUMNS}`)
         .eq("user_id", id)
         .order("created_at", { ascending: false }),
       admin
@@ -66,6 +67,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       platform: c.platform,
       stage: c.stage,
       paymentStatus: c.payment_status,
+      payment: pickPaymentRecord(c as Record<string, unknown>),
       feeAmountKobo: c.fee_amount_kobo,
       agentName: c.agent_name,
       createdAt: c.created_at,

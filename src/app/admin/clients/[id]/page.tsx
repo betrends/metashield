@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { PaymentStatusBadge, PaymentSummaryLine } from "@/components/portal/PaymentStatusBadge";
+import type { PaymentRecord } from "@/lib/portal/payments";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { getPlan, type PlanId } from "@/lib/portal/billing";
@@ -22,6 +24,7 @@ type Detail = {
     platform: string;
     stage: string;
     paymentStatus: "unpaid" | "pending_review" | "paid" | "failed";
+    payment: PaymentRecord;
     feeAmountKobo: number | null;
     agentName: string | null;
     createdAt: string;
@@ -187,15 +190,10 @@ export default function AdminClientDetailPage() {
                   {c.platform} · Agent: {c.agentName || "—"}
                   {c.feeAmountKobo ? ` · Fee: ${formatNaira(c.feeAmountKobo)}` : ""}
                 </p>
-                <p className="mt-2 text-xs font-semibold">
-                  {c.paymentStatus === "paid" ? (
-                    <span className="text-risk-low">Paid</span>
-                  ) : c.paymentStatus === "pending_review" ? (
-                    <span className="text-risk-medium">Receipt in review</span>
-                  ) : (
-                    <span className="text-risk-high">Unpaid</span>
-                  )}
-                </p>
+                <div className="mt-2">
+                  <PaymentStatusBadge payment={c.payment} />
+                </div>
+                <PaymentSummaryLine payment={c.payment} />
               </div>
             ))}
           </div>

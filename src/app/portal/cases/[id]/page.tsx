@@ -9,6 +9,8 @@ import { CaseStageStepper } from "@/components/portal/CaseStageStepper";
 import { fetchCase, submitPaymentReceipt, type PortalCase } from "@/lib/portal/data";
 import { formatNaira } from "@/lib/portal/case-fees";
 import { bankDetails } from "@/lib/portal/bank-details";
+import { PaymentStatusBadge, formatBalanceDeadline } from "@/components/portal/PaymentStatusBadge";
+import { summarizePayment, type PaymentKind } from "@/lib/portal/payments";
 
 export default function PortalCaseDetailPage() {
   const params = useParams<{ id: string }>();
@@ -37,14 +39,14 @@ export default function PortalCaseDetailPage() {
     };
   }, [params.id]);
 
-  async function handleReceiptChange(e: ChangeEvent<HTMLInputElement>) {
+  async function handleReceiptChange(e: ChangeEvent<HTMLInputElement>, kind: PaymentKind) {
     const file = e.target.files?.[0];
     e.target.value = "";
-    if (!file || !portalCase) return;
+    if (!file || !portalCase || uploadingReceipt) return;
     setReceiptError(null);
     setUploadingReceipt(true);
     try {
-      const updated = await submitPaymentReceipt(portalCase.id, file);
+      const updated = await submitPaymentReceipt(portalCase.id, file, kind);
       setPortalCase(updated);
     } catch (err) {
       setReceiptError(err instanceof Error ? err.message : "Couldn't upload that — please try again.");
@@ -72,6 +74,7 @@ export default function PortalCaseDetailPage() {
   }
 
   const displayId = portalCase.id.slice(0, 8).toUpperCase();
+  const payment = summarizePayment(portalCase.payment);
 
   return (
     <div>
@@ -128,78 +131,115 @@ export default function PortalCaseDetailPage() {
         </Card>
       ) : null}
 
-      {portalCase.paymentStatus !== "paid" && portalCase.feeAmountKobo ? (
+      {payment.totalKobo > 0 ? (
         <Card className="mt-6 border-brand-200 bg-brand-50/60">
-          {portalCase.paymentStatus === "pending_review" ? (
-            <>
-              <p className="text-sm font-semibold text-brand-800">Payment under review</p>
-              <p className="mt-1 text-sm text-ink-600">
-                We&apos;ve received your receipt and are confirming it — you&apos;ll get a message
-                here as soon as it&apos;s verified and recovery starts.
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold text-ink-900">Payment</h2>
+            <PaymentStatusBadge payment={portalCase.payment} />
+          </div>
+
+          <dl className="mt-4 grid gap-3 rounded-xl border border-ink-200 bg-white p-4 sm:grid-cols-4">
+            <div>
+              <dt className="text-xs text-ink-400">Total recovery fee</dt>
+              <dd className="text-sm font-semibold text-ink-900">{formatNaira(payment.totalKobo)}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-ink-400">Deposit (50%)</dt>
+              <dd className="text-sm font-semibold text-ink-900">{formatNaira(payment.depositKobo)}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-ink-400">Amount paid</dt>
+              <dd className="text-sm font-semibold text-ink-900">{formatNaira(payment.amountPaidKobo)}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-ink-400">Outstanding balance</dt>
+              <dd className="text-sm font-semibold text-ink-900">{formatNaira(payment.outstandingKobo)}</dd>
+            </div>
+          </dl>
+
+          {!payment.depositConfirmed ? (
+            payment.depositStatus === "pending_review" ? (
+              <p className="mt-4 text-sm text-ink-600">
+                <span className="font-semibold text-brand-800">Deposit under review.</span> We&apos;ve received your
+                receipt and are checking it against our bank account — you&apos;ll get a message here as soon as
+                it&apos;s confirmed and recovery starts. There&apos;s no need to pay again.
               </p>
-            </>
+            ) : (
+              <>
+                <p className="mt-4 text-sm text-ink-600">
+                  {payment.depositStatus === "failed" ? (
+                    <span className="font-semibold text-risk-high">
+                      We couldn&apos;t match your last receipt to a transfer — please check and upload the correct
+                      one.{" "}
+                    </span>
+                  ) : null}
+                  {portalCase.agentName ? `${portalCase.agentName} is ready to begin — ` : ""}
+                  to start your recovery, transfer the{" "}
+                  <span className="font-semibold text-ink-900">deposit of {formatNaira(payment.depositKobo)}</span>{" "}
+                  (50% of the total fee) to the account below, then upload your receipt. The remaining{" "}
+                  {formatNaira(payment.balanceKobo)} is only due after your recovery is completed.
+                </p>
+                <BankDetails />
+                <ReceiptUpload
+                  label="Upload deposit receipt"
+                  uploading={uploadingReceipt}
+                  onChange={(e) => handleReceiptChange(e, "deposit")}
+                />
+              </>
+            )
+          ) : payment.balanceStatus === "not_due" ? (
+            <p className="mt-4 text-sm text-ink-600">
+              <span className="font-semibold text-risk-low">Payment Confirmed.</span> Your deposit is verified. The
+              remaining {formatNaira(payment.balanceKobo)} becomes due 24 hours after your recovery is completed —
+              nothing more to pay until then.
+            </p>
+          ) : payment.balanceStatus === "pending_review" ? (
+            <p className="mt-4 text-sm text-ink-600">
+              <span className="font-semibold text-brand-800">Final balance under review.</span> We&apos;re checking
+              your receipt against our bank account. There&apos;s no need to pay again.
+            </p>
+          ) : payment.balanceStatus === "paid" ? (
+            <p className="mt-4 text-sm font-semibold text-risk-low">Paid in full — thank you.</p>
           ) : (
             <>
-              <p className="text-sm font-semibold text-brand-800">Payment required to start recovery</p>
-              <p className="mt-1 text-sm text-ink-600">
-                {portalCase.agentName ? `${portalCase.agentName} is ready to begin — ` : ""}
-                transfer{" "}
-                <span className="font-semibold text-ink-900">
-                  {formatNaira(portalCase.feeAmountKobo)}
-                </span>{" "}
-                to the account below, then upload your receipt.
+              <p className="mt-4 text-sm text-ink-600">
+                {payment.balanceStatus === "failed" ? (
+                  <span className="font-semibold text-risk-high">
+                    We couldn&apos;t match your last receipt to a transfer — please check and upload the correct one.{" "}
+                  </span>
+                ) : null}
+                Your recovery is complete. Please transfer the{" "}
+                <span className="font-semibold text-ink-900">final balance of {formatNaira(payment.balanceKobo)}</span>
+                {payment.balanceDueAt ? (
+                  <>
+                    {" "}
+                    by{" "}
+                    <span className={`font-semibold ${payment.balanceOverdue ? "text-risk-high" : "text-ink-900"}`}>
+                      {formatBalanceDeadline(payment.balanceDueAt)}
+                    </span>
+                    {payment.balanceOverdue ? " (overdue)" : ""}
+                  </>
+                ) : null}{" "}
+                and upload your receipt.
               </p>
-
-              <div className="mt-4 grid gap-3 rounded-xl border border-ink-200 bg-white p-4 sm:grid-cols-3">
-                <div>
-                  <p className="text-xs text-ink-400">Bank</p>
-                  <p className="text-sm font-semibold text-ink-900">{bankDetails.bankName}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-ink-400">Account Number</p>
-                  <p className="text-sm font-semibold text-ink-900">{bankDetails.accountNumber}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-ink-400">Account Name</p>
-                  <p className="text-sm font-semibold text-ink-900">{bankDetails.accountName}</p>
-                </div>
-              </div>
-
-              <label className="mt-4 flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-brand-300 bg-white px-4 py-3.5 text-center hover:border-brand-400 hover:bg-brand-50/40">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-brand-600">
-                  <path
-                    d="M12 16V4m0 0-4 4m4-4 4 4M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                <span className="text-sm font-semibold text-brand-700">
-                  {uploadingReceipt ? "Uploading…" : "Upload payment receipt"}
-                </span>
-                <input
-                  type="file"
-                  accept="image/*,.pdf"
-                  className="hidden"
-                  disabled={uploadingReceipt}
-                  onChange={handleReceiptChange}
-                />
-              </label>
-              {receiptError ? (
-                <p className="mt-2 text-xs font-medium text-risk-high">{receiptError}</p>
-              ) : null}
+              <BankDetails />
+              <ReceiptUpload
+                label="Upload final balance receipt"
+                uploading={uploadingReceipt}
+                onChange={(e) => handleReceiptChange(e, "balance")}
+              />
             </>
           )}
+          {receiptError ? <p className="mt-2 text-xs font-medium text-risk-high">{receiptError}</p> : null}
         </Card>
       ) : null}
 
-      {portalCase.paymentStatus === "paid" && portalCase.stage === "Documents Required" ? (
+      {payment.depositConfirmed && portalCase.stage === "Documents Required" ? (
         <Card className="mt-6 flex flex-col items-start gap-3 border-brand-200 bg-brand-50/60 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-semibold text-brand-800">Documents needed</p>
             <p className="mt-1 text-sm text-ink-600">
-              Payment confirmed. Upload your ID, screenshots and any emails from the platform so
+              Payment Confirmed. Upload your ID, screenshots and any emails from the platform so
               {portalCase.agentName ? ` ${portalCase.agentName.split(" ")[0]}` : " your agent"} can start the recovery.
             </p>
           </div>
@@ -229,5 +269,54 @@ export default function PortalCaseDetailPage() {
         </ol>
       </Card>
     </div>
+  );
+}
+
+function BankDetails() {
+  return (
+    <div className="mt-4 grid gap-3 rounded-xl border border-ink-200 bg-white p-4 sm:grid-cols-3">
+      <div>
+        <p className="text-xs text-ink-400">Bank</p>
+        <p className="text-sm font-semibold text-ink-900">{bankDetails.bankName}</p>
+      </div>
+      <div>
+        <p className="text-xs text-ink-400">Account Number</p>
+        <p className="text-sm font-semibold text-ink-900">{bankDetails.accountNumber}</p>
+      </div>
+      <div>
+        <p className="text-xs text-ink-400">Account Name</p>
+        <p className="text-sm font-semibold text-ink-900">{bankDetails.accountName}</p>
+      </div>
+    </div>
+  );
+}
+
+function ReceiptUpload({
+  label,
+  uploading,
+  onChange,
+}: {
+  label: string;
+  uploading: boolean;
+  onChange: (e: ChangeEvent<HTMLInputElement>) => void;
+}) {
+  return (
+    <label
+      className={`mt-4 flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-brand-300 bg-white px-4 py-3.5 text-center ${
+        uploading ? "cursor-wait opacity-60" : "cursor-pointer hover:border-brand-400 hover:bg-brand-50/40"
+      }`}
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-brand-600">
+        <path
+          d="M12 16V4m0 0-4 4m4-4 4 4M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+      <span className="text-sm font-semibold text-brand-700">{uploading ? "Uploading…" : label}</span>
+      <input type="file" accept="image/*,.pdf" className="hidden" disabled={uploading} onChange={onChange} />
+    </label>
   );
 }

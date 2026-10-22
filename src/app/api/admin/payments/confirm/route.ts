@@ -1,17 +1,36 @@
-// Admin marks a case's bank-transfer payment as confirmed: advances the
-// case, logs it, and lets the client know. Gated to ADMIN_EMAIL.
+// Admin verifies a bank-transfer installment against the bank statement
+// and records it as paid. Gated to ADMIN_EMAIL (agents can see payment
+// status but cannot confirm money).
 //
-// Works for "pending_review" (receipt uploaded) and "unpaid" (client paid
-// but no receipt reached us — the admin has checked the bank account).
-// Idempotent: confirming an already-paid case returns ok without logging
-// or messaging twice, and a case already past "Documents Required" keeps
-// its stage.
+// Body: { caseId, kind?: "deposit" | "balance" }  (kind defaults to deposit)
+//
+//  - deposit: payment_status → "paid", deposit_paid_at set; a case still
+//    in a pre-payment stage moves to "Documents Required", the next step
+//    of the workflow. Works from "pending_review" (receipt uploaded),
+//    "failed" (re-verified) or "unpaid" (transfer seen at the bank but no
+//    receipt reached us).
+//  - balance: balance_status → "paid", balance_paid_at set; the case is
+//    then settled. Only after recovery completion made the balance due.
+//
+// Idempotent: the update is conditional on the installment not already
+// being paid, so a repeated request, double click or second admin gets
+// { alreadyPaid: true } and nothing is logged, messaged or emailed twice.
 
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { sendCaseUpdateEmail } from "@/lib/email/case-update";
 import { getAdminRole } from "@/lib/admin/auth";
-import { paymentConfirmationUpdate, type PaymentStatus } from "@/lib/portal/case-rules";
+import { paymentConfirmationUpdate } from "@/lib/portal/case-rules";
+import { formatNaira } from "@/lib/portal/case-fees";
+import {
+  confirmableFrom,
+  confirmationUpdate,
+  isAlreadyConfirmed,
+  PAYMENT_COLUMNS,
+  pickPaymentRecord,
+  summarizePayment,
+  type PaymentKind,
+} from "@/lib/portal/payments";
 import type { CaseStage } from "@/lib/portal/mock-data";
 
 export async function POST(request: Request) {
@@ -20,13 +39,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "not_authorized" }, { status: 403 });
   }
 
-  let body: { caseId?: unknown };
+  let body: { caseId?: unknown; kind?: unknown };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }
   const caseId = typeof body.caseId === "string" ? body.caseId : "";
+  const kind: PaymentKind = body.kind === "balance" ? "balance" : "deposit";
   if (!caseId) {
     return NextResponse.json({ error: "missing_case_id" }, { status: 400 });
   }
@@ -35,7 +55,7 @@ export async function POST(request: Request) {
 
   const { data: current, error: readError } = await admin
     .from("cases")
-    .select("id, title, user_id, agent_name, stage, payment_status")
+    .select(`id, title, user_id, agent_name, stage, ${PAYMENT_COLUMNS}`)
     .eq("id", caseId)
     .maybeSingle();
   if (readError) {
@@ -46,65 +66,93 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "case_not_found" }, { status: 404 });
   }
 
-  const { alreadyPaid, update } = paymentConfirmationUpdate({
-    stage: current.stage as CaseStage,
-    payment_status: current.payment_status as PaymentStatus,
-  });
-  if (alreadyPaid) {
-    return NextResponse.json({ ok: true, alreadyPaid: true, stage: current.stage, paymentStatus: "paid" });
+  const record = pickPaymentRecord(current);
+  if (isAlreadyConfirmed(kind, record)) {
+    return NextResponse.json({ ok: true, alreadyPaid: true, kind, payment: record, stage: current.stage });
+  }
+  const from = confirmableFrom(kind);
+  const statusNow = kind === "deposit" ? record.payment_status : record.balance_status ?? "not_due";
+  if (!from.includes(statusNow)) {
+    // e.g. confirming a balance before recovery completion made it due.
+    return NextResponse.json(
+      { error: "not_confirmable", status: statusNow, message: `The ${kind} isn't due yet for this case.` },
+      { status: 409 }
+    );
   }
 
-  // Only flips a case that is still unpaid, so two admins clicking at
-  // once can't both log the confirmation.
-  const { data: updatedCase, error } = await admin
+  const now = new Date();
+  const update: Record<string, unknown> = { ...confirmationUpdate(kind, record, now) };
+  if (kind === "deposit") {
+    // Same stage rule as before: a confirmed deposit unlocks the next
+    // workflow step, but never drags a case back.
+    const next = paymentConfirmationUpdate({ stage: current.stage as CaseStage, payment_status: record.payment_status });
+    if (next.update.stage) update.stage = next.update.stage;
+  }
+
+  const statusColumn = kind === "deposit" ? "payment_status" : "balance_status";
+  const { data: updated, error } = await admin
     .from("cases")
     .update(update)
     .eq("id", caseId)
-    .neq("payment_status", "paid")
-    .select("id, title, user_id, agent_name, stage, payment_status")
+    .in(statusColumn, from)
+    .select(`id, title, user_id, agent_name, stage, ${PAYMENT_COLUMNS}`)
     .maybeSingle();
 
   if (error) {
     console.error("Failed to confirm payment:", error);
     return NextResponse.json({ error: "update_failed", detail: error.message }, { status: 500 });
   }
-  if (!updatedCase) {
-    return NextResponse.json({ ok: true, alreadyPaid: true, stage: current.stage, paymentStatus: "paid" });
+  if (!updated) {
+    // Lost a race with another confirmation — nothing more to do.
+    return NextResponse.json({ ok: true, alreadyPaid: true, kind, stage: current.stage });
   }
 
-  const nextStepEvents = [{ case_id: caseId, event: "Payment confirmed — recovery started" }];
-  if (update.stage) nextStepEvents.push({ case_id: caseId, event: `Moved to ${update.stage}` });
-  const { error: timelineError } = await admin.from("case_timeline_events").insert(nextStepEvents);
+  const summary = summarizePayment(pickPaymentRecord(updated), now);
+  const amount = kind === "deposit" ? summary.depositKobo : summary.balanceKobo;
+
+  const events =
+    kind === "deposit"
+      ? [`Deposit of ${formatNaira(amount)} confirmed — Payment Confirmed`]
+      : [`Final balance of ${formatNaira(amount)} confirmed — paid in full`];
+  if (update.stage) events.push(`Moved to ${update.stage}`);
+  const { error: timelineError } = await admin
+    .from("case_timeline_events")
+    .insert(events.map((event) => ({ case_id: caseId, event })));
   if (timelineError) console.error("Payment confirmed but timeline insert failed:", timelineError);
 
   const { error: messageError } = await admin.from("messages").insert({
-    user_id: updatedCase.user_id,
+    user_id: updated.user_id,
     case_id: caseId,
     from_role: "team",
-    author_name: updatedCase.agent_name || "Your agent",
+    author_name: updated.agent_name || "Your agent",
     body:
-      updatedCase.stage === "Documents Required"
-        ? "Payment received and confirmed, thank you! Next step: please upload your supporting documents (ID, screenshots, any emails from the platform) in the Document Center so I can start the recovery."
-        : "Payment received and confirmed, thank you! I'll keep you posted here as the recovery progresses.",
+      kind === "balance"
+        ? `Your final balance of ${formatNaira(amount)} is confirmed — your case is now paid in full. Thank you!`
+        : updated.stage === "Documents Required"
+          ? `Your deposit of ${formatNaira(amount)} is confirmed, thank you! Next step: please upload your supporting documents (ID, screenshots, any emails from the platform) in the Document Center so I can start the recovery. The remaining ${formatNaira(
+              summary.balanceKobo
+            )} is only due after your recovery is completed.`
+          : `Your deposit of ${formatNaira(amount)} is confirmed, thank you! I'll keep you posted here as the recovery progresses.`,
   });
   if (messageError) console.error("Payment confirmed but message insert failed:", messageError);
 
-  const { data: clientData } = await admin.auth.admin.getUserById(updatedCase.user_id);
+  const { data: clientData } = await admin.auth.admin.getUserById(updated.user_id);
   const clientEmail = clientData?.user?.email;
   if (clientEmail) {
     await sendCaseUpdateEmail({
       to: clientEmail,
       kind: "payment_confirmed",
       clientName: (clientData?.user?.user_metadata?.full_name as string | undefined) || "there",
-      caseTitle: updatedCase.title,
-      agentName: updatedCase.agent_name,
+      caseTitle: updated.title,
+      agentName: updated.agent_name,
     });
   }
 
   return NextResponse.json({
     ok: true,
     alreadyPaid: false,
-    stage: updatedCase.stage,
-    paymentStatus: updatedCase.payment_status,
+    kind,
+    stage: updated.stage,
+    payment: pickPaymentRecord(updated),
   });
 }

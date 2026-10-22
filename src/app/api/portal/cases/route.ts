@@ -2,7 +2,8 @@
 // in the browser, which let a client choose their own fee, stage,
 // payment status and agent, and post the "welcome" message as the team.
 // Now the server decides all of those:
-//   - fee from the follower-range price list (lib/portal/case-fees.ts)
+//   - fee from the follower-range price list (lib/portal/case-fees.ts),
+//     and the 50% deposit due before recovery starts (lib/portal/payments.ts)
 //   - stage "Payment Pending", payment "unpaid"
 //   - a real active agent from the roster, or no agent (shows as
 //     "Unassigned" for the admin) — never a placeholder name without an
@@ -12,6 +13,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { formatNaira, getFollowerRangeFeeKobo, FOLLOWER_RANGES } from "@/lib/portal/case-fees";
 import { sendCaseUpdateEmail } from "@/lib/email/case-update";
+import { depositFor } from "@/lib/portal/payments";
 
 const MAX = { title: 120, platform: 60, handle: 120, issue: 2000, event: 200, events: 5 };
 
@@ -50,10 +52,16 @@ export async function POST(request: Request) {
   if (!title || !platform) {
     return NextResponse.json({ error: "missing_fields" }, { status: 400 });
   }
+  // The wizard requires ticking the Terms (incl. payment, deposit and
+  // refund policy) before submitting; record that acceptance here.
+  if (body.termsAccepted !== true) {
+    return NextResponse.json({ error: "terms_not_accepted" }, { status: 400 });
+  }
   const followerRange = FOLLOWER_RANGES.some((r) => r.value === body.followerRange)
     ? (body.followerRange as string)
     : "0-500";
   const feeKobo = getFollowerRangeFeeKobo(followerRange);
+  const depositKobo = depositFor(feeKobo);
   const clientEvents = (Array.isArray(body.timeline) ? body.timeline : [])
     .map((t) => str((t as { event?: unknown })?.event, MAX.event))
     .filter(Boolean)
@@ -78,7 +86,9 @@ export async function POST(request: Request) {
       agent_email: agent?.email ?? null,
       issue: issue || null,
       fee_amount_kobo: feeKobo,
+      deposit_amount_kobo: depositKobo,
       payment_status: "unpaid",
+      terms_accepted_at: new Date().toISOString(),
       screenshot_url: safeScreenshotUrl(body.screenshotUrl),
     })
     .select("id, title")
@@ -91,7 +101,7 @@ export async function POST(request: Request) {
   const events = [
     ...clientEvents,
     agent ? `Assigned to ${agent.name}` : "Awaiting agent assignment",
-    `Payment of ${formatNaira(feeKobo)} required to begin recovery`,
+    `Deposit of ${formatNaira(depositKobo)} (50% of ${formatNaira(feeKobo)}) required to begin recovery`,
   ];
   const { error: timelineError } = await admin
     .from("case_timeline_events")
@@ -106,14 +116,18 @@ export async function POST(request: Request) {
     from_role: "team",
     author_name: authorName,
     body: agent
-      ? `Hi ${firstName}, I'm ${agent.name} and I'll be handling your case (${title}). Once the case fee of ${formatNaira(
+      ? `Hi ${firstName}, I'm ${agent.name} and I'll be handling your case (${title}). The total recovery fee is ${formatNaira(
           feeKobo
-        )} is paid, I'll start the recovery process right away — you can pay from this case's page any time${
+        )}. Once the 50% deposit of ${formatNaira(
+          depositKobo
+        )} is confirmed, I'll start the recovery process right away — you can pay from this case's page any time${
           agent.phone ? `, and reach me directly at ${agent.phone}` : ""
         }.`
-      : `Hi ${firstName}, thanks for opening your case (${title}). An agent will be assigned shortly. Once the case fee of ${formatNaira(
+      : `Hi ${firstName}, thanks for opening your case (${title}). An agent will be assigned shortly. The total recovery fee is ${formatNaira(
           feeKobo
-        )} is paid, recovery starts right away — you can pay from this case's page any time.`,
+        )}; once the 50% deposit of ${formatNaira(
+          depositKobo
+        )} is confirmed, recovery starts right away — you can pay from this case's page any time.`,
   });
   if (messageError) console.error("Case created but welcome message failed:", messageError);
 

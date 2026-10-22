@@ -55,3 +55,13 @@ order by c.created_at;
 select count(*) filter (where case_id is null and from_role = 'client') as client_msgs_without_case,
        count(*) filter (where attachment_name is not null) as msgs_with_attachment_name
 from public.messages;
+
+-- 7. (Phase 2, after 012) Cases resolved BEFORE deposit/balance tracking
+--    existed: deposit counted as paid, but no completion time was ever
+--    recorded, so no final balance has been scheduled for them. Decide
+--    case by case; nothing is billed automatically.
+select id, title, stage, payment_status, fee_amount_kobo,
+       fee_amount_kobo - coalesce(deposit_amount_kobo, fee_amount_kobo / 2) as balance_if_billed_kobo
+from public.cases
+where stage = 'Resolved' and recovery_completed_at is null and payment_status = 'paid'
+order by created_at desc;

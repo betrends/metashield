@@ -1,22 +1,15 @@
-// Lists every case that hasn't been paid yet — "unpaid" (client hasn't
-// submitted anything) and "pending_review" (receipt submitted, needs a
-// human to confirm it actually landed in the bank account). Gated to
-// whichever email is set as ADMIN_EMAIL; everyone else gets 403.
+// Payment work queue for the admin: every case with an installment that
+// still needs attention —
+//   deposit: unpaid / pending_review (receipt to verify) / failed
+//   balance: due / pending_review (receipt to verify) / failed
+// Each row carries the authoritative payment record (lib/portal/payments.ts)
+// and a short-lived link to whichever receipt was uploaded. Gated to
+// ADMIN_EMAIL; everyone else gets 403.
 
 import { NextResponse } from "next/server";
-import { createClient as createServerClient, createAdminClient } from "@/lib/supabase/server";
-
-async function requireAdmin() {
-  const supabase = await createServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const adminEmail = process.env.ADMIN_EMAIL;
-  if (!user || !adminEmail || user.email !== adminEmail) {
-    return null;
-  }
-  return user;
-}
+import { createAdminClient } from "@/lib/supabase/server";
+import { getAdminRole } from "@/lib/admin/auth";
+import { PAYMENT_COLUMNS, pickPaymentRecord } from "@/lib/portal/payments";
 
 type CaseRow = {
   id: string;
@@ -25,16 +18,16 @@ type CaseRow = {
   platform: string;
   account_handle: string;
   issue: string | null;
-  fee_amount_kobo: number | null;
-  payment_status: "unpaid" | "pending_review" | "paid" | "failed";
-  receipt_storage_path: string | null;
+  stage: string;
   agent_name: string | null;
   created_at: string;
-};
+  receipt_storage_path: string | null;
+  balance_receipt_storage_path: string | null;
+} & Record<string, unknown>;
 
 export async function GET() {
-  const admin = await requireAdmin();
-  if (!admin) {
+  const role = await getAdminRole();
+  if (!role || role.type !== "admin") {
     return NextResponse.json({ error: "not_authorized" }, { status: 403 });
   }
 
@@ -42,9 +35,9 @@ export async function GET() {
   const { data, error } = await adminClient
     .from("cases")
     .select(
-      "id, user_id, title, platform, account_handle, issue, fee_amount_kobo, payment_status, receipt_storage_path, agent_name, created_at"
+      `id, user_id, title, platform, account_handle, issue, stage, agent_name, created_at, receipt_storage_path, balance_receipt_storage_path, ${PAYMENT_COLUMNS}`
     )
-    .in("payment_status", ["unpaid", "pending_review"])
+    .or("payment_status.in.(unpaid,pending_review,failed),balance_status.in.(due,pending_review,failed)")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -52,34 +45,38 @@ export async function GET() {
     return NextResponse.json({ error: "query_failed" }, { status: 500 });
   }
 
-  const rows = data as CaseRow[];
+  const rows = (data ?? []) as unknown as CaseRow[];
 
-  const withClientAndReceipt = await Promise.all(
+  async function sign(path: string | null) {
+    if (!path) return null;
+    const { data: signed } = await adminClient.storage.from("documents").createSignedUrl(path, 60 * 10);
+    return signed?.signedUrl ?? null;
+  }
+
+  const cases = await Promise.all(
     rows.map(async (row) => {
       const { data: userData } = await adminClient.auth.admin.getUserById(row.user_id);
-      let receiptUrl: string | null = null;
-      if (row.receipt_storage_path) {
-        const { data: signed } = await adminClient.storage
-          .from("documents")
-          .createSignedUrl(row.receipt_storage_path, 60 * 10); // 10 minutes
-        receiptUrl = signed?.signedUrl ?? null;
-      }
+      const payment = pickPaymentRecord(row);
       return {
         id: row.id,
         title: row.title,
         platform: row.platform,
         accountHandle: row.account_handle,
         issue: row.issue,
-        feeAmountKobo: row.fee_amount_kobo,
-        paymentStatus: row.payment_status,
+        stage: row.stage,
         agentName: row.agent_name,
         createdAt: row.created_at,
         clientName: (userData?.user?.user_metadata?.full_name as string | undefined) || null,
         clientEmail: userData?.user?.email || null,
-        receiptUrl,
+        payment,
+        // Kept for older clients of this API.
+        feeAmountKobo: payment.fee_amount_kobo,
+        paymentStatus: payment.payment_status,
+        receiptUrl: await sign(row.receipt_storage_path),
+        balanceReceiptUrl: await sign(row.balance_receipt_storage_path),
       };
     })
   );
 
-  return NextResponse.json({ cases: withClientAndReceipt });
+  return NextResponse.json({ cases });
 }

@@ -18,6 +18,7 @@ import {
 } from "@/lib/portal/local-records";
 import type { FollowerRange } from "@/lib/portal/case-fees";
 import { pickDefaultCaseId, safeStorageName } from "@/lib/portal/case-rules";
+import { pickPaymentRecord, type PaymentKind, type PaymentRecord } from "@/lib/portal/payments";
 
 export type PortalAccount = {
   id: string;
@@ -44,6 +45,9 @@ export type PortalCase = {
   feeAmountKobo?: number;
   paymentStatus: "unpaid" | "pending_review" | "paid" | "failed";
   receiptStoragePath?: string;
+  // The authoritative payment record; render it via summarizePayment()
+  // (lib/portal/payments.ts) so every screen agrees.
+  payment: PaymentRecord;
 };
 
 export type PortalMessage = {
@@ -210,6 +214,7 @@ function mapCase(row: CaseRow, timeline: PortalCase["timeline"]): PortalCase {
     feeAmountKobo: row.fee_amount_kobo ?? undefined,
     paymentStatus: row.payment_status,
     receiptStoragePath: row.receipt_storage_path ?? undefined,
+    payment: pickPaymentRecord(row as unknown as Record<string, unknown>),
   };
 }
 
@@ -247,6 +252,7 @@ export async function createCase(input: {
   followerRange?: FollowerRange;
   timeline?: { event: string }[];
   screenshotUrl?: string | null;
+  termsAccepted: boolean;
 }): Promise<PortalCase> {
   const res = await fetch("/api/portal/cases", {
     method: "POST",
@@ -265,7 +271,11 @@ export async function createCase(input: {
 // Bank-transfer flow: the client uploads proof of payment to their own
 // Storage folder, then the server records it and puts the case into
 // "pending_review" until the admin confirms it (see /admin/payments).
-export async function submitPaymentReceipt(caseId: string, file: File): Promise<PortalCase> {
+export async function submitPaymentReceipt(
+  caseId: string,
+  file: File,
+  kind: PaymentKind = "deposit"
+): Promise<PortalCase> {
   const supabase = createClient();
   const user = await requireUser(supabase);
 
@@ -276,13 +286,17 @@ export async function submitPaymentReceipt(caseId: string, file: File): Promise<
   const res = await fetch("/api/portal/cases/receipt", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ caseId, storagePath: path }),
+    body: JSON.stringify({ caseId, storagePath: path, kind }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(
-      data.error === "already_paid"
-        ? "This case is already marked as paid."
+      data.error === "not_payable"
+        ? data.status === "pending_review"
+          ? "A receipt for this payment is already being reviewed — no need to pay again."
+          : data.status === "paid"
+            ? "This payment is already confirmed — no need to pay again."
+            : "This payment isn't due yet."
         : "Your receipt was uploaded but couldn't be recorded — please try again."
     );
   }
@@ -296,8 +310,8 @@ export async function submitPaymentReceipt(caseId: string, file: File): Promise<
       source: "payment_receipt",
       name: (user.user_metadata?.full_name as string | undefined) || "A client",
       email: user.email || "unknown",
-      message: `Receipt submitted for case "${data.title}" (${caseId}). Review it at /admin/payments.`,
-      metadata: { caseId, caseTitle: data.title, feeAmountKobo: String(data.feeAmountKobo ?? "") },
+      message: `${kind === "deposit" ? "Deposit" : "Final balance"} receipt submitted for case "${data.title}" (${caseId}). Review it at /admin/payments.`,
+      metadata: { caseId, caseTitle: data.title, kind, amountKobo: String(data.amountKobo ?? "") },
     }),
   }).catch(() => {});
 
@@ -577,6 +591,9 @@ async function runMigration(): Promise<MigrationResult> {
           accountHandle: localCase.accountHandle,
           issue: localCase.issue,
           timeline: localCase.timeline,
+          // A local case is only saved by the wizard after its Terms
+          // checkbox is ticked (EligibilityWizard.handleSubmitCase).
+          termsAccepted: true,
         });
         caseId = created.id;
         clearLocalCase();
