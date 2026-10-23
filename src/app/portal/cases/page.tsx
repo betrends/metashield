@@ -54,7 +54,7 @@ export default function PortalCasesPage() {
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <PaymentStatusBadge status={c.paymentStatus} />
+                  <PaymentStatusBadge payment={c.payment} />
                   <span className="w-fit rounded-full bg-risk-medium-bg px-2.5 py-1 text-xs font-semibold text-risk-medium">
                     {c.stage}
                   </span>

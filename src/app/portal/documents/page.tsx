@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/Card";
 import {
   deleteDocument,
   fetchDocuments,
+  resolveDocumentCaseId,
   uploadDocument,
   type PortalDocument,
 } from "@/lib/portal/data";
@@ -56,15 +57,25 @@ export default function PortalDocumentsPage() {
     setSubmitting(true);
     setSubmitSuccess(false);
     try {
-      const uploaded = await Promise.all(staged.map((sf) => uploadDocument(sf.file)));
+      // Link the upload to a case (?case=<id> from the case page, else the
+      // client's case waiting on documents) so the assigned agent sees it.
+      const caseParam = new URLSearchParams(window.location.search).get("case");
+      const caseId = await resolveDocumentCaseId(caseParam);
+      const uploaded = await Promise.all(
+        staged.map((sf) => uploadDocument(sf.file, "Uploaded document", caseId))
+      );
       setDocuments((prev) => (prev === "loading" ? uploaded : [...uploaded, ...prev]));
 
-      // Fire-and-forget team notification — don't block on this
-      fetch("/api/portal/documents/notify", {
+      // Tells the team and, for a paid case waiting on documents, moves it
+      // on to "Under Review" so it can't sit at "Documents Required".
+      // Awaited (errors ignored) so the case has moved before we report
+      // success; the documents themselves are already saved either way.
+      await fetch("/api/portal/documents/notify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           fileNames: staged.map((sf) => sf.file.name),
+          caseId,
         }),
       }).catch(() => {});
 

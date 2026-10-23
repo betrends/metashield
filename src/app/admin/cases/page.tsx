@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { caseStages, type CaseStage } from "@/lib/portal/mock-data";
+import { PaymentStatusBadge, PaymentSummaryLine } from "@/components/portal/PaymentStatusBadge";
+import type { PaymentRecord } from "@/lib/portal/payments";
 
 type AdminCase = {
   id: string;
@@ -10,6 +12,7 @@ type AdminCase = {
   accountHandle: string;
   stage: CaseStage;
   paymentStatus: "unpaid" | "pending_review" | "paid" | "failed";
+  payment: PaymentRecord;
   agentName: string | null;
   createdAt: string;
   clientName: string | null;
@@ -19,53 +22,52 @@ type AdminCase = {
 
 type AgentOption = { id: string; name: string; active: boolean };
 
-function PaymentPill({ status }: { status: AdminCase["paymentStatus"] }) {
-  if (status === "paid") {
-    return (
-      <span className="rounded-full bg-risk-low-bg px-2.5 py-1 text-[11px] font-semibold text-risk-low">Paid</span>
-    );
-  }
-  if (status === "pending_review") {
-    return (
-      <span className="rounded-full bg-risk-medium-bg px-2.5 py-1 text-[11px] font-semibold text-risk-medium">
-        Receipt in review
-      </span>
-    );
-  }
-  return (
-    <span className="rounded-full bg-risk-high-bg px-2.5 py-1 text-[11px] font-semibold text-risk-high">Unpaid</span>
-  );
-}
-
 export default function AdminCasesPage() {
   const [cases, setCases] = useState<AdminCase[] | "loading" | "unauthorized">("loading");
   const [agents, setAgents] = useState<AgentOption[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [isAgent, setIsAgent] = useState(false);
+  const [actionError, setActionError] = useState<{ caseId: string; message: string } | null>(null);
+
+  async function loadCases() {
+    const casesRes = await fetch("/api/admin/cases", { cache: "no-store" });
+    if (casesRes.status === 403) {
+      setCases("unauthorized");
+      return;
+    }
+    if (!casesRes.ok) return;
+    const casesData = await casesRes.json();
+    setCases(casesData.cases ?? []);
+    if (casesData.role === "agent") setIsAgent(true);
+  }
 
   useEffect(() => {
     async function load() {
-      const [casesRes, agentsRes] = await Promise.all([
-        fetch("/api/admin/cases"),
-        fetch("/api/admin/agents"),
-      ]);
-      if (casesRes.status === 403) {
-        setCases("unauthorized");
-        return;
-      }
-      const casesData = await casesRes.json();
-      setCases(casesData.cases ?? []);
-      if (casesData.role === "agent") setIsAgent(true);
+      await loadCases();
+      const agentsRes = await fetch("/api/admin/agents");
       if (agentsRes.ok) {
         const agentsData = await agentsRes.json();
         setAgents((agentsData.agents ?? []).map((a: AgentOption) => ({ id: a.id, name: a.name, active: a.active })));
       }
     }
+    // Reading from the API (an external system) can only safely happen
+    // after mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
+    // Keep payment status and stages current (e.g. a payment the admin
+    // just confirmed elsewhere) without a manual reload.
+    const interval = setInterval(loadCases, 30_000);
+    const onFocus = () => loadCases();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+    };
   }, []);
 
   async function handleStageChange(caseId: string, stage: CaseStage) {
     setBusyId(caseId);
+    setActionError(null);
     try {
       const res = await fetch("/api/admin/cases/advance", {
         method: "POST",
@@ -76,6 +78,14 @@ export default function AdminCasesPage() {
         setCases((prev) =>
           Array.isArray(prev) ? prev.map((c) => (c.id === caseId ? { ...c, stage } : c)) : prev
         );
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setActionError({
+          caseId,
+          message:
+            data.message ||
+            (res.status === 403 ? "You can't change this case." : "Couldn't update the stage — please try again."),
+        });
       }
     } finally {
       setBusyId(null);
@@ -91,7 +101,9 @@ export default function AdminCasesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ caseId, agentId }),
       });
-      if (res.ok) {
+      if (!res.ok) {
+        setActionError({ caseId, message: "Couldn't assign that agent — please try again." });
+      } else {
         const agentName = agents.find((a) => a.id === agentId)?.name ?? null;
         setCases((prev) =>
           Array.isArray(prev) ? prev.map((c) => (c.id === caseId ? { ...c, agentName } : c)) : prev
@@ -133,7 +145,7 @@ export default function AdminCasesPage() {
                     <span className="text-[11px] font-semibold text-brand-600">
                       Case #{c.id.slice(0, 8).toUpperCase()}
                     </span>
-                    <PaymentPill status={c.paymentStatus} />
+                    <PaymentStatusBadge payment={c.payment} />
                   </div>
                   <p className="mt-1 text-sm font-semibold text-ink-900">{c.title}</p>
                   <p className="mt-0.5 text-xs text-ink-500">
@@ -143,6 +155,7 @@ export default function AdminCasesPage() {
                     {c.clientName || "Unknown client"}
                     {c.clientEmail ? ` · ${c.clientEmail}` : ""}
                   </p>
+                  <PaymentSummaryLine payment={c.payment} />
                   {c.screenshotUrl && (
                     <a
                       href={c.screenshotUrl}
@@ -200,6 +213,11 @@ export default function AdminCasesPage() {
                   </div>
                 </div>
               </div>
+              {actionError?.caseId === c.id ? (
+                <p className="mt-3 rounded-lg bg-risk-high-bg px-3 py-2 text-xs font-medium text-risk-high">
+                  {actionError.message}
+                </p>
+              ) : null}
             </div>
           ))}
         </div>

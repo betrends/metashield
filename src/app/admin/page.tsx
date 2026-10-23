@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { PaymentStatusBadge } from "@/components/portal/PaymentStatusBadge";
+import type { PaymentRecord } from "@/lib/portal/payments";
 import Link from "next/link";
 import { formatNaira } from "@/lib/portal/case-fees";
 import { DonutChart, DonutLegend } from "@/components/admin/DonutChart";
@@ -24,6 +26,7 @@ type RecentRequest = {
   accountHandle: string;
   stage: string;
   paymentStatus: "unpaid" | "pending_review" | "paid" | "failed";
+  payment: PaymentRecord;
   agentName: string | null;
   createdAt: string;
 };
@@ -116,22 +119,6 @@ function StagePill({ stage }: { stage: string }) {
       ? "bg-brand-100 text-brand-700"
       : "bg-ink-100 text-ink-600";
   return <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${cls}`}>{stage}</span>;
-}
-
-function PaymentPill({ status }: { status: RecentRequest["paymentStatus"] }) {
-  const map: Record<RecentRequest["paymentStatus"], string> = {
-    paid: "bg-risk-low-bg text-risk-low",
-    pending_review: "bg-risk-medium-bg text-risk-medium",
-    unpaid: "bg-risk-high-bg text-risk-high",
-    failed: "bg-risk-high-bg text-risk-high",
-  };
-  const label: Record<RecentRequest["paymentStatus"], string> = {
-    paid: "Paid",
-    pending_review: "In review",
-    unpaid: "Unpaid",
-    failed: "Failed",
-  };
-  return <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${map[status]}`}>{label[status]}</span>;
 }
 
 function IconDoc() {
@@ -315,7 +302,7 @@ export default function AdminDashboardPage() {
                       <StagePill stage={r.stage} />
                     </td>
                     <td className="py-3 pr-4">
-                      <PaymentPill status={r.paymentStatus} />
+                      <PaymentStatusBadge payment={r.payment} />
                     </td>
                     <td className="py-3 pr-4 text-ink-600">{r.agentName || "—"}</td>
                     <td className="py-3 pr-4 text-ink-400">

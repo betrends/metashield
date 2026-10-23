@@ -1,16 +1,15 @@
-// Sends a team reply into a client's conversation from the admin inbox.
-// Gated to ADMIN_EMAIL.
+// Sends a team reply into a client's conversation from the staff inbox.
+// The admin may reply anywhere; an agent only on their own cases (or the
+// "General" thread of a client they handle), and their replies carry
+// their own name so the client sees who answered.
 
 import { NextResponse } from "next/server";
-import { createClient as createServerClient, createAdminClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
+import { canAccessCase, canAccessClient, getAdminRole } from "@/lib/admin/auth";
 
 export async function POST(request: Request) {
-  const supabase = await createServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const adminEmail = process.env.ADMIN_EMAIL;
-  if (!user || !adminEmail || user.email !== adminEmail) {
+  const role = await getAdminRole();
+  if (!role) {
     return NextResponse.json({ error: "not_authorized" }, { status: 403 });
   }
 
@@ -23,16 +22,23 @@ export async function POST(request: Request) {
   const userId = typeof body.userId === "string" ? body.userId : "";
   const caseId = typeof body.caseId === "string" && body.caseId ? body.caseId : null;
   const text = typeof body.text === "string" ? body.text.trim() : "";
-  const authorName = typeof body.authorName === "string" && body.authorName.trim() ? body.authorName.trim() : "MetaShield Team";
+  const requestedName =
+    typeof body.authorName === "string" && body.authorName.trim() ? body.authorName.trim() : "MetaShield Team";
+  const authorName = role.type === "agent" ? role.agentName : requestedName;
   if (!userId || !text) {
     return NextResponse.json({ error: "invalid_input" }, { status: 400 });
+  }
+
+  const allowed = caseId ? await canAccessCase(role, caseId) : await canAccessClient(role, userId);
+  if (!allowed) {
+    return NextResponse.json({ error: "not_authorized" }, { status: 403 });
   }
 
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("messages")
     .insert({ user_id: userId, case_id: caseId, from_role: "team", author_name: authorName, body: text })
-    .select("id, from_role, author_name, body, created_at")
+    .select("id, from_role, author_name, body, attachment_name, created_at")
     .single();
 
   if (error || !data) {
@@ -40,5 +46,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "insert_failed" }, { status: 500 });
   }
 
-  return NextResponse.json({ message: data });
+  return NextResponse.json({ message: { ...data, attachment_url: null } });
 }

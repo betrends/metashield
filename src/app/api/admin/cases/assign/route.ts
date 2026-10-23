@@ -5,6 +5,8 @@
 
 import { NextResponse } from "next/server";
 import { createClient as createServerClient, createAdminClient } from "@/lib/supabase/server";
+import { sendCaseUpdateEmail } from "@/lib/email/case-update";
+import { escapeHtml } from "@/lib/email-templates";
 
 export async function POST(request: Request) {
   const supabase = await createServerClient();
@@ -79,18 +81,14 @@ export async function POST(request: Request) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
 
   if (clientEmail) {
-    fetch(`${appUrl}/api/case-update-email`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        to: clientEmail,
-        clientName,
-        caseTitle: updatedCase.title,
-        kind: "agent_assigned",
-        agentName: agent.name,
-        agentPhone: agent.phone,
-      }),
-    }).catch(() => {});
+    await sendCaseUpdateEmail({
+      to: clientEmail,
+      kind: "agent_assigned",
+      clientName: clientName,
+      caseTitle: updatedCase.title,
+      agentName: agent.name,
+      agentPhone: agent.phone,
+    });
   }
 
   // Notify the agent by email so they know a case has been assigned to them
@@ -106,6 +104,9 @@ export async function POST(request: Request) {
       const resend = new Resend(apiKey);
       const fromAddress = process.env.RESEND_FROM_EMAIL || "MetaShield <onboarding@resend.dev>";
       const label = isReassignment ? "You've been reassigned a case" : "You've been assigned a new case";
+      // Case title, client name and issue come from the client — escape
+      // them before putting them into HTML.
+      const e = (v: string | null | undefined) => escapeHtml(v ?? "");
       const html = `
 <!DOCTYPE html>
 <html>
@@ -114,12 +115,12 @@ export async function POST(request: Request) {
     <p style="color:#fff;font-size:13px;font-weight:600;margin:0;letter-spacing:1px;text-transform:uppercase">MetaShield</p>
     <h1 style="color:#fff;font-size:20px;font-weight:700;margin:8px 0 0">${label}</h1>
   </div>
-  <p style="font-size:15px;margin-bottom:20px">Hi ${agent.name}, a case has been assigned to you on MetaShield. Here are the details:</p>
+  <p style="font-size:15px;margin-bottom:20px">Hi ${e(agent.name)}, a case has been assigned to you on MetaShield. Here are the details:</p>
   <table style="width:100%;border-collapse:collapse;font-size:14px;border:1px solid #e8e8f0;border-radius:8px;overflow:hidden">
-    <tr style="background:#f5f5ff"><td style="padding:10px 16px;font-weight:600;color:#6b7280;width:35%">Case</td><td style="padding:10px 16px">${updatedCase.title}</td></tr>
-    <tr><td style="padding:10px 16px;font-weight:600;color:#6b7280;border-top:1px solid #e8e8f0">Client</td><td style="padding:10px 16px;border-top:1px solid #e8e8f0">${clientName}${clientEmail ? ` &lt;${clientEmail}&gt;` : ""}</td></tr>
-    ${caseRow ? `<tr style="background:#f5f5ff"><td style="padding:10px 16px;font-weight:600;color:#6b7280;border-top:1px solid #e8e8f0">Platform</td><td style="padding:10px 16px;border-top:1px solid #e8e8f0">${caseRow.platform} · ${caseRow.account_handle}</td></tr>` : ""}
-    ${caseRow?.issue ? `<tr><td style="padding:10px 16px;font-weight:600;color:#6b7280;border-top:1px solid #e8e8f0">Issue</td><td style="padding:10px 16px;border-top:1px solid #e8e8f0">${caseRow.issue}</td></tr>` : ""}
+    <tr style="background:#f5f5ff"><td style="padding:10px 16px;font-weight:600;color:#6b7280;width:35%">Case</td><td style="padding:10px 16px">${e(updatedCase.title)}</td></tr>
+    <tr><td style="padding:10px 16px;font-weight:600;color:#6b7280;border-top:1px solid #e8e8f0">Client</td><td style="padding:10px 16px;border-top:1px solid #e8e8f0">${e(clientName)}${clientEmail ? ` &lt;${e(clientEmail)}&gt;` : ""}</td></tr>
+    ${caseRow ? `<tr style="background:#f5f5ff"><td style="padding:10px 16px;font-weight:600;color:#6b7280;border-top:1px solid #e8e8f0">Platform</td><td style="padding:10px 16px;border-top:1px solid #e8e8f0">${e(caseRow.platform)} · ${e(caseRow.account_handle)}</td></tr>` : ""}
+    ${caseRow?.issue ? `<tr><td style="padding:10px 16px;font-weight:600;color:#6b7280;border-top:1px solid #e8e8f0">Issue</td><td style="padding:10px 16px;border-top:1px solid #e8e8f0">${e(caseRow.issue)}</td></tr>` : ""}
   </table>
   <div style="margin-top:28px;text-align:center">
     <a href="${appUrl}/admin/cases" style="background:#4f46e5;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:600">View case in admin</a>
@@ -127,10 +128,10 @@ export async function POST(request: Request) {
   <p style="margin-top:28px;font-size:13px;color:#6b7280">Log in with your email at <a href="${appUrl}/portal/login" style="color:#4f46e5">${appUrl}/portal/login</a> then go to Recovery Requests.</p>
 </body>
 </html>`;
-      resend.emails.send({
+      await resend.emails.send({
         from: fromAddress,
         to: agent.email,
-        subject: `${label}: ${updatedCase.title}`,
+        subject: `${label}: ${updatedCase.title.replace(/[\r\n]+/g, " ")}`,
         html,
       }).then((r) => {
         if (r.error) console.error("Agent email failed:", JSON.stringify(r.error));

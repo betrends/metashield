@@ -6,10 +6,13 @@
 import { NextResponse } from "next/server";
 import { createClient as createServerClient, createAdminClient } from "@/lib/supabase/server";
 import type { CaseStage } from "@/lib/portal/mock-data";
+import { PAYMENT_COLUMNS, pickPaymentRecord, summarizePayment } from "@/lib/portal/payments";
 
 const IN_PROGRESS_STAGES: CaseStage[] = ["Under Review", "Recovery Process", "Awaiting Platform Response"];
 const DAY_MS = 24 * 60 * 60 * 1000;
-const PAYMENT_CONFIRMED_EVENT = "Payment confirmed — recovery started";
+// Confirmations recorded before deposit/balance tracking existed only
+// left this timeline event (and no deposit_paid_at).
+const LEGACY_PAYMENT_CONFIRMED_EVENT = "Payment confirmed — recovery started";
 
 function dayKey(iso: string) {
   return new Date(iso).toISOString().slice(0, 10);
@@ -29,6 +32,8 @@ type CaseRow = {
   stage: CaseStage;
   payment_status: "unpaid" | "pending_review" | "paid" | "failed";
   fee_amount_kobo: number | null;
+  deposit_paid_at: string | null;
+  balance_paid_at: string | null;
   agent_id: string | null;
   agent_name: string | null;
   created_at: string;
@@ -52,7 +57,7 @@ export async function GET() {
       admin
         .from("cases")
         .select(
-          "id, user_id, title, platform, account_handle, stage, payment_status, fee_amount_kobo, agent_id, agent_name, created_at"
+          `id, user_id, title, platform, account_handle, stage, agent_id, agent_name, created_at, ${PAYMENT_COLUMNS}`
         )
         .order("created_at", { ascending: false }),
       admin.from("agents").select("id, name, email, phone, active").order("created_at", { ascending: true }),
@@ -65,15 +70,33 @@ export async function GET() {
       admin
         .from("case_timeline_events")
         .select("case_id, created_at")
-        .eq("event", PAYMENT_CONFIRMED_EVENT)
+        .eq("event", LEGACY_PAYMENT_CONFIRMED_EVENT)
         .order("created_at", { ascending: false }),
     ]);
 
   const cases = (casesData ?? []) as CaseRow[];
   const agents = agentsData ?? [];
   const invoices = invoicesData ?? [];
-  const confirmations = confirmEvents ?? [];
   const casesById = new Map(cases.map((c) => [c.id, c]));
+  const legacyConfirmedAt = new Map<string, string>();
+  for (const e of confirmEvents ?? []) {
+    if (!legacyConfirmedAt.has(e.case_id)) legacyConfirmedAt.set(e.case_id, e.created_at);
+  }
+
+  // Every verified installment, with the amount actually received and when
+  // it was confirmed — the basis for revenue figures (a deposit is 50% of
+  // the fee, so summing whole fees would overstate revenue).
+  const confirmations: { case_id: string; created_at: string; amountKobo: number; kind: "deposit" | "balance" }[] = [];
+  for (const c of cases) {
+    const p = summarizePayment(pickPaymentRecord(c as unknown as Record<string, unknown>));
+    const depositAt = c.deposit_paid_at ?? legacyConfirmedAt.get(c.id) ?? null;
+    if (p.depositConfirmed && depositAt) {
+      confirmations.push({ case_id: c.id, created_at: depositAt, amountKobo: p.depositKobo, kind: "deposit" });
+    }
+    if (p.balanceStatus === "paid" && c.balance_paid_at) {
+      confirmations.push({ case_id: c.id, created_at: c.balance_paid_at, amountKobo: p.balanceKobo, kind: "balance" });
+    }
+  }
 
   const now = Date.now();
   const weekStart = now - 7 * DAY_MS;
@@ -90,16 +113,17 @@ export async function GET() {
   const recovered = cases.filter((c) => c.stage === "Resolved").length;
   const inProgress = cases.filter((c) => IN_PROGRESS_STAGES.includes(c.stage)).length;
 
-  const caseRevenueKobo = cases
-    .filter((c) => c.payment_status === "paid")
-    .reduce((sum, c) => sum + (c.fee_amount_kobo ?? 0), 0);
+  const caseRevenueKobo = cases.reduce(
+    (sum, c) => sum + summarizePayment(pickPaymentRecord(c as unknown as Record<string, unknown>)).amountPaidKobo,
+    0
+  );
   const subscriptionRevenueKobo = invoices.reduce((sum, inv) => sum + (inv.amount_kobo ?? 0), 0);
   const totalRevenueKobo = caseRevenueKobo + subscriptionRevenueKobo;
 
   const revenueThisWeekKobo =
     confirmations
       .filter((e) => new Date(e.created_at).getTime() >= weekStart)
-      .reduce((sum, e) => sum + (casesById.get(e.case_id)?.fee_amount_kobo ?? 0), 0) +
+      .reduce((sum, e) => sum + e.amountKobo, 0) +
     invoices
       .filter((i) => new Date(i.created_at).getTime() >= weekStart)
       .reduce((sum, i) => sum + (i.amount_kobo ?? 0), 0);
@@ -109,7 +133,7 @@ export async function GET() {
         const t = new Date(e.created_at).getTime();
         return t >= prevWeekStart && t < weekStart;
       })
-      .reduce((sum, e) => sum + (casesById.get(e.case_id)?.fee_amount_kobo ?? 0), 0) +
+      .reduce((sum, e) => sum + e.amountKobo, 0) +
     invoices
       .filter((i) => {
         const t = new Date(i.created_at).getTime();
@@ -175,6 +199,7 @@ export async function GET() {
         accountHandle: c.account_handle,
         stage: c.stage,
         paymentStatus: c.payment_status,
+        payment: pickPaymentRecord(c as unknown as Record<string, unknown>),
         agentName: c.agent_name,
         createdAt: c.created_at,
       };
@@ -185,11 +210,11 @@ export async function GET() {
   const caseTransactions = confirmations.map((e) => {
     const c = casesById.get(e.case_id);
     return {
-      id: `case-${e.case_id}`,
+      id: `case-${e.case_id}-${e.kind}`,
       kind: "case" as const,
-      label: c?.title ?? "Recovery case",
+      label: `${c?.title ?? "Recovery case"} — ${e.kind === "deposit" ? "deposit" : "final balance"}`,
       userId: c?.user_id ?? null,
-      amountKobo: c?.fee_amount_kobo ?? 0,
+      amountKobo: e.amountKobo,
       createdAt: e.created_at,
     };
   });

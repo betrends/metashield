@@ -125,6 +125,9 @@ export function EligibilityWizard() {
   }
 
   async function handleSubmitCase() {
+    // Terms (incl. the 50% deposit and refund policy) must be accepted;
+    // the server records the acceptance with the case.
+    if (!termsAgreed) return;
     setSubmittingCase(true);
 
     // Upload screenshot first if one was selected
@@ -161,6 +164,7 @@ export function EligibilityWizard() {
           followerRange: followerRange || undefined,
           timeline: [{ event: "Case submitted" }],
           screenshotUrl: uploadedUrl,
+          termsAccepted: termsAgreed,
         });
         signedInCaseId = created.id;
       }

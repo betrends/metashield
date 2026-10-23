@@ -9,8 +9,24 @@ import { AskAIBar } from "@/components/portal/AskAIBar";
 import { ContactSupportMenu } from "@/components/portal/ContactSupportMenu";
 import { EmergencyModal } from "@/components/portal/EmergencyModal";
 
-type PortalSession = { name: string; email: string };
+type PortalSession = { id: string; name: string; email: string };
 const EMERGENCY_PLANS = ["basic", "professional", "business", "one_time"];
+
+const seenKey = (userId: string) => `metashield:notifications-seen:${userId}`;
+function readSeenAt(userId: string): number {
+  try {
+    return Number(window.localStorage.getItem(seenKey(userId)) ?? 0) || 0;
+  } catch {
+    return 0;
+  }
+}
+function markNotificationsSeen(userId: string) {
+  try {
+    window.localStorage.setItem(seenKey(userId), String(Date.now()));
+  } catch {
+    // Storage unavailable (private mode) — the badge just won't persist.
+  }
+}
 
 const navItems = [
   { label: "Overview", href: "/portal", icon: "grid" },
@@ -167,6 +183,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
       }
 
       setSession({
+        id: user.id,
         name: (user.user_metadata?.full_name as string | undefined) || user.email?.split("@")[0] || "Client",
         email: user.email ?? "",
       });
@@ -199,34 +216,41 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isLoginPage || session === "loading" || session === null) return;
 
-    const sessionEmail = session.email;
+    const sessionUserId = session.id;
     let cancelled = false;
     let pollInterval: NodeJS.Timeout | null = null;
 
+    // Notifications are the team's messages to this client. This used to
+    // query columns that don't exist (recipient_email, sender, message,
+    // is_read), so the bell never showed anything. "Read" is tracked per
+    // browser as the time the client last opened the bell.
     async function fetchNotifications() {
       try {
         const supabase = createClient();
         const { data, error } = await supabase
           .from("messages")
-          .select("*")
-          .eq("recipient_email", sessionEmail)
+          .select("id, author_name, body, created_at")
+          .eq("user_id", sessionUserId)
+          .eq("from_role", "team")
           .order("created_at", { ascending: false })
           .limit(20);
 
         if (!cancelled && !error && data) {
-          // Map data to expected format, handling missing is_read field
-          const mappedData = data.map((m: any) => ({
-            id: m.id,
-            sender: m.sender,
-            message: m.message,
-            created_at: m.created_at,
-            is_read: m.is_read ?? false, // Default to false if not present
-          }));
+          const seenAt = readSeenAt(sessionUserId);
+          const mappedData = (data as { id: string; author_name: string; body: string; created_at: string }[]).map(
+            (m) => ({
+              id: m.id,
+              sender: m.author_name,
+              message: m.body,
+              created_at: m.created_at,
+              is_read: new Date(m.created_at).getTime() <= seenAt,
+            })
+          );
           setNotifications(mappedData);
           setUnreadCount(mappedData.filter((m) => !m.is_read).length);
         }
       } catch {
-        // Silently fail if messages table doesn't exist yet
+        // Non-fatal: the bell just stays empty.
       }
     }
 
@@ -237,14 +261,14 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
     try {
       const supabase = createClient();
       channel = supabase
-        .channel(`messages:${sessionEmail}`)
+        .channel(`messages:${sessionUserId}`)
         .on(
           "postgres_changes",
           {
             event: "*",
             schema: "public",
             table: "messages",
-            filter: `recipient_email=eq.${sessionEmail}`,
+            filter: `user_id=eq.${sessionUserId}`,
           },
           () => {
             // Refetch when messages change
@@ -312,7 +336,13 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
           <p className="text-sm text-ink-500">{session.email}</p>
           <div className="relative">
             <button
-              onClick={() => setNotificationsOpen(!notificationsOpen)}
+              onClick={() => {
+                if (!notificationsOpen) {
+                  markNotificationsSeen(session.id);
+                  setUnreadCount(0);
+                }
+                setNotificationsOpen(!notificationsOpen);
+              }}
               className={`relative flex h-12 w-12 items-center justify-center rounded-xl text-ink-600 transition-all hover:bg-brand-50 hover:text-brand-600 active:scale-95 ${
                 unreadCount > 0 ? "bell-bouncing text-brand-600" : ""
               }`}
