@@ -10,6 +10,7 @@ import { setLocalCase, todayLabel } from "@/lib/portal/local-records";
 import { createClient } from "@/lib/supabase/client";
 import { createCase } from "@/lib/portal/data";
 import { FOLLOWER_RANGES, getFollowerRangeFeeKobo, formatNaira, type FollowerRange } from "@/lib/portal/case-fees";
+import { depositFor } from "@/lib/portal/payments";
 
 const platforms = [
   "Instagram",
@@ -266,6 +267,11 @@ export function EligibilityWizard() {
               />
             ))}
           </div>
+          {followerRange ? (
+            <div className="mt-6">
+              <FeeBreakdown totalKobo={getFollowerRangeFeeKobo(followerRange)} t={t} />
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -459,7 +465,7 @@ export function EligibilityWizard() {
               </h2>
               <p className="mx-auto mt-2 max-w-md text-sm text-ink-500">
                 {t(createdCaseId
-                  ? "An agent has been assigned to your case and is ready to start — pay the case fee from the case page to begin recovery."
+                  ? "An agent has been assigned to your case and is ready to start — pay the 50% deposit from the case page to begin recovery."
                   : "Create your free portal account and an agent will be assigned to your case right away — you'll see their name, be able to message them directly, and pay to get started.")}
               </p>
 
@@ -492,13 +498,11 @@ export function EligibilityWizard() {
                 <dd className="text-ink-800">{t(hasAccountAccess ? "Yes" : "No")}</dd>
               </dl>
 
-              <div className="mx-auto mt-6 max-w-sm rounded-xl bg-brand-50 p-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-brand-600">{t("Recovery Fee")}</p>
-                <p className="mt-2 text-3xl font-semibold text-brand-900">
-                  {followerRange ? formatNaira(getFollowerRangeFeeKobo(followerRange)) : "—"}
-                </p>
-                <p className="mt-1 text-xs text-brand-700">{t("Charged when you submit the case")}</p>
-              </div>
+              {followerRange ? (
+                <div className="mx-auto mt-6 max-w-sm">
+                  <FeeBreakdown totalKobo={getFollowerRangeFeeKobo(followerRange)} t={t} />
+                </div>
+              ) : null}
 
               <div className="mx-auto mt-6 max-w-sm space-y-3 rounded-xl border border-ink-100 p-4 text-left">
                 <label className="flex items-start gap-3 cursor-pointer">
@@ -539,5 +543,36 @@ export function EligibilityWizard() {
         </div>
       ) : null}
     </Card>
+  );
+}
+
+// The payment plan shown before a client submits: total fee, the 50%
+// deposit that starts recovery, and the 50% balance due after a
+// successful recovery (same split the case page and admin use —
+// lib/portal/payments.ts).
+function FeeBreakdown({ totalKobo, t }: { totalKobo: number; t: (text: string) => string }) {
+  const depositKobo = depositFor(totalKobo);
+  const balanceKobo = totalKobo - depositKobo;
+  return (
+    <div className="rounded-xl bg-brand-50 p-5 text-left">
+      <p className="text-xs font-semibold uppercase tracking-wide text-brand-600">{t("Recovery Fee")}</p>
+      <p className="mt-1 text-3xl font-semibold text-brand-900">{formatNaira(totalKobo)}</p>
+      <dl className="mt-4 space-y-3 border-t border-brand-100 pt-4 text-sm">
+        <div className="flex items-start justify-between gap-4">
+          <dt>
+            <span className="font-semibold text-ink-900">{t("Deposit to start (50%)")}</span>
+            <span className="block text-xs text-ink-500">{t("Paid by bank transfer after you submit — recovery starts once it's confirmed")}</span>
+          </dt>
+          <dd className="shrink-0 font-semibold text-ink-900">{formatNaira(depositKobo)}</dd>
+        </div>
+        <div className="flex items-start justify-between gap-4">
+          <dt>
+            <span className="font-semibold text-ink-900">{t("Balance after recovery (50%)")}</span>
+            <span className="block text-xs text-ink-500">{t("Due within 24 hours of a successful recovery")}</span>
+          </dt>
+          <dd className="shrink-0 font-semibold text-ink-900">{formatNaira(balanceKobo)}</dd>
+        </div>
+      </dl>
+    </div>
   );
 }
