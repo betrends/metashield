@@ -1,0 +1,49 @@
+# Temporary diagnostic: builds main and the original commit, and posts
+# the result as a comment on the "Build check" issue. Safe to delete.
+name: build-check
+on:
+  push:
+    branches: [ci/build-check]
+permissions:
+  contents: read
+  issues: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ref: [ci/build-check]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.ref }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: install
+        run: npm ci 2>&1 | tail -40 > install.log; echo "exit=${PIPESTATUS[0]}" >> install.log
+      - name: typecheck
+        run: (npx tsc --noEmit 2>&1 | tail -60; echo "exit=${PIPESTATUS[0]}") > tsc.log || true
+      - name: build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: (npm run build 2>&1 | tail -120; echo "exit=${PIPESTATUS[0]}") > build.log || true
+      - name: lint
+        run: (npx eslint . 2>&1 | tail -60; echo "exit=${PIPESTATUS[0]}") > lint.log || true
+      - name: report
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "### Build check: \`${{ matrix.ref }}\`"
+            for f in install tsc build lint; do
+              echo "<details><summary>$f — $(tail -1 $f.log)</summary>"; echo; echo '```'; head -c 20000 $f.log; echo '```'; echo "</details>"
+            done
+          } > report.md
+          num=$(gh issue list --repo "$GITHUB_REPOSITORY" --search "Build check in:title" --state open --json number --jq '.[0].number')
+          if [ -z "$num" ]; then num=$(gh issue create --repo "$GITHUB_REPOSITORY" --title "Build check (temporary, automated)" --body "Automated build diagnostics. Safe to close." | grep -oE '[0-9]+$'); fi
+          gh issue comment "$num" --repo "$GITHUB_REPOSITORY" --body-file report.md
