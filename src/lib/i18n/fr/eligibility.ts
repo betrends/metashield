@@ -34,8 +34,8 @@ export const eligibility: Record<string, string> = {
   "We'll use this to follow up about your case.": "Nous les utiliserons pour assurer le suivi de votre dossier.",
   "Phone / WhatsApp (optional)": "Téléphone / WhatsApp (facultatif)",
   "Case submitted,": "Dossier soumis,",
-  "An agent has been assigned to your case and is ready to start — pay the case fee from the case page to begin recovery.":
-    "Un agent a été assigné à votre dossier et est prêt à commencer — réglez les frais depuis la page du dossier pour lancer la récupération.",
+  "An agent has been assigned to your case and is ready to start — pay the 50% deposit from the case page to begin recovery.":
+    "Un agent a été assigné à votre dossier et est prêt à commencer — réglez l'acompte de 50 % depuis la page du dossier pour lancer la récupération.",
   "Create your free portal account and an agent will be assigned to your case right away — you'll see their name, be able to message them directly, and pay to get started.":
     "Créez votre espace client gratuit et un agent sera immédiatement assigné à votre dossier — vous verrez son nom, pourrez lui écrire directement et payer pour démarrer.",
   "View Your Case": "Voir mon dossier",
@@ -47,6 +47,11 @@ export const eligibility: Record<string, string> = {
   "Already appealed": "Recours déjà fait",
   "Account access": "Accès au compte",
   "Charged when you submit the case": "Facturé à la soumission du dossier",
+  "Deposit to start (50%)": "Acompte pour démarrer (50 %)",
+  "Paid by bank transfer after you submit — recovery starts once it's confirmed":
+    "Réglé par virement après la soumission — la récupération commence dès sa confirmation",
+  "Balance after recovery (50%)": "Solde après récupération (50 %)",
+  "Due within 24 hours of a successful recovery": "À régler dans les 24 heures suivant une récupération réussie",
   "I have read and agree to the": "J'ai lu et j'accepte les",
   "— I will not engage another recovery service while my case is under review.":
     "— je ne ferai appel à aucun autre service de récupération pendant l'examen de mon dossier.",
