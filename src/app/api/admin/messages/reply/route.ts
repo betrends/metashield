@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "not_authorized" }, { status: 403 });
   }
 
-  let body: { userId?: unknown; caseId?: unknown; text?: unknown; authorName?: unknown };
+  let body: { userId?: unknown; caseId?: unknown; text?: unknown; authorName?: unknown; dedupeKey?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -35,11 +35,18 @@ export async function POST(request: Request) {
   }
 
   const admin = createAdminClient();
-  const { data, error } = await admin
+  // A retried send carries the same key, so it is stored only once.
+  const dedupeKey =
+    typeof body.dedupeKey === "string" && /^[A-Za-z0-9-]{8,64}$/.test(body.dedupeKey) ? `staff:${body.dedupeKey}` : null;
+  const returning = "id, from_role, author_name, body, attachment_name, created_at";
+  let { data, error } = await admin
     .from("messages")
-    .insert({ user_id: userId, case_id: caseId, from_role: "team", author_name: authorName, body: text })
-    .select("id, from_role, author_name, body, attachment_name, created_at")
+    .insert({ user_id: userId, case_id: caseId, from_role: "team", author_name: authorName, body: text, kind: "message", dedupe_key: dedupeKey })
+    .select(returning)
     .single();
+  if (error?.code === "23505" && dedupeKey) {
+    ({ data, error } = await admin.from("messages").select(returning).eq("dedupe_key", dedupeKey).single());
+  }
 
   if (error || !data) {
     console.error("Failed to send admin reply:", error);

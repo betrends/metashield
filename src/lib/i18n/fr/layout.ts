@@ -43,4 +43,7 @@ export const layout: Record<string, string> = {
   "All rights reserved. We will never ask for your social media password.":
     "Tous droits réservés. Nous ne vous demanderons jamais le mot de passe de vos réseaux sociaux.",
   "MetaShield is by": "MetaShield est conçu par",
+  "Hello MetaShield, I need help with my account.": "Bonjour MetaShield, j'ai besoin d'aide avec mon compte.",
+  "Chat with MetaShield support on WhatsApp": "Discuter avec le support MetaShield sur WhatsApp",
+  "Chat with us on WhatsApp": "Discutez avec nous sur WhatsApp",
 };

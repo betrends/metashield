@@ -8,6 +8,14 @@ import { formatNaira } from "@/lib/portal/case-fees";
 import { DonutChart, DonutLegend } from "@/components/admin/DonutChart";
 import { LineChart } from "@/components/admin/LineChart";
 
+type NeedsAction = {
+  paymentsToVerify: number;
+  balancesOverdue: number;
+  documentsToReview: number;
+  unreadClientMessages: number;
+  cancellationRequests: number;
+};
+
 type Stats = {
   totalClients: number;
   totalRequests: number;
@@ -51,6 +59,7 @@ type Transaction = {
 };
 
 type Dashboard = {
+  needsAction?: NeedsAction;
   stats: Stats;
   requestsOverview: { date: string; count: number }[];
   platformBreakdown: { platform: string; count: number }[];
@@ -200,6 +209,29 @@ export default function AdminDashboardPage() {
           <p className="mt-1 text-sm text-ink-500">Here&apos;s what&apos;s happening with your recovery platform today.</p>
         </div>
       </div>
+
+      {data.needsAction ? (
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+          {[
+            { label: "Payments to verify", value: data.needsAction.paymentsToVerify, href: "/admin/payments" },
+            { label: "Balances overdue", value: data.needsAction.balancesOverdue, href: "/admin/payments" },
+            { label: "Documents to review", value: data.needsAction.documentsToReview, href: "/admin/documents" },
+            { label: "Unread client messages", value: data.needsAction.unreadClientMessages, href: "/admin/messages" },
+            { label: "Cancellation requests", value: data.needsAction.cancellationRequests, href: "/admin/cases" },
+          ].map((item) => (
+            <Link
+              key={item.label}
+              href={item.href}
+              className={`rounded-2xl border p-4 shadow-sm transition-colors hover:bg-ink-50 ${
+                item.value > 0 ? "border-brand-200 bg-brand-50/60" : "border-ink-100 bg-white"
+              }`}
+            >
+              <p className="text-2xl font-semibold text-ink-900">{item.value}</p>
+              <p className="mt-0.5 text-xs font-medium text-ink-500">{item.label}</p>
+            </Link>
+          ))}
+        </div>
+      ) : null}
 
       {/* Stat cards */}
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">

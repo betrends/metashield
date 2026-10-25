@@ -96,11 +96,14 @@ export default function AdminPaymentsPage() {
     const amount = formatNaira(kind === "deposit" ? summary.depositKobo : summary.balanceKobo);
     const hasReceipt = kind === "deposit" ? !!c.receiptUrl : !!c.balanceReceiptUrl;
     let reason = "";
+    let reference = "";
     if (action === "confirm") {
       const question = hasReceipt
         ? `Confirm that the ${kind} of ${amount} has arrived in the bank account?`
         : `No receipt has been uploaded for this ${kind}. Only confirm if you've checked the bank account and ${amount} has arrived.`;
       if (!window.confirm(question)) return;
+      // Optional bank transfer reference, saved with the payment record.
+      reference = window.prompt("Bank transfer reference (optional):", "") ?? "";
     } else {
       const answer = window.prompt(
         `Reject this ${kind} receipt? The client will be asked to re-upload. Optional reason for the client:`,
@@ -116,7 +119,7 @@ export default function AdminPaymentsPage() {
       const res = await fetch(`/api/admin/payments/${action}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ caseId: c.id, kind, reason }),
+        body: JSON.stringify({ caseId: c.id, kind, reason, reference }),
       });
       if (res.ok) {
         // Re-read the queue from the server rather than guessing locally.

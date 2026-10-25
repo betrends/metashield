@@ -245,7 +245,29 @@ export async function GET() {
     })
   );
 
+  // ── Needs action (live counts) ───────────────────────────────────────
+  const [pendingDocs, unreadMsgs, cancelRequests] = await Promise.all([
+    admin.from("documents").select("id", { count: "exact", head: true }).eq("review_status", "submitted").not("case_id", "is", null),
+    admin.from("messages").select("id", { count: "exact", head: true }).eq("from_role", "client").is("read_at", null),
+    admin
+      .from("cases")
+      .select("id", { count: "exact", head: true })
+      .not("cancellation_requested_at", "is", null)
+      .is("cancelled_at", null),
+  ]);
+  const needsAction = {
+    paymentsToVerify: cases.filter((c) => {
+      const p = pickPaymentRecord(c as unknown as Record<string, unknown>);
+      return p.payment_status === "pending_review" || p.balance_status === "pending_review";
+    }).length,
+    balancesOverdue: cases.filter((c) => summarizePayment(pickPaymentRecord(c as unknown as Record<string, unknown>)).balanceOverdue).length,
+    documentsToReview: pendingDocs.count ?? 0,
+    unreadClientMessages: unreadMsgs.count ?? 0,
+    cancellationRequests: cancelRequests.count ?? 0,
+  };
+
   return NextResponse.json({
+    needsAction,
     stats: {
       totalClients: totalClients ?? 0,
       totalRequests,

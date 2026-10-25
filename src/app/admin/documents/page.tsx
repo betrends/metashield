@@ -12,6 +12,8 @@ type ClientDocument = {
   clientEmail: string;
   clientName: string;
   caseTitle?: string | null;
+  caseId?: string | null;
+  reviewStatus?: string | null;
   url?: string;
 };
 
@@ -120,7 +122,28 @@ export default function AdminDocumentsPage() {
                       <td className="px-4 py-3 font-mono text-xs text-ink-700">
                         {doc.filename}
                         {doc.caseTitle ? (
-                          <span className="mt-0.5 block font-sans text-[11px] text-ink-400">{doc.caseTitle}</span>
+                          <span className="mt-0.5 block font-sans text-[11px] text-ink-400">
+                            {doc.caseId ? (
+                              <Link href={`/admin/cases/${doc.caseId}`} className="hover:text-brand-600">
+                                {doc.caseTitle} → review
+                              </Link>
+                            ) : (
+                              doc.caseTitle
+                            )}
+                          </span>
+                        ) : null}
+                        {doc.reviewStatus ? (
+                          <span
+                            className={`mt-1 inline-block rounded-full px-2 py-0.5 font-sans text-[10px] font-semibold ${
+                              doc.reviewStatus === "approved"
+                                ? "bg-risk-low-bg text-risk-low"
+                                : doc.reviewStatus === "rejected"
+                                  ? "bg-risk-high-bg text-risk-high"
+                                  : "bg-risk-medium-bg text-risk-medium"
+                            }`}
+                          >
+                            {doc.reviewStatus === "submitted" ? "awaiting review" : doc.reviewStatus}
+                          </span>
                         ) : null}
                       </td>
                       <td className="px-4 py-3 text-ink-600">{doc.category || "—"}</td>

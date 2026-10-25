@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { caseStages, type CaseStage } from "@/lib/portal/mock-data";
+import Link from "next/link";
+import { type CaseStage } from "@/lib/portal/mock-data";
 import { PaymentStatusBadge, PaymentSummaryLine } from "@/components/portal/PaymentStatusBadge";
 import type { PaymentRecord } from "@/lib/portal/payments";
 
@@ -13,6 +14,9 @@ type AdminCase = {
   stage: CaseStage;
   paymentStatus: "unpaid" | "pending_review" | "paid" | "failed";
   payment: PaymentRecord;
+  cancelledAt: string | null;
+  cancellationRequestedAt: string | null;
+  allowedNextStages: CaseStage[];
   agentName: string | null;
   createdAt: string;
   clientName: string | null;
@@ -75,9 +79,8 @@ export default function AdminCasesPage() {
         body: JSON.stringify({ caseId, stage }),
       });
       if (res.ok) {
-        setCases((prev) =>
-          Array.isArray(prev) ? prev.map((c) => (c.id === caseId ? { ...c, stage } : c)) : prev
-        );
+        // Re-read so the next allowed stages and statuses are current.
+        await loadCases();
       } else {
         const data = await res.json().catch(() => ({}));
         setActionError({
@@ -146,8 +149,15 @@ export default function AdminCasesPage() {
                       Case #{c.id.slice(0, 8).toUpperCase()}
                     </span>
                     <PaymentStatusBadge payment={c.payment} />
+                    {c.cancelledAt ? (
+                      <span className="rounded-full bg-ink-800 px-2.5 py-1 text-[11px] font-semibold text-white">Cancelled</span>
+                    ) : c.cancellationRequestedAt ? (
+                      <span className="rounded-full bg-risk-medium-bg px-2.5 py-1 text-[11px] font-semibold text-risk-medium">Cancellation requested</span>
+                    ) : null}
                   </div>
-                  <p className="mt-1 text-sm font-semibold text-ink-900">{c.title}</p>
+                  <Link href={`/admin/cases/${c.id}`} className="mt-1 block text-sm font-semibold text-ink-900 hover:text-brand-700">
+                    {c.title} <span className="text-xs font-semibold text-brand-600">· Open case →</span>
+                  </Link>
                   <p className="mt-0.5 text-xs text-ink-500">
                     {c.platform} · {c.accountHandle}
                   </p>
@@ -198,15 +208,17 @@ export default function AdminCasesPage() {
                   )}
                   <div className="flex flex-col items-start gap-1">
                     <label className="text-[10px] font-semibold uppercase tracking-wide text-ink-400">Stage</label>
+                    {/* Only valid next steps; admins correct other stages (with a
+                        reason) from the case page. */}
                     <select
                       value={c.stage}
-                      disabled={busyId === c.id}
+                      disabled={busyId === c.id || !!c.cancelledAt}
                       onChange={(e) => handleStageChange(c.id, e.target.value as CaseStage)}
                       className="rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 outline-none focus:border-brand-500 disabled:opacity-50"
                     >
-                      {caseStages.map((stage) => (
+                      {[c.stage, ...c.allowedNextStages].map((stage) => (
                         <option key={stage} value={stage}>
-                          {stage}
+                          {stage === c.stage ? stage : `→ ${stage}`}
                         </option>
                       ))}
                     </select>

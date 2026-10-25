@@ -6,7 +6,20 @@ import { useParams } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { ButtonLink } from "@/components/ui/Button";
 import { CaseStageStepper } from "@/components/portal/CaseStageStepper";
-import { fetchCase, submitPaymentReceipt, type PortalCase } from "@/lib/portal/data";
+import {
+  cancelCase,
+  fetchCase,
+  fetchCaseDocuments,
+  fetchCaseWorkflow,
+  submitPaymentReceipt,
+  type CaseDocumentItem,
+  type PortalCase,
+} from "@/lib/portal/data";
+import { TermsModal } from "@/components/portal/TermsModal";
+import { RecoveryFormCard } from "@/components/portal/RecoveryFormCard";
+import { CaseDocumentsSection } from "@/components/portal/CaseDocumentsSection";
+import { TERMS_VERSION } from "@/lib/portal/recovery-terms";
+import { nextAction } from "@/lib/portal/workflow";
 import { formatNaira } from "@/lib/portal/case-fees";
 import { bankDetails } from "@/lib/portal/bank-details";
 import { PaymentStatusBadge, formatBalanceDeadline } from "@/components/portal/PaymentStatusBadge";
@@ -17,13 +30,25 @@ export default function PortalCaseDetailPage() {
   const [portalCase, setPortalCase] = useState<PortalCase | null | undefined>(undefined);
   const [uploadingReceipt, setUploadingReceipt] = useState(false);
   const [receiptError, setReceiptError] = useState<string | null>(null);
+  const [documents, setDocuments] = useState<CaseDocumentItem[]>([]);
+  const [workflow, setWorkflow] = useState<{ termsAcceptedAt: string | null; formSubmittedAt: string | null }>({
+    termsAcceptedAt: null,
+    formSubmittedAt: null,
+  });
+  const [showTerms, setShowTerms] = useState(false);
+  const [cancelMessage, setCancelMessage] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const refresh = () => setRefreshKey((k) => k + 1);
 
   useEffect(() => {
     let cancelled = false;
     function load() {
-      fetchCase(params.id)
-        .then((result) => {
-          if (!cancelled) setPortalCase(result);
+      Promise.all([fetchCase(params.id), fetchCaseDocuments(params.id), fetchCaseWorkflow(params.id, TERMS_VERSION)])
+        .then(([result, docs, wf]) => {
+          if (cancelled) return;
+          setPortalCase(result);
+          setDocuments(docs);
+          setWorkflow(wf);
         })
         .catch(() => {});
     }
@@ -37,7 +62,26 @@ export default function PortalCaseDetailPage() {
       clearInterval(interval);
       window.removeEventListener("focus", load);
     };
-  }, [params.id]);
+  }, [params.id, refreshKey]);
+
+  async function handleCancel() {
+    if (!portalCase) return;
+    const paid = portalCase.paymentStatus === "paid" || portalCase.paymentStatus === "pending_review";
+    const question = paid
+      ? "Your deposit is paid or being checked, so we'll send a cancellation request to our team. As stated in the terms, the deposit is non-refundable. Continue?"
+      : "Cancel this case? Your case will be closed and kept in your history.";
+    if (!window.confirm(question)) return;
+    const reason = window.prompt("Optional: tell us why you're cancelling", "") ?? "";
+    const result = await cancelCase(portalCase.id, reason);
+    setCancelMessage(
+      result.ok
+        ? result.outcome === "cancelled"
+          ? "Your case has been cancelled."
+          : "Your cancellation request has been sent to our team."
+        : result.message
+    );
+    refresh();
+  }
 
   async function handleReceiptChange(e: ChangeEvent<HTMLInputElement>, kind: PaymentKind) {
     const file = e.target.files?.[0];
@@ -75,6 +119,17 @@ export default function PortalCaseDetailPage() {
 
   const displayId = portalCase.id.slice(0, 8).toUpperCase();
   const payment = summarizePayment(portalCase.payment);
+  const isCancelled = !!portalCase.cancelledAt;
+  const next = nextAction({
+    stage: portalCase.stage,
+    depositConfirmed: payment.depositConfirmed,
+    depositStatus: payment.depositStatus,
+    balanceStatus: payment.balanceStatus,
+    cancelled: isCancelled,
+    cancellationRequested: !!portalCase.cancellationRequestedAt,
+    docs: documents.map((d) => ({ category: d.category, review_status: d.reviewStatus })),
+    formSubmitted: !!workflow.formSubmittedAt,
+  }).client;
 
   return (
     <div>
@@ -99,6 +154,18 @@ export default function PortalCaseDetailPage() {
           {portalCase.agentName ? `Message ${portalCase.agentName.split(" ")[0]}` : "Message the team"}
         </ButtonLink>
       </div>
+
+      {isCancelled ? (
+        <div className="mt-6 rounded-xl border border-ink-200 bg-ink-50 px-4 py-3 text-sm text-ink-700">
+          <span className="font-semibold">This case has been cancelled.</span> It stays in your history for your records.
+        </div>
+      ) : (
+        <div className="mt-6 rounded-xl border border-brand-200 bg-brand-50/60 px-4 py-3 text-sm">
+          <span className="font-semibold text-brand-800">Next step: </span>
+          <span className="text-ink-700">{next}</span>
+        </div>
+      )}
+      {cancelMessage ? <p className="mt-3 text-sm font-medium text-ink-700">{cancelMessage}</p> : null}
 
       {portalCase.agentName ? (
         <Card className="mt-6 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -131,7 +198,7 @@ export default function PortalCaseDetailPage() {
         </Card>
       ) : null}
 
-      {payment.totalKobo > 0 ? (
+      {payment.totalKobo > 0 && !isCancelled ? (
         <Card className="mt-6 border-brand-200 bg-brand-50/60">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-sm font-semibold text-ink-900">Payment</h2>
@@ -179,12 +246,35 @@ export default function PortalCaseDetailPage() {
                   (50% of the total fee) to the account below, then upload your receipt. The remaining{" "}
                   {formatNaira(payment.balanceKobo)} is only due after your recovery is completed.
                 </p>
-                <BankDetails />
-                <ReceiptUpload
-                  label="Upload deposit receipt"
-                  uploading={uploadingReceipt}
-                  onChange={(e) => handleReceiptChange(e, "deposit")}
-                />
+                {workflow.termsAcceptedAt ? (
+                  <>
+                    <p className="mt-3 text-xs text-ink-500">
+                      ✓ Recovery terms accepted ·{" "}
+                      <button type="button" onClick={() => setShowTerms(true)} className="font-semibold text-brand-700 hover:underline">
+                        view terms
+                      </button>
+                    </p>
+                    <BankDetails />
+                    <ReceiptUpload
+                      label="Upload deposit receipt"
+                      uploading={uploadingReceipt}
+                      onChange={(e) => handleReceiptChange(e, "deposit")}
+                    />
+                  </>
+                ) : (
+                  <div className="mt-4 rounded-xl border border-brand-200 bg-white p-4">
+                    <p className="text-sm text-ink-700">
+                      Before you pay, please read and accept our recovery terms and conditions.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setShowTerms(true)}
+                      className="mt-3 rounded-full bg-brand-600 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-700"
+                    >
+                      Read terms and continue to payment
+                    </button>
+                  </div>
+                )}
               </>
             )
           ) : payment.balanceStatus === "not_due" ? (
@@ -234,19 +324,30 @@ export default function PortalCaseDetailPage() {
         </Card>
       ) : null}
 
-      {payment.depositConfirmed && portalCase.stage === "Documents Required" ? (
-        <Card className="mt-6 flex flex-col items-start gap-3 border-brand-200 bg-brand-50/60 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-semibold text-brand-800">Documents needed</p>
-            <p className="mt-1 text-sm text-ink-600">
-              Payment Confirmed. Upload your ID, screenshots and any emails from the platform so
-              {portalCase.agentName ? ` ${portalCase.agentName.split(" ")[0]}` : " your agent"} can start the recovery.
+      {payment.depositConfirmed && !isCancelled ? (
+        <>
+          <Card className="mt-6">
+            <h2 className="text-sm font-semibold text-ink-900">Recovery form</h2>
+            <p className="mt-1 text-sm text-ink-500">Fill this out so we can prepare your case.</p>
+            <div className="mt-4">
+              <RecoveryFormCard
+                caseId={portalCase.id}
+                submittedAt={workflow.formSubmittedAt}
+                documents={documents}
+                onChanged={refresh}
+              />
+            </div>
+          </Card>
+          <Card className="mt-6">
+            <h2 className="text-sm font-semibold text-ink-900">Documents</h2>
+            <p className="mt-1 text-sm text-ink-500">
+              Upload what&apos;s required below. Our team reviews each document; you&apos;ll see its status here.
             </p>
-          </div>
-          <ButtonLink href={`/portal/documents?case=${portalCase.id}`} size="sm">
-            Upload documents
-          </ButtonLink>
-        </Card>
+            <div className="mt-4">
+              <CaseDocumentsSection caseId={portalCase.id} documents={documents} onChanged={refresh} />
+            </div>
+          </Card>
+        </>
       ) : null}
 
       <Card className="mt-6">
@@ -268,6 +369,29 @@ export default function PortalCaseDetailPage() {
           ))}
         </ol>
       </Card>
+
+      {!isCancelled && portalCase.stage !== "Resolved" ? (
+        <div className="mt-6 text-right">
+          {portalCase.cancellationRequestedAt ? (
+            <p className="text-xs text-ink-500">Cancellation requested — our team will reply in your messages.</p>
+          ) : (
+            <button type="button" onClick={handleCancel} className="text-xs font-semibold text-ink-400 hover:text-risk-high">
+              Cancel this case
+            </button>
+          )}
+        </div>
+      ) : null}
+
+      {showTerms ? (
+        <TermsModal
+          caseId={portalCase.id}
+          onClose={() => setShowTerms(false)}
+          onAccepted={() => {
+            setShowTerms(false);
+            refresh();
+          }}
+        />
+      ) : null}
     </div>
   );
 }

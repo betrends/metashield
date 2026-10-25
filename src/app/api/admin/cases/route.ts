@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { getAdminRole } from "@/lib/admin/auth";
 import { PAYMENT_COLUMNS, pickPaymentRecord } from "@/lib/portal/payments";
+import { allowedNextStages } from "@/lib/portal/workflow";
+import type { CaseStage } from "@/lib/portal/mock-data";
 
 export async function GET() {
   const role = await getAdminRole();
@@ -11,7 +13,7 @@ export async function GET() {
   let query = admin
     .from("cases")
     .select(
-      `id, user_id, title, platform, account_handle, stage, agent_name, issue, created_at, screenshot_url, ${PAYMENT_COLUMNS}`
+      `id, user_id, title, platform, account_handle, stage, agent_name, issue, created_at, screenshot_url, cancelled_at, cancellation_requested_at, ${PAYMENT_COLUMNS}`
     )
     .order("created_at", { ascending: false });
 
@@ -37,6 +39,9 @@ export async function GET() {
         paymentStatus: row.payment_status,
         // Same authoritative record every portal reads (lib/portal/payments.ts).
         payment: pickPaymentRecord(row),
+        cancelledAt: row.cancelled_at ?? null,
+        cancellationRequestedAt: row.cancellation_requested_at ?? null,
+        allowedNextStages: allowedNextStages(row.stage as CaseStage),
         agentName: row.agent_name,
         issue: row.issue,
         createdAt: row.created_at,

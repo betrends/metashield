@@ -14,6 +14,10 @@ type ThreadRow = {
   body: string;
   attachment_name: string | null;
   attachment_path?: string | null;
+  attachment_type?: string | null;
+  attachment_size?: number | null;
+  kind?: string | null;
+  read_at?: string | null;
   created_at: string;
 };
 
@@ -42,7 +46,7 @@ export async function GET(request: Request) {
       .from("messages")
       .select(
         withPath
-          ? "id, from_role, author_name, body, attachment_name, attachment_path, created_at"
+          ? "id, from_role, author_name, body, attachment_name, attachment_path, attachment_type, attachment_size, kind, read_at, created_at"
           : "id, from_role, author_name, body, attachment_name, created_at"
       )
       .eq("user_id", userId)
@@ -75,6 +79,10 @@ export async function GET(request: Request) {
         body: m.body,
         created_at: m.created_at,
         attachment_name: m.attachment_name,
+        attachment_type: m.attachment_type ?? null,
+        attachment_size: m.attachment_size ?? null,
+        kind: m.kind ?? "message",
+        read_at: m.read_at ?? null,
         attachment_url,
       };
     })

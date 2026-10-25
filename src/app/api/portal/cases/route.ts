@@ -14,6 +14,7 @@ import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { formatNaira, getFollowerRangeFeeKobo, FOLLOWER_RANGES } from "@/lib/portal/case-fees";
 import { sendCaseUpdateEmail } from "@/lib/email/case-update";
 import { depositFor } from "@/lib/portal/payments";
+import { postCaseMessage } from "@/lib/server/case-events";
 
 const MAX = { title: 120, platform: 60, handle: 120, issue: 2000, event: 200, events: 5 };
 
@@ -103,6 +104,16 @@ export async function POST(request: Request) {
     agent ? `Assigned to ${agent.name}` : "Awaiting agent assignment",
     `Deposit of ${formatNaira(depositKobo)} (50% of ${formatNaira(feeKobo)}) required to begin recovery`,
   ];
+  const { error: historyError } = await admin.from("case_stage_history").insert({
+    case_id: created.id,
+    from_stage: null,
+    to_stage: "Payment Pending",
+    actor_role: "client",
+    actor: user.email ?? null,
+    reason: "Case opened",
+  });
+  if (historyError) console.error("Case created but stage history insert failed:", historyError);
+
   const { error: timelineError } = await admin
     .from("case_timeline_events")
     .insert(events.map((event) => ({ case_id: created.id, event })));
@@ -110,11 +121,12 @@ export async function POST(request: Request) {
 
   const firstName = (user.user_metadata?.full_name as string | undefined)?.split(" ")[0] || "there";
   const authorName = agent?.name ?? "MetaShield Team";
-  const { error: messageError } = await admin.from("messages").insert({
-    user_id: user.id,
-    case_id: created.id,
-    from_role: "team",
-    author_name: authorName,
+  await postCaseMessage(admin, {
+    userId: user.id,
+    caseId: created.id,
+    authorName,
+    kind: "message",
+    dedupeKey: `welcome:${created.id}`,
     body: agent
       ? `Hi ${firstName}, I'm ${agent.name} and I'll be handling your case (${title}). The total recovery fee is ${formatNaira(
           feeKobo
@@ -129,7 +141,7 @@ export async function POST(request: Request) {
           depositKobo
         )} is confirmed, recovery starts right away — you can pay from this case's page any time.`,
   });
-  if (messageError) console.error("Case created but welcome message failed:", messageError);
+
 
   if (user.email) {
     await sendCaseUpdateEmail({

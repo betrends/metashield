@@ -5,7 +5,7 @@
 // stage/agent controls as the full Cases page, just pre-filtered.
 
 import { useEffect, useState } from "react";
-import { caseStages, type CaseStage } from "@/lib/portal/mock-data";
+import { type CaseStage } from "@/lib/portal/mock-data";
 import { PaymentStatusBadge } from "@/components/portal/PaymentStatusBadge";
 import type { PaymentRecord } from "@/lib/portal/payments";
 
@@ -19,6 +19,8 @@ type AdminCase = {
   stage: CaseStage;
   paymentStatus: "unpaid" | "pending_review" | "paid" | "failed";
   payment: PaymentRecord;
+  allowedNextStages?: CaseStage[];
+  cancelledAt?: string | null;
   agentName: string | null;
   issue: string | null;
   createdAt: string;
@@ -152,13 +154,13 @@ export default function AdminAppealsPage() {
                     <label className="text-[10px] font-semibold uppercase tracking-wide text-ink-400">Stage</label>
                     <select
                       value={c.stage}
-                      disabled={busyId === c.id}
+                      disabled={busyId === c.id || !!c.cancelledAt}
                       onChange={(e) => handleStageChange(c.id, e.target.value as CaseStage)}
                       className="rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 outline-none focus:border-brand-500 disabled:opacity-50"
                     >
-                      {caseStages.map((stage) => (
+                      {[c.stage, ...(c.allowedNextStages ?? [])].map((stage) => (
                         <option key={stage} value={stage}>
-                          {stage}
+                          {stage === c.stage ? stage : `→ ${stage}`}
                         </option>
                       ))}
                     </select>

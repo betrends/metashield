@@ -1,5 +1,6 @@
 "use client";
 
+import { markTeamMessagesRead } from "@/lib/portal/data";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -220,16 +221,16 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
     let cancelled = false;
     let pollInterval: NodeJS.Timeout | null = null;
 
-    // Notifications are the team's messages to this client. This used to
-    // query columns that don't exist (recipient_email, sender, message,
-    // is_read), so the bell never showed anything. "Read" is tracked per
-    // browser as the time the client last opened the bell.
+    // Notifications are the team's messages to this client; unread =
+    // read_at not set (marked read when the client opens the bell or
+    // Messages). Falls back to the per-browser "last opened" time for
+    // databases without the read_at column.
     async function fetchNotifications() {
       try {
         const supabase = createClient();
         const { data, error } = await supabase
           .from("messages")
-          .select("id, author_name, body, created_at")
+          .select("*")
           .eq("user_id", sessionUserId)
           .eq("from_role", "team")
           .order("created_at", { ascending: false })
@@ -237,15 +238,15 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
 
         if (!cancelled && !error && data) {
           const seenAt = readSeenAt(sessionUserId);
-          const mappedData = (data as { id: string; author_name: string; body: string; created_at: string }[]).map(
-            (m) => ({
-              id: m.id,
-              sender: m.author_name,
-              message: m.body,
-              created_at: m.created_at,
-              is_read: new Date(m.created_at).getTime() <= seenAt,
-            })
-          );
+          const mappedData = (
+            data as { id: string; author_name: string; body: string; created_at: string; read_at?: string | null }[]
+          ).map((m) => ({
+            id: m.id,
+            sender: m.author_name,
+            message: m.body,
+            created_at: m.created_at,
+            is_read: m.read_at !== undefined ? !!m.read_at : new Date(m.created_at).getTime() <= seenAt,
+          }));
           setNotifications(mappedData);
           setUnreadCount(mappedData.filter((m) => !m.is_read).length);
         }
@@ -339,6 +340,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
               onClick={() => {
                 if (!notificationsOpen) {
                   markNotificationsSeen(session.id);
+                  void markTeamMessagesRead();
                   setUnreadCount(0);
                 }
                 setNotificationsOpen(!notificationsOpen);

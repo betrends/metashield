@@ -511,7 +511,7 @@ export function paymentConfirmedEmail(opts: {
         ["📬", "Regular updates", "You'll receive email updates at every stage of the recovery process."],
         ["💬", "Direct messaging", `Message ${agentName || "your agent"} anytime from your portal.`],
         ["📊", "Live tracking", "Track every step in real-time from your client dashboard."],
-        ["⏱️", "Timeline", "Recovery typically takes 3–14 days depending on the platform and case complexity."],
+        ["⏱️", "Timeline", "The process can take up to 9 weeks, depending on the case and Meta's review timeline."],
       ].map(([icon, title, desc]) => `
         <tr>
           <td style="padding:10px 0;vertical-align:top;width:36px;"><span style="font-size:20px;">${icon}</span></td>
@@ -589,6 +589,88 @@ export function subscriptionWelcomeEmail(opts: {
 
     <p style="margin:0;color:${TEXT_LIGHT};font-size:12px;">
       You can manage or cancel your subscription anytime from the Billing section of your portal.
+    </p>
+  `);
+}
+
+// Final 50% balance is due (sent when recovery completion is recorded).
+export function balanceDueEmail(opts: {
+  clientName: string;
+  caseTitle: string;
+  balance: string;
+  deadline: string;
+  overdue?: boolean;
+}) {
+  const { clientName, caseTitle, balance, deadline } = escapeOpts(opts);
+  const overdue = !!opts.overdue;
+  return wrapper(`
+    <div style="margin-bottom:8px;">${statusBadge(overdue ? "Balance Overdue" : "Balance Due", BRAND_PURPLE, BRAND_LIGHT)}</div>
+    <h1 style="margin:16px 0 8px;color:${BRAND_DARK};font-size:24px;font-weight:700;line-height:1.3;">
+      ${overdue ? "Your final balance is overdue" : "Your recovery is complete 🎉"}
+    </h1>
+    <p style="margin:0 0 24px;color:${TEXT_MID};font-size:15px;line-height:1.7;">
+      Hi <strong>${clientName}</strong>, ${
+        overdue
+          ? `the remaining balance for <strong>${caseTitle}</strong> was due by <strong>${deadline}</strong>.`
+          : `your case <strong>${caseTitle}</strong> has been completed successfully.`
+      }
+      The remaining 50% of your recovery fee, <strong>${balance}</strong>, ${overdue ? "is now overdue" : `is due by <strong>${deadline}</strong> (24 hours from completion)`}.
+    </p>
+    <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:24px;">
+      ${infoRow("Balance due", balance)}
+      ${infoRow("Deadline", deadline)}
+    </table>
+    <p style="margin:0 0 24px;color:${TEXT_MID};font-size:14px;line-height:1.7;">
+      Pay by bank transfer and upload your receipt from your case page.
+    </p>
+    ${ctaButton("Pay my balance", `${PORTAL_URL}/portal/cases`)}
+  `);
+}
+
+// Short internal alert to the team (NOTIFY_EMAIL).
+export function staffAlertEmail(opts: { title: string; lines: string[]; link?: string | null }) {
+  const title = escapeHtml(opts.title);
+  const lines = opts.lines.map(escapeHtml);
+  return wrapper(`
+    <h1 style="margin:0 0 16px;color:${BRAND_DARK};font-size:20px;font-weight:700;line-height:1.3;">${title}</h1>
+    ${lines.map((l) => `<p style="margin:0 0 8px;color:${TEXT_MID};font-size:14px;line-height:1.6;">${l}</p>`).join("")}
+    ${opts.link ? ctaButton("Open in admin", `${PORTAL_URL}${opts.link}`) : ""}
+  `);
+}
+
+// Follow-up for someone who checked eligibility but didn't open a case.
+export function eligibilityFollowupEmail(opts: {
+  name: string;
+  platform?: string | null;
+  issue?: string | null;
+  unsubscribeUrl: string;
+}) {
+  const { name, platform, issue } = escapeOpts({ name: opts.name, platform: opts.platform ?? "", issue: opts.issue ?? "" });
+  const unsubscribeUrl = escapeHtml(opts.unsubscribeUrl);
+  return wrapper(`
+    <h1 style="margin:0 0 8px;color:${BRAND_DARK};font-size:22px;font-weight:700;line-height:1.3;">
+      Still need help getting your account back, ${name.split(" ")[0] || "there"}?
+    </h1>
+    <p style="margin:0 0 16px;color:${TEXT_MID};font-size:15px;line-height:1.7;">
+      You recently checked your recovery eligibility with MetaShield${platform ? ` for your <strong>${platform}</strong> account` : ""}${
+        issue ? ` (<strong>${issue}</strong>)` : ""
+      }. Your situation looked like a case we can work on.
+    </p>
+    <h2 style="margin:0 0 10px;color:${TEXT_DARK};font-size:15px;font-weight:700;">How MetaShield can help</h2>
+    <p style="margin:0 0 8px;color:${TEXT_MID};font-size:14px;line-height:1.7;">
+      We prepare and submit your case for further review through available Meta support channels, and keep you updated at every step.
+    </p>
+    <p style="margin:0 0 16px;color:${TEXT_MID};font-size:14px;line-height:1.7;">
+      <strong>Next steps:</strong> open your case, pay the 50% deposit, and complete the recovery form. The remaining 50% is only due after a successful recovery.
+    </p>
+    ${ctaButton("Start my recovery case", `${PORTAL_URL}/recovery-eligibility`)}
+    <p style="margin:16px 0 0;color:${TEXT_LIGHT};font-size:12px;line-height:1.6;">
+      An eligibility check does not guarantee recovery — the final decision remains with Meta.
+      Questions? Reply to this email or contact support at ${PORTAL_URL}/contact.
+    </p>
+    <p style="margin:12px 0 0;color:${TEXT_LIGHT};font-size:11px;">
+      You received this because you asked us to email you about your eligibility result.
+      <a href="${unsubscribeUrl}" style="color:${TEXT_LIGHT};">Unsubscribe</a>
     </p>
   `);
 }

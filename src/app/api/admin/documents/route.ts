@@ -22,6 +22,7 @@ type DocumentRow = {
   storage_path: string | null;
   created_at: string;
   case_id?: string | null;
+  review_status?: string | null;
 };
 
 type CaseRow = { id: string; title: string; user_id: string; agent_id: string | null };
@@ -42,7 +43,7 @@ export async function GET() {
         .from("documents")
         .select(
           withCaseId
-            ? "id, user_id, name, category, size_bytes, storage_path, created_at, case_id"
+            ? "id, user_id, name, category, size_bytes, storage_path, created_at, case_id, review_status"
             : "id, user_id, name, category, size_bytes, storage_path, created_at"
         )
         .order("created_at", { ascending: false });
@@ -99,6 +100,7 @@ export async function GET() {
           clientName: profile?.full_name || profile?.email?.split("@")[0] || "Unknown",
           caseId: doc.case_id ?? null,
           caseTitle: caseRow?.title ?? null,
+          reviewStatus: doc.review_status ?? null,
           url,
         };
       })
