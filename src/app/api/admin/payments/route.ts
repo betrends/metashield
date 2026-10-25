@@ -47,6 +47,25 @@ export async function GET() {
 
   const rows = (data ?? []) as unknown as CaseRow[];
 
+  // When each receipt was uploaded: the latest "…receipt… submitted"
+  // timeline event per case and installment. Covers older wording too
+  // ("Payment receipt submitted — awaiting confirmation" = deposit).
+  const receiptAt = new Map<string, { deposit?: string; balance?: string }>();
+  if (rows.length > 0) {
+    const { data: events } = await adminClient
+      .from("case_timeline_events")
+      .select("case_id, event, created_at")
+      .in("case_id", rows.map((r) => r.id))
+      .ilike("event", "%receipt%submitted%")
+      .order("created_at", { ascending: true });
+    for (const e of (events ?? []) as { case_id: string; event: string; created_at: string }[]) {
+      const entry = receiptAt.get(e.case_id) ?? {};
+      if (e.event.startsWith("Final balance receipt")) entry.balance = e.created_at;
+      else entry.deposit = e.created_at;
+      receiptAt.set(e.case_id, entry);
+    }
+  }
+
   async function sign(path: string | null) {
     if (!path) return null;
     const { data: signed } = await adminClient.storage.from("documents").createSignedUrl(path, 60 * 10);
@@ -74,6 +93,8 @@ export async function GET() {
         paymentStatus: payment.payment_status,
         receiptUrl: await sign(row.receipt_storage_path),
         balanceReceiptUrl: await sign(row.balance_receipt_storage_path),
+        depositReceiptAt: receiptAt.get(row.id)?.deposit ?? null,
+        balanceReceiptAt: receiptAt.get(row.id)?.balance ?? null,
       };
     })
   );

@@ -19,7 +19,48 @@ type AdminCaseRow = {
   payment: PaymentRecord;
   receiptUrl: string | null;
   balanceReceiptUrl: string | null;
+  depositReceiptAt: string | null;
+  balanceReceiptAt: string | null;
 };
+
+// Date and time in Lagos time, e.g. "23 Oct 2026, 08:45".
+function formatDateTime(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  return new Date(iso).toLocaleString("en-GB", {
+    timeZone: "Africa/Lagos",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+// The payment timeline for one case, oldest first; only steps that happened.
+function PaymentDates({ c }: { c: AdminCaseRow }) {
+  const p = c.payment;
+  const rows: [string, string | null][] = [
+    ["Case opened", formatDateTime(c.createdAt)],
+    ["Deposit receipt uploaded", formatDateTime(c.depositReceiptAt)],
+    ["Deposit confirmed", formatDateTime(p.deposit_paid_at)],
+    ["Recovery completed", formatDateTime(p.recovery_completed_at)],
+    ["Balance due by", formatDateTime(p.balance_due_at)],
+    ["Balance receipt uploaded", formatDateTime(c.balanceReceiptAt)],
+    ["Balance confirmed", formatDateTime(p.balance_paid_at)],
+  ];
+  const shown = rows.filter(([, value]) => value);
+  if (shown.length === 0) return null;
+  return (
+    <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+      {shown.map(([label, value]) => (
+        <div key={label} className="contents">
+          <dt className="text-ink-400">{label}</dt>
+          <dd className="font-medium text-ink-700">{value} WAT</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
 
 // Which installment this row is waiting on: the deposit until it is
 // verified, then the final balance once recovery completion made it due.
@@ -141,6 +182,7 @@ export default function AdminPaymentsPage() {
                     </p>
                     {c.agentName ? <p className="mt-0.5 text-xs text-ink-400">Agent: {c.agentName}</p> : null}
                     <PaymentSummaryLine payment={c.payment} />
+                    <PaymentDates c={c} />
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-2">
                     <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">
