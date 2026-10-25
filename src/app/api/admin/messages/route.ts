@@ -25,7 +25,7 @@ export async function GET() {
     clientFilter = Array.from(new Set((agentCases ?? []).map((c) => c.user_id as string)));
   }
 
-  const select = "id, user_id, case_id, from_role, author_name, body, attachment_name, created_at";
+  const select = "id, user_id, case_id, from_role, author_name, body, attachment_name, created_at, read_at";
   const baseQuery = () => admin.from("messages").select(select).order("created_at", { ascending: false });
 
   let messagesQuery;
@@ -66,6 +66,7 @@ export async function GET() {
     lastMessage: string;
     lastFromRole: "client" | "team";
     lastAt: string;
+    unread: number;
   };
 
   const conversations = new Map<string, Conversation>();
@@ -80,8 +81,11 @@ export async function GET() {
         lastMessage: m.attachment_name ? `📎 ${m.attachment_name} — ${m.body}` : m.body,
         lastFromRole: m.from_role,
         lastAt: m.created_at,
+        unread: 0,
       });
     }
+    // Unread = client messages staff haven't opened yet.
+    if (m.from_role === "client" && !m.read_at) conversations.get(key)!.unread += 1;
   }
 
   const list = Array.from(conversations.values()).sort(

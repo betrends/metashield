@@ -1,6 +1,7 @@
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { InstallBanner } from "@/components/InstallBanner";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { LocaleProvider } from "@/lib/i18n/client";
 import { getLocale } from "@/lib/i18n/server";
 
@@ -16,6 +17,7 @@ export default async function MarketingLayout({
       <Header />
       <main className="flex-1">{children}</main>
       <Footer />
+      <WhatsAppButton />
       <InstallBanner />
     </LocaleProvider>
   );

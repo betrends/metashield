@@ -1,145 +1,137 @@
-// Fires after a client submits documents in the portal.
-// Sends an HTML notification email to the team (NOTIFY_EMAIL) and to the
-// case's assigned agent so they know there's new material to review, and
-// moves a paid case waiting on documents on to "Under Review" — before
-// this, nothing ever moved a case out of "Documents Required".
-// Auth-gated: only a signed-in user can trigger this, and only for a case
-// they own (checked through their own RLS-scoped session).
+// Called by the client after a batch of documents has been uploaded and
+// registered (/api/portal/documents/register). The server re-checks that
+// every listed document exists and is linked to this client's case before:
+//  - posting "Document upload received…" in the case chat (once per
+//    batch, de-duplicated so a refresh or retry can't repeat it),
+//  - moving a paid case from "Documents Required" to "Under Review" once
+//    the recovery form is in and every required document type has been
+//    submitted (submission is not approval — staff approve or reject each
+//    document afterwards),
+//  - emailing the team and the assigned agent.
+// Auth-gated; only works on the caller's own case (checked through RLS).
 
+import { createHash } from "node:crypto";
 import { Resend } from "resend";
 import { NextResponse } from "next/server";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { documentsSubmittedEmail } from "@/lib/email-templates";
-import { stageAfterDocumentsSubmitted, type PaymentStatus } from "@/lib/portal/case-rules";
+import { documentTypeLabel, readyForReview, type CaseDocument } from "@/lib/portal/workflow";
 import type { CaseStage } from "@/lib/portal/mock-data";
+import { moveStage, postCaseMessage } from "@/lib/server/case-events";
+
+const DOCUMENTS_RECEIVED_MESSAGE =
+  "Document upload received. Your documents have been submitted successfully and are awaiting review.";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
   if (!user) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  let body: { fileNames?: unknown; caseTitle?: unknown; caseId?: unknown };
+  let body: { caseId?: unknown; documentIds?: unknown };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }
-
-  const fileNames: string[] = Array.isArray(body.fileNames)
-    ? body.fileNames.filter((n): n is string => typeof n === "string")
+  const caseId = typeof body.caseId === "string" ? body.caseId : "";
+  const documentIds = Array.isArray(body.documentIds)
+    ? body.documentIds.filter((n): n is string => typeof n === "string").slice(0, 50)
     : [];
-  let caseTitle = typeof body.caseTitle === "string" ? body.caseTitle : null;
-  const caseId = typeof body.caseId === "string" && body.caseId ? body.caseId : null;
-
-  if (fileNames.length === 0) {
-    return NextResponse.json({ error: "no_files" }, { status: 400 });
+  if (!caseId || documentIds.length === 0) {
+    return NextResponse.json({ error: "invalid_input" }, { status: 400 });
   }
 
-  const clientEmail = user.email ?? "";
-  const clientName =
-    (user.user_metadata?.full_name as string | undefined) ||
-    clientEmail.split("@")[0] ||
-    "A client";
+  const { data: ownCase } = await supabase
+    .from("cases")
+    .select("id, title, stage, payment_status, agent_name, agent_email, cancelled_at")
+    .eq("id", caseId)
+    .maybeSingle();
+  if (!ownCase) return NextResponse.json({ error: "case_not_found" }, { status: 404 });
 
-  // Read through the client's own session: RLS only returns the case if
-  // it belongs to them.
-  let agentEmail: string | null = null;
-  let newStage: CaseStage | null = null;
-  if (caseId) {
-    const { data: ownCase } = await supabase
-      .from("cases")
-      .select("id, title, stage, payment_status, agent_name, agent_email")
-      .eq("id", caseId)
-      .maybeSingle();
-    if (ownCase) {
-      caseTitle = caseTitle ?? ownCase.title;
-      agentEmail = ownCase.agent_email ?? null;
-      const admin = createAdminClient();
-      const fileList = `${fileNames.length} document${fileNames.length !== 1 ? "s" : ""}`;
-      const nextStage = stageAfterDocumentsSubmitted({
-        stage: ownCase.stage as CaseStage,
-        payment_status: ownCase.payment_status as PaymentStatus,
-      });
-      if (nextStage) {
-        // Conditional on the stage still being "Documents Required" so a
-        // concurrent staff change isn't overwritten.
-        const { data: moved, error: moveError } = await admin
-          .from("cases")
-          .update({ stage: nextStage })
-          .eq("id", caseId)
-          .eq("stage", "Documents Required")
-          .select("id")
-          .maybeSingle();
-        if (moveError) console.error("Failed to move case after documents:", moveError);
-        if (moved) newStage = nextStage;
-      }
-      await admin.from("case_timeline_events").insert(
-        [
-          { case_id: caseId, event: `${fileList} submitted by client` },
-          newStage ? { case_id: caseId, event: `Moved to ${newStage}` } : null,
-        ].filter((e): e is { case_id: string; event: string } => e !== null)
-      );
-      if (newStage) {
-        await admin.from("messages").insert({
-          user_id: user.id,
-          case_id: caseId,
-          from_role: "team",
-          author_name: ownCase.agent_name || "Your agent",
-          body: `Thanks — I've received your ${fileList} and your case is now under review. I'll message you here if I need anything else.`,
-        });
-      }
-    }
+  const admin = createAdminClient();
+  const { data: caseDocs, error: docsError } = await admin
+    .from("documents")
+    .select("id, name, category, review_status, user_id")
+    .eq("case_id", caseId);
+  if (docsError) {
+    console.error("Documents notify: lookup failed:", docsError);
+    return NextResponse.json({ error: "query_failed" }, { status: 500 });
+  }
+  const docs = (caseDocs ?? []) as (CaseDocument & { id: string; name: string; user_id: string })[];
+  const batch = docs.filter((d) => documentIds.includes(d.id) && d.user_id === user.id);
+  if (batch.length !== documentIds.length) {
+    // Something in the list isn't stored or isn't linked to this case.
+    return NextResponse.json({ error: "documents_not_found" }, { status: 400 });
   }
 
-  const resendKey = process.env.RESEND_API_KEY;
-  const notifyTo = process.env.NOTIFY_EMAIL;
-  const recipients = Array.from(new Set([notifyTo, agentEmail].filter((e): e is string => !!e)));
+  const batchKey = createHash("sha256").update([...documentIds].sort().join(",")).digest("hex").slice(0, 32);
+  const posted = await postCaseMessage(admin, {
+    userId: user.id,
+    caseId,
+    authorName: ownCase.agent_name || "MetaShield",
+    kind: "system",
+    dedupeKey: `docs_received:${caseId}:${batchKey}`,
+    body: DOCUMENTS_RECEIVED_MESSAGE,
+  });
+  if (!posted) {
+    // Already handled (refresh/retry) — don't move or email again.
+    return NextResponse.json({ ok: true, alreadyNotified: true, stage: ownCase.stage });
+  }
 
-  if (resendKey && recipients.length > 0) {
+  await admin.from("case_timeline_events").insert({
+    case_id: caseId,
+    event: `${batch.length} document${batch.length !== 1 ? "s" : ""} submitted by client: ${batch
+      .map((d) => documentTypeLabel(d.category))
+      .join(", ")}`,
+  });
+
+  let stage = ownCase.stage as CaseStage;
+  const { count: formCount } = await admin
+    .from("recovery_form_submissions")
+    .select("id", { count: "exact", head: true })
+    .eq("case_id", caseId);
+  if (
+    !ownCase.cancelled_at &&
+    readyForReview({ stage, depositConfirmed: ownCase.payment_status === "paid", formSubmitted: (formCount ?? 0) > 0, docs })
+  ) {
+    const moved = await moveStage(admin, {
+      caseId,
+      from: "Documents Required",
+      to: "Under Review",
+      actor: { role: "system", name: "Required documents submitted" },
+    });
+    if (moved) stage = "Under Review";
+  }
+
+  const recipients = Array.from(
+    new Set([process.env.NOTIFY_EMAIL, ownCase.agent_email].filter((e): e is string => !!e))
+  );
+  if (process.env.RESEND_API_KEY && recipients.length > 0) {
+    const clientEmail = user.email ?? "";
+    const clientName = (user.user_metadata?.full_name as string | undefined) || clientEmail.split("@")[0] || "A client";
     try {
-      const resend = new Resend(resendKey);
-      const fromAddress =
-        process.env.RESEND_FROM_EMAIL || "MetaShield <onboarding@resend.dev>";
-
-      const html = documentsSubmittedEmail({
-        clientName,
-        clientEmail,
-        fileCount: fileNames.length,
-        fileNames,
-        caseTitle,
-      });
-
-      const { error: sendError } = await resend.emails.send({
-        from: fromAddress,
+      const { error: sendError } = await new Resend(process.env.RESEND_API_KEY).emails.send({
+        from: process.env.RESEND_FROM_EMAIL || "MetaShield <onboarding@resend.dev>",
         to: recipients,
         replyTo: clientEmail || undefined,
-        subject: `📎 ${fileNames.length} document${fileNames.length !== 1 ? "s" : ""} submitted by ${clientName}`,
-        html,
-        text: [
-          `Client: ${clientName} (${clientEmail})`,
-          caseTitle ? `Case: ${caseTitle}` : "",
-          `Files submitted (${fileNames.length}):`,
-          ...fileNames.map((n) => `  - ${n}`),
-          "",
-          `Review in the admin dashboard: ${process.env.NEXT_PUBLIC_APP_URL || "https://account-recovery-platform.vercel.app"}/admin`,
-        ]
-          .filter(Boolean)
-          .join("\n"),
+        subject: `📎 ${batch.length} document${batch.length !== 1 ? "s" : ""} submitted by ${clientName}`.replace(/[\r\n]+/g, " "),
+        html: documentsSubmittedEmail({
+          clientName,
+          clientEmail,
+          fileCount: batch.length,
+          fileNames: batch.map((d) => `${documentTypeLabel(d.category)}: ${d.name}`),
+          caseTitle: ownCase.title,
+        }),
       });
-
-      if (sendError) {
-        console.error("Resend rejected document notification:", sendError);
-      }
+      if (sendError) console.error("Resend rejected document notification:", sendError);
     } catch (err) {
-      // Don't fail the response — the docs are already saved in Supabase.
       console.error("Failed to send document notification:", err);
     }
   }
 
-  return NextResponse.json({ ok: true, caseId, stage: newStage });
+  return NextResponse.json({ ok: true, stage });
 }

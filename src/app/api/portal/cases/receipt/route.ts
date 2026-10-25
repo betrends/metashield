@@ -14,6 +14,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { sendCaseUpdateEmail } from "@/lib/email/case-update";
 import { formatNaira } from "@/lib/portal/case-fees";
+import { TERMS_VERSION } from "@/lib/portal/recovery-terms";
 import {
   canSubmitReceipt,
   PAYMENT_COLUMNS,
@@ -47,13 +48,30 @@ export async function POST(request: Request) {
   // Read through the client's own session: RLS only returns their case.
   const { data: ownCase } = await supabase
     .from("cases")
-    .select(`id, title, ${PAYMENT_COLUMNS}`)
+    .select(`id, title, cancelled_at, ${PAYMENT_COLUMNS}`)
     .eq("id", caseId)
     .maybeSingle();
   if (!ownCase) {
     return NextResponse.json({ error: "case_not_found" }, { status: 404 });
   }
+  if (ownCase.cancelled_at) {
+    return NextResponse.json({ error: "case_cancelled" }, { status: 409 });
+  }
   const record = pickPaymentRecord(ownCase);
+  if (kind === "deposit") {
+    // The recovery terms must be accepted before paying the deposit.
+    const { count: accepted } = await supabase
+      .from("case_terms_acceptances")
+      .select("id", { count: "exact", head: true })
+      .eq("case_id", caseId)
+      .eq("terms_version", TERMS_VERSION);
+    if (!accepted) {
+      return NextResponse.json(
+        { error: "terms_not_accepted", message: "Please read and accept the recovery terms before paying." },
+        { status: 409 }
+      );
+    }
+  }
   if (!canSubmitReceipt(kind, record)) {
     return NextResponse.json({ error: "not_payable", ...statusFor(kind, record) }, { status: 409 });
   }
@@ -85,6 +103,17 @@ export async function POST(request: Request) {
 
   const summary = summarizePayment(record);
   const amount = kind === "deposit" ? summary.depositKobo : summary.balanceKobo;
+
+  // Payment ledger entry for this submission (status pending_review).
+  const { error: ledgerError } = await admin.from("payment_ledger").insert({
+    case_id: caseId,
+    user_id: user.id,
+    kind,
+    amount_kobo: amount,
+    status: "pending_review",
+    receipt_storage_path: storagePath,
+  });
+  if (ledgerError) console.error("Receipt recorded but ledger write failed:", ledgerError, { caseId, kind });
   await admin.from("case_timeline_events").insert({
     case_id: caseId,
     event:

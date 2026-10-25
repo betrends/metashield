@@ -32,6 +32,8 @@ import {
   type PaymentKind,
 } from "@/lib/portal/payments";
 import type { CaseStage } from "@/lib/portal/mock-data";
+import { postCaseMessage, recordStageChange } from "@/lib/server/case-events";
+import { FORM_REQUEST_MESSAGE, RECOVERY_FORM_VERSION } from "@/lib/portal/recovery-form";
 
 export async function POST(request: Request) {
   const role = await getAdminRole();
@@ -39,7 +41,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "not_authorized" }, { status: 403 });
   }
 
-  let body: { caseId?: unknown; kind?: unknown };
+  let body: { caseId?: unknown; kind?: unknown; reference?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -47,6 +49,8 @@ export async function POST(request: Request) {
   }
   const caseId = typeof body.caseId === "string" ? body.caseId : "";
   const kind: PaymentKind = body.kind === "balance" ? "balance" : "deposit";
+  // Optional bank-transfer reference typed by the admin when confirming.
+  const reference = typeof body.reference === "string" ? body.reference.trim().slice(0, 120) || null : null;
   if (!caseId) {
     return NextResponse.json({ error: "missing_case_id" }, { status: 400 });
   }
@@ -55,7 +59,7 @@ export async function POST(request: Request) {
 
   const { data: current, error: readError } = await admin
     .from("cases")
-    .select(`id, title, user_id, agent_name, stage, ${PAYMENT_COLUMNS}`)
+    .select(`id, title, user_id, agent_name, stage, cancelled_at, ${PAYMENT_COLUMNS}`)
     .eq("id", caseId)
     .maybeSingle();
   if (readError) {
@@ -67,6 +71,9 @@ export async function POST(request: Request) {
   }
 
   const record = pickPaymentRecord(current);
+  if (current.cancelled_at) {
+    return NextResponse.json({ error: "case_cancelled", message: "This case has been cancelled." }, { status: 409 });
+  }
   if (isAlreadyConfirmed(kind, record)) {
     return NextResponse.json({ ok: true, alreadyPaid: true, kind, payment: record, stage: current.stage });
   }
@@ -110,31 +117,71 @@ export async function POST(request: Request) {
   const summary = summarizePayment(pickPaymentRecord(updated), now);
   const amount = kind === "deposit" ? summary.depositKobo : summary.balanceKobo;
 
-  const events =
-    kind === "deposit"
-      ? [`Deposit of ${formatNaira(amount)} confirmed — Payment Confirmed`]
-      : [`Final balance of ${formatNaira(amount)} confirmed — paid in full`];
-  if (update.stage) events.push(`Moved to ${update.stage}`);
-  const { error: timelineError } = await admin
-    .from("case_timeline_events")
-    .insert(events.map((event) => ({ case_id: caseId, event })));
-  if (timelineError) console.error("Payment confirmed but timeline insert failed:", timelineError);
+  // Payment ledger: confirm the pending receipt row, or record a confirmed
+  // transfer the admin verified without a receipt. The unique index on
+  // (case_id, kind) where status = 'confirmed' backs up the conditional
+  // case update above against double processing.
+  const decidedBy = role.email;
+  const { data: pendingRow } = await admin
+    .from("payment_ledger")
+    .select("id")
+    .eq("case_id", caseId)
+    .eq("kind", kind)
+    .eq("status", "pending_review")
+    .order("submitted_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const ledger = pendingRow
+    ? await admin
+        .from("payment_ledger")
+        .update({ status: "confirmed", decided_at: now.toISOString(), decided_by: decidedBy, amount_kobo: amount, ...(reference ? { reference } : {}) })
+        .eq("id", pendingRow.id)
+    : await admin.from("payment_ledger").insert({
+        case_id: caseId,
+        user_id: updated.user_id,
+        kind,
+        amount_kobo: amount,
+        status: "confirmed",
+        reference,
+        note: "Confirmed by admin without an uploaded receipt",
+        submitted_at: now.toISOString(),
+        decided_at: now.toISOString(),
+        decided_by: decidedBy,
+      });
+  if (ledger.error) console.error("Payment confirmed but ledger write failed:", ledger.error, { caseId, kind });
 
-  const { error: messageError } = await admin.from("messages").insert({
-    user_id: updated.user_id,
+  const { error: timelineError } = await admin.from("case_timeline_events").insert({
     case_id: caseId,
-    from_role: "team",
-    author_name: updated.agent_name || "Your agent",
-    body:
-      kind === "balance"
-        ? `Your final balance of ${formatNaira(amount)} is confirmed — your case is now paid in full. Thank you!`
-        : updated.stage === "Documents Required"
-          ? `Your deposit of ${formatNaira(amount)} is confirmed, thank you! Next step: please upload your supporting documents (ID, screenshots, any emails from the platform) in the Document Center so I can start the recovery. The remaining ${formatNaira(
-              summary.balanceKobo
-            )} is only due after your recovery is completed.`
-          : `Your deposit of ${formatNaira(amount)} is confirmed, thank you! I'll keep you posted here as the recovery progresses.`,
+    event:
+      kind === "deposit"
+        ? `Deposit of ${formatNaira(amount)} confirmed — Payment Confirmed`
+        : `Final balance of ${formatNaira(amount)} confirmed — paid in full`,
   });
-  if (messageError) console.error("Payment confirmed but message insert failed:", messageError);
+  if (timelineError) console.error("Payment confirmed but timeline insert failed:", timelineError);
+  if (update.stage) {
+    // recordStageChange also writes the "Moved to …" timeline event.
+    await recordStageChange(admin, {
+      caseId,
+      from: current.stage as CaseStage,
+      to: update.stage as CaseStage,
+      actor: { role: "system", name: "Deposit confirmed" },
+    });
+  }
+
+  // Deposit: the exact "Payment confirmed!" message with the recovery form
+  // under it (kind form_request), posted once. Balance: a thank-you note.
+  await postCaseMessage(admin, {
+    userId: updated.user_id,
+    caseId,
+    authorName: updated.agent_name || "Your agent",
+    dedupeKey: `${kind}_confirmed:${caseId}`,
+    kind: kind === "deposit" ? "form_request" : "system",
+    metadata: kind === "deposit" ? { formVersion: RECOVERY_FORM_VERSION } : undefined,
+    body:
+      kind === "deposit"
+        ? FORM_REQUEST_MESSAGE
+        : `Your final balance of ${formatNaira(amount)} is confirmed — your case is now paid in full. Thank you!`,
+  });
 
   const { data: clientData } = await admin.auth.admin.getUserById(updated.user_id);
   const clientEmail = clientData?.user?.email;

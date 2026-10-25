@@ -53,6 +53,8 @@ export function EligibilityWizard() {
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [contactInfo, setContactInfo] = useState({ name: "", email: "", phone: "" });
+  // Opt-in for one follow-up email about the result (off by default).
+  const [emailConsent, setEmailConsent] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
@@ -197,6 +199,7 @@ export function EligibilityWizard() {
           name: contactInfo.name,
           email: contactInfo.email,
           phone: contactInfo.phone || null,
+          emailConsent,
           metadata: {
             platform,
             issue,
@@ -438,6 +441,17 @@ export function EligibilityWizard() {
               {phoneError ? <span className="mt-1 block text-xs text-risk-high">{t(phoneError)}</span> : null}
             </label>
           </div>
+          <label className="mt-4 flex cursor-pointer items-start gap-3 text-left">
+            <input
+              type="checkbox"
+              checked={emailConsent}
+              onChange={(e) => setEmailConsent(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-brand-600"
+            />
+            <span className="text-xs leading-relaxed text-ink-600">
+              {t("Email me my eligibility result and how MetaShield can help. You can unsubscribe at any time.")}
+            </span>
+          </label>
         </div>
       ) : null}
 

@@ -34,6 +34,7 @@ export async function POST(request: Request) {
     phone?: unknown;
     message?: unknown;
     metadata?: unknown;
+    emailConsent?: unknown;
   };
   try {
     body = await request.json();
@@ -74,6 +75,8 @@ export async function POST(request: Request) {
       phone,
       message,
       metadata,
+      // Only the eligibility wizard asks for follow-up consent (opt-in).
+      email_consent: source === "recovery_eligibility" && body.emailConsent === true,
     });
     if (error) throw error;
   } catch (err) {

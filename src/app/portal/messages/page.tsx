@@ -3,7 +3,30 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { fetchMessages, getFileUrl, sendMessage, type PortalMessage } from "@/lib/portal/data";
+import {
+  MESSAGE_PAGE_SIZE,
+  fetchMessages,
+  getFileUrl,
+  markTeamMessagesRead,
+  sendMessage,
+  type PortalMessage,
+} from "@/lib/portal/data";
+import { InlineRecoveryForm } from "@/components/portal/InlineRecoveryForm";
+
+// A message the client has sent that hasn't been confirmed by the server
+// yet. `key` is reused on retry so the server stores it only once.
+type Outgoing = { key: string; body: string; file: File | null; caseId: string | null; status: "sending" | "failed"; error?: string };
+
+function mergeById(a: PortalMessage[], b: PortalMessage[]) {
+  const map = new Map<string, PortalMessage>();
+  for (const m of [...a, ...b]) map.set(m.id, m);
+  return Array.from(map.values()).sort((x, y) => x.createdAt.localeCompare(y.createdAt));
+}
+
+function fileSize(bytes?: number) {
+  if (!bytes) return "";
+  return bytes < 1024 * 1024 ? `${Math.round(bytes / 1024)} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 import { createClient } from "@/lib/supabase/client";
 
 function initials(name: string) {
@@ -41,10 +64,13 @@ function ClientAvatar({ name }: { name: string }) {
 }
 
 export default function PortalMessagesPage() {
-  const [messages, setMessages] = useState<PortalMessage[] | "loading">("loading");
+  const [messages, setMessages] = useState<PortalMessage[] | "loading" | "error">("loading");
+  const [hasEarlier, setHasEarlier] = useState(false);
+  const [loadingEarlier, setLoadingEarlier] = useState(false);
+  const [outbox, setOutbox] = useState<Outgoing[]>([]);
   const [draft, setDraft] = useState("");
   const [attachment, setAttachment] = useState<File | null>(null);
-  const [sending, setSending] = useState(false);
+  const sending = outbox.some((o) => o.status === "sending");
   const [sendError, setSendError] = useState<string | null>(null);
   const [userName, setUserName] = useState("You");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -65,21 +91,30 @@ export default function PortalMessagesPage() {
 
   useEffect(() => {
     let cancelled = false;
+    let first = true;
     function load() {
       fetchMessages()
         .then((result) => {
-          // Only replace when something changed, so polling doesn't
-          // re-scroll the conversation every few seconds.
           if (cancelled) return;
-          setMessages((prev) =>
-            prev !== "loading" &&
-            prev.length === result.length &&
-            prev[prev.length - 1]?.id === result[result.length - 1]?.id
+          if (first) setHasEarlier(result.length === MESSAGE_PAGE_SIZE);
+          first = false;
+          // Merge (keeps older pages already loaded); only replace the
+          // state when something changed so polling doesn't re-scroll.
+          setMessages((prev) => {
+            const base = Array.isArray(prev) ? prev : [];
+            const merged = mergeById(base, result);
+            return Array.isArray(prev) &&
+              merged.length === prev.length &&
+              merged.every((m, i) => m.id === prev[i].id && m.readAt === prev[i].readAt)
               ? prev
-              : result
-          );
+              : merged;
+          });
+          // Opening Messages marks the team's messages as read.
+          if (result.some((m) => m.from === "team" && !m.readAt)) void markTeamMessagesRead();
         })
-        .catch(() => {});
+        .catch(() => {
+          if (!cancelled) setMessages((prev) => (Array.isArray(prev) ? prev : "error"));
+        });
     }
     load();
     // Agent replies show up without a manual reload.
@@ -90,38 +125,70 @@ export default function PortalMessagesPage() {
     };
   }, []);
 
+  const lastId = Array.isArray(messages) ? messages[messages.length - 1]?.id : undefined;
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages]);
+  }, [lastId, outbox.length]);
+
+  async function loadEarlier() {
+    if (!Array.isArray(messages) || messages.length === 0 || loadingEarlier) return;
+    setLoadingEarlier(true);
+    try {
+      const older = await fetchMessages({ before: messages[0].createdAt });
+      setHasEarlier(older.length === MESSAGE_PAGE_SIZE);
+      setMessages((prev) => (Array.isArray(prev) ? mergeById(older, prev) : older));
+    } finally {
+      setLoadingEarlier(false);
+    }
+  }
+
+  async function deliver(item: Outgoing) {
+    setOutbox((prev) => prev.map((o) => (o.key === item.key ? { ...o, status: "sending", error: undefined } : o)));
+    try {
+      const message = await sendMessage({
+        body: item.body,
+        caseId: item.caseId,
+        attachmentFile: item.file,
+        dedupeKey: item.key,
+      });
+      setMessages((prev) => (Array.isArray(prev) ? mergeById(prev, [message]) : [message]));
+      setOutbox((prev) => prev.filter((o) => o.key !== item.key));
+    } catch (err) {
+      setOutbox((prev) =>
+        prev.map((o) =>
+          o.key === item.key
+            ? { ...o, status: "failed", error: err instanceof Error ? err.message : "Couldn't send." }
+            : o
+        )
+      );
+    }
+  }
 
   async function openAttachment(path: string) {
     const url = await getFileUrl(path);
     if (url) window.open(url, "_blank", "noopener,noreferrer");
   }
 
-  async function handleSend(e: FormEvent<HTMLFormElement>) {
+  function handleSend(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if ((!draft.trim() && !attachment) || sending) return;
-    setSending(true);
     setSendError(null);
-    try {
-      // ?case=<id> when opened from a case page; otherwise sendMessage
-      // links it to the client's newest open case.
-      const caseId = new URLSearchParams(window.location.search).get("case");
-      const message = await sendMessage({
-        body: draft.trim() || "Sent an attachment.",
-        caseId,
-        attachmentFile: attachment,
-      });
-      setMessages((prev) => (prev === "loading" ? [message] : [...prev, message]));
-      setDraft("");
-      setAttachment(null);
-    } catch (err) {
-      setSendError(err instanceof Error ? err.message : "Couldn't send — please try again.");
-    } finally {
-      setSending(false);
-    }
+    // ?case=<id> when opened from a case page; otherwise sendMessage
+    // links it to the client's newest open case.
+    const item: Outgoing = {
+      key: typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
+      body: draft.trim() || "Sent an attachment.",
+      file: attachment,
+      caseId: new URLSearchParams(window.location.search).get("case"),
+      status: "sending",
+    };
+    setOutbox((prev) => [...prev, item]);
+    setDraft("");
+    setAttachment(null);
+    void deliver(item);
   }
+
+  const lastClientMessage = Array.isArray(messages) ? [...messages].reverse().find((m) => m.from === "client") : undefined;
 
   return (
     <div className="flex h-[calc(100vh-8rem)] max-h-[820px] flex-col">
@@ -134,9 +201,23 @@ export default function PortalMessagesPage() {
 
       <Card className="mt-6 flex flex-1 flex-col overflow-hidden p-0">
         <div ref={scrollRef} className="flex-1 space-y-5 overflow-y-auto p-5 sm:p-6">
+          {hasEarlier ? (
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={loadEarlier}
+                disabled={loadingEarlier}
+                className="text-xs font-semibold text-brand-700 hover:underline disabled:opacity-50"
+              >
+                {loadingEarlier ? "Loading…" : "Load earlier messages"}
+              </button>
+            </div>
+          ) : null}
           {messages === "loading" ? (
             <p className="text-sm text-ink-400">Loading messages…</p>
-          ) : messages.length === 0 ? (
+          ) : messages === "error" ? (
+            <p className="text-sm text-risk-high">Couldn&apos;t load your messages — check your connection. We&apos;ll keep trying.</p>
+          ) : messages.length === 0 && outbox.length === 0 ? (
             <p className="text-sm text-ink-400">
               No messages yet — send one below and our team will reply here.
             </p>
@@ -190,14 +271,44 @@ export default function PortalMessagesPage() {
                             />
                           </svg>
                           {m.attachment}
+                          {m.attachmentSize ? <span className="opacity-70">· {fileSize(m.attachmentSize)}</span> : null}
                         </button>
                       ) : null}
                     </div>
+                    {isClient && m.id === lastClientMessage?.id ? (
+                      <p className="mt-1 text-right text-[10px] text-ink-400">{m.readAt ? "Seen" : "Sent"}</p>
+                    ) : null}
+                    {m.kind === "form_request" && m.caseId ? (
+                      <div className="mt-2">
+                        <InlineRecoveryForm caseId={m.caseId} />
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               );
             })
           )}
+          {outbox.map((o) => (
+            <div key={o.key} className="flex flex-row-reverse items-end gap-2.5">
+              <ClientAvatar name={userName} />
+              <div className="max-w-[78%] sm:max-w-[65%]">
+                <div className="rounded-2xl rounded-br-sm bg-brand-600/70 px-4 py-3 text-sm text-white">
+                  <p className="leading-relaxed">{o.body}</p>
+                  {o.file ? <p className="mt-1 text-xs opacity-80">📎 {o.file.name}</p> : null}
+                </div>
+                {o.status === "sending" ? (
+                  <p className="mt-1 text-right text-[10px] text-ink-400">Sending…</p>
+                ) : (
+                  <p className="mt-1 text-right text-[11px] text-risk-high">
+                    Not sent{o.error ? ` — ${o.error}` : ""}.{" "}
+                    <button type="button" onClick={() => deliver(o)} className="font-semibold underline">
+                      Retry
+                    </button>
+                  </p>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
 
         <form

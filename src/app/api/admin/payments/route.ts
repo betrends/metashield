@@ -38,6 +38,7 @@ export async function GET() {
       `id, user_id, title, platform, account_handle, issue, stage, agent_name, created_at, receipt_storage_path, balance_receipt_storage_path, ${PAYMENT_COLUMNS}`
     )
     .or("payment_status.in.(unpaid,pending_review,failed),balance_status.in.(due,pending_review,failed)")
+    .is("cancelled_at", null)
     .order("created_at", { ascending: false });
 
   if (error) {

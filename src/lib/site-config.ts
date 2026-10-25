@@ -10,7 +10,9 @@ export const brandTagline = "Account Recovery Services & Advanced Protection";
 export const contact = {
   email: "bethetrendsng@gmail.com",
   phone: "+234 911 021 4417",
-  whatsapp: "https://wa.me/2349110214417",
+  // Official WhatsApp support number (confirmed by MetaShield 2026-10-25).
+  whatsapp: "https://wa.me/2347080223440",
+  whatsappDisplay: "+234 708 022 3440",
   instagram: "https://instagram.com/metashield",
   address: "Lagos, Nigeria",
 };

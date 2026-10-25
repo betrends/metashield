@@ -11,6 +11,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { getAdminRole } from "@/lib/admin/auth";
 import type { PaymentKind } from "@/lib/portal/payments";
+import { postCaseMessage } from "@/lib/server/case-events";
 
 export async function POST(request: Request) {
   const role = await getAdminRole();
@@ -54,15 +55,31 @@ export async function POST(request: Request) {
   }
 
   const label = kind === "deposit" ? "deposit" : "final balance";
+  const { data: pendingRow } = await admin
+    .from("payment_ledger")
+    .select("id")
+    .eq("case_id", caseId)
+    .eq("kind", kind)
+    .eq("status", "pending_review")
+    .order("submitted_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (pendingRow) {
+    const { error: ledgerError } = await admin
+      .from("payment_ledger")
+      .update({ status: "rejected", decided_at: new Date().toISOString(), decided_by: role.email, note: reason || null })
+      .eq("id", pendingRow.id);
+    if (ledgerError) console.error("Receipt rejected but ledger write failed:", ledgerError, { caseId, kind });
+  }
   await admin.from("case_timeline_events").insert({
     case_id: caseId,
     event: `${kind === "deposit" ? "Deposit" : "Final balance"} receipt could not be verified`,
   });
-  await admin.from("messages").insert({
-    user_id: updated.user_id,
-    case_id: caseId,
-    from_role: "team",
-    author_name: updated.agent_name || "Your agent",
+  await postCaseMessage(admin, {
+    userId: updated.user_id,
+    caseId,
+    authorName: updated.agent_name || "Your agent",
+    dedupeKey: pendingRow ? `${kind}_rejected:${pendingRow.id}` : undefined,
     body: `We couldn't match your ${label} receipt to a transfer in our account${
       reason ? ` (${reason})` : ""
     }. Please check the transfer details and upload the correct receipt from your case page — nothing else on your case has changed.`,

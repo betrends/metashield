@@ -48,6 +48,8 @@ export const eligibility: Record<string, string> = {
   "Account access": "Accès au compte",
   "Charged when you submit the case": "Facturé à la soumission du dossier",
   "Deposit to start (50%)": "Acompte pour démarrer (50 %)",
+  "Email me my eligibility result and how MetaShield can help. You can unsubscribe at any time.":
+    "Envoyez-moi par e-mail mon résultat d'éligibilité et comment MetaShield peut m'aider. Vous pouvez vous désinscrire à tout moment.",
   "Paid by bank transfer after you submit — recovery starts once it's confirmed":
     "Réglé par virement après la soumission — la récupération commence dès sa confirmation",
   "Balance after recovery (50%)": "Solde après récupération (50 %)",

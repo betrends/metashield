@@ -48,6 +48,8 @@ export type PortalCase = {
   // The authoritative payment record; render it via summarizePayment()
   // (lib/portal/payments.ts) so every screen agrees.
   payment: PaymentRecord;
+  cancelledAt: string | null;
+  cancellationRequestedAt: string | null;
 };
 
 export type PortalMessage = {
@@ -56,9 +58,14 @@ export type PortalMessage = {
   authorName: string;
   body: string;
   date: string;
+  createdAt: string;
   caseId?: string;
   attachment?: string;
   attachmentPath?: string;
+  attachmentType?: string;
+  attachmentSize?: number;
+  kind: "message" | "system" | "form_request";
+  readAt: string | null;
 };
 
 export type PortalDocument = {
@@ -69,6 +76,7 @@ export type PortalDocument = {
   sizeLabel: string;
   storagePath: string | null;
   caseId: string | null;
+  reviewStatus: "submitted" | "approved" | "rejected";
 };
 
 // PostgREST error for a column that doesn't exist yet — i.e. migration
@@ -215,6 +223,9 @@ function mapCase(row: CaseRow, timeline: PortalCase["timeline"]): PortalCase {
     paymentStatus: row.payment_status,
     receiptStoragePath: row.receipt_storage_path ?? undefined,
     payment: pickPaymentRecord(row as unknown as Record<string, unknown>),
+    cancelledAt: (row as unknown as { cancelled_at?: string | null }).cancelled_at ?? null,
+    cancellationRequestedAt:
+      (row as unknown as { cancellation_requested_at?: string | null }).cancellation_requested_at ?? null,
   };
 }
 
@@ -342,6 +353,10 @@ type MessageRow = {
   body: string;
   attachment_name: string | null;
   attachment_path?: string | null;
+  attachment_type?: string | null;
+  attachment_size?: number | null;
+  kind?: "message" | "system" | "form_request" | null;
+  read_at?: string | null;
   case_id: string | null;
   created_at: string;
 };
@@ -353,9 +368,14 @@ function mapMessage(row: MessageRow): PortalMessage {
     authorName: row.author_name,
     body: row.body,
     date: formatDateTime(row.created_at),
+    createdAt: row.created_at,
     caseId: row.case_id ?? undefined,
     attachment: row.attachment_name ?? undefined,
     attachmentPath: row.attachment_path ?? undefined,
+    attachmentType: row.attachment_type ?? undefined,
+    attachmentSize: row.attachment_size ?? undefined,
+    kind: row.kind ?? "message",
+    readAt: row.read_at ?? null,
   };
 }
 
@@ -380,14 +400,31 @@ export async function getFileUrl(storagePath: string): Promise<string | null> {
   return data?.signedUrl ?? null;
 }
 
-export async function fetchMessages(): Promise<PortalMessage[]> {
+export const MESSAGE_PAGE_SIZE = 50;
+
+// Newest page of the client's messages (oldest first for display). Pass
+// `before` (an ISO time) to load the page before it.
+export async function fetchMessages(opts: { before?: string; limit?: number } = {}): Promise<PortalMessage[]> {
   const supabase = createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("messages")
     .select("*")
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: false })
+    .limit(opts.limit ?? MESSAGE_PAGE_SIZE);
+  if (opts.before) query = query.lt("created_at", opts.before);
+  const { data, error } = await query;
   if (error) throw error;
-  return (data as MessageRow[]).map(mapMessage);
+  return (data as MessageRow[]).map(mapMessage).reverse();
+}
+
+// Marks the team's messages to this client as read (server-side, so
+// clients can't edit message content).
+export async function markTeamMessagesRead(caseId?: string | null): Promise<void> {
+  await fetch("/api/portal/messages/read", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ caseId: caseId ?? null }),
+  }).catch(() => {});
 }
 
 export async function sendMessage(input: {
@@ -395,6 +432,8 @@ export async function sendMessage(input: {
   caseId?: string | null;
   attachmentName?: string | null;
   attachmentFile?: File | null;
+  // Same key on a retry → the message is stored only once.
+  dedupeKey?: string;
 }): Promise<PortalMessage> {
   const supabase = createClient();
   const user = await requireUser(supabase);
@@ -420,11 +459,22 @@ export async function sendMessage(input: {
     body: input.body,
     attachment_name: attachmentName,
     attachment_path: attachmentPath,
+    attachment_type: input.attachmentFile?.type || null,
+    attachment_size: input.attachmentFile?.size ?? null,
+    dedupe_key: input.dedupeKey ? `client:${user.id}:${input.dedupeKey}` : null,
   };
   let { data, error } = await supabase.from("messages").insert(row).select().single();
+  if (error?.code === "23505" && row.dedupe_key) {
+    // A previous attempt already got through — return that message.
+    const existing = await supabase.from("messages").select("*").eq("dedupe_key", row.dedupe_key).maybeSingle();
+    if (existing.data) return mapMessage(existing.data as MessageRow);
+  }
   if (isMissingColumnError(error)) {
-    const { attachment_path: _omit, ...legacyRow } = row;
-    void _omit;
+    const { attachment_path: _a, attachment_type: _b, attachment_size: _c, dedupe_key: _d, ...legacyRow } = row;
+    void _a;
+    void _b;
+    void _c;
+    void _d;
     ({ data, error } = await supabase.from("messages").insert(legacyRow).select().single());
   }
   if (error) throw error;
@@ -440,6 +490,7 @@ type DocumentRow = {
   size_bytes: number | null;
   storage_path: string | null;
   case_id?: string | null;
+  review_status?: "submitted" | "approved" | "rejected" | null;
   created_at: string;
 };
 
@@ -452,6 +503,7 @@ function mapDocument(row: DocumentRow): PortalDocument {
     sizeLabel: formatSize(row.size_bytes),
     storagePath: row.storage_path,
     caseId: row.case_id ?? null,
+    reviewStatus: row.review_status ?? "submitted",
   };
 }
 
@@ -604,4 +656,107 @@ async function runMigration(): Promise<MigrationResult> {
   }
 
   return { accountId, caseId };
+}
+
+// ── Case workflow (documents, terms, recovery form, cancellation) ─────
+
+export type CaseDocumentItem = {
+  id: string;
+  name: string;
+  category: string;
+  sizeBytes: number | null;
+  mimeType: string | null;
+  storagePath: string | null;
+  createdAt: string;
+  reviewStatus: "submitted" | "approved" | "rejected";
+  reviewNote: string | null;
+};
+
+export async function fetchCaseDocuments(caseId: string): Promise<CaseDocumentItem[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("documents")
+    .select("id, name, category, size_bytes, mime_type, storage_path, created_at, review_status, review_note")
+    .eq("case_id", caseId)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return ((data ?? []) as Record<string, unknown>[]).map((d) => ({
+    id: d.id as string,
+    name: d.name as string,
+    category: d.category as string,
+    sizeBytes: (d.size_bytes as number | null) ?? null,
+    mimeType: (d.mime_type as string | null) ?? null,
+    storagePath: (d.storage_path as string | null) ?? null,
+    createdAt: d.created_at as string,
+    reviewStatus: ((d.review_status as string) ?? "submitted") as CaseDocumentItem["reviewStatus"],
+    reviewNote: (d.review_note as string | null) ?? null,
+  }));
+}
+
+export async function fetchCaseWorkflow(
+  caseId: string,
+  termsVersion: string
+): Promise<{ termsAcceptedAt: string | null; formSubmittedAt: string | null }> {
+  const supabase = createClient();
+  const [terms, form] = await Promise.all([
+    supabase
+      .from("case_terms_acceptances")
+      .select("accepted_at")
+      .eq("case_id", caseId)
+      .eq("terms_version", termsVersion)
+      .maybeSingle(),
+    supabase.from("recovery_form_submissions").select("submitted_at").eq("case_id", caseId).maybeSingle(),
+  ]);
+  return {
+    termsAcceptedAt: (terms.data?.accepted_at as string | undefined) ?? null,
+    formSubmittedAt: (form.data?.submitted_at as string | undefined) ?? null,
+  };
+}
+
+export async function acceptRecoveryTerms(caseId: string, version: string): Promise<void> {
+  const res = await fetch("/api/portal/cases/terms", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ caseId, version, accepted: true }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error === "terms_changed" ? "The terms were updated — please read them again." : "Couldn't save — please try again.");
+  }
+}
+
+export async function submitRecoveryForm(
+  caseId: string,
+  answers: Record<string, string>
+): Promise<{ ok: true; stage?: string } | { ok: false; message: string; errors?: Record<string, string> }> {
+  try {
+    const res = await fetch("/api/portal/cases/form", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ caseId, answers }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) return { ok: true, stage: data.stage };
+    return { ok: false, message: data.message || "Please check the highlighted answers.", errors: data.errors };
+  } catch {
+    return { ok: false, message: "Network error — please try again." };
+  }
+}
+
+export async function cancelCase(
+  caseId: string,
+  reason: string
+): Promise<{ ok: true; outcome: "cancelled" | "requested" } | { ok: false; message: string }> {
+  try {
+    const res = await fetch("/api/portal/cases/cancel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ caseId, reason }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) return { ok: true, outcome: data.outcome };
+    return { ok: false, message: data.message || "Couldn't do that — please try again." };
+  } catch {
+    return { ok: false, message: "Network error — please try again." };
+  }
 }

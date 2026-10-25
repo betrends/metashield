@@ -13,6 +13,7 @@ import {
   agentAssignedEmail,
   stageChangedEmail,
   paymentConfirmedEmail,
+  balanceDueEmail,
 } from "@/lib/email-templates";
 
 export type CaseEmailKind =
@@ -20,7 +21,9 @@ export type CaseEmailKind =
   | "receipt_received"
   | "stage_changed"
   | "agent_assigned"
-  | "payment_confirmed";
+  | "payment_confirmed"
+  | "balance_due"
+  | "balance_overdue";
 
 export const CASE_EMAIL_KINDS: CaseEmailKind[] = [
   "case_submitted",
@@ -36,6 +39,8 @@ const KIND_SUBJECT: Record<CaseEmailKind, (caseTitle: string, extra?: string) =>
   stage_changed: (title, stage) => `📋 Case update — ${stage ?? "Status changed"}: ${title}`,
   agent_assigned: (title, agent) => `👋 Meet your agent${agent ? ` ${agent}` : ""}: ${title}`,
   payment_confirmed: (title) => `🚀 Payment confirmed — recovery starting: ${title}`,
+  balance_due: (title) => `🎉 Recovery complete — final balance due: ${title}`,
+  balance_overdue: (title) => `⏰ Final balance overdue: ${title}`,
 };
 
 export type CaseEmailInput = {
@@ -46,6 +51,8 @@ export type CaseEmailInput = {
   agentName?: string | null;
   agentPhone?: string | null;
   stage?: string | null;
+  balance?: string | null;
+  deadline?: string | null;
 };
 
 // Subject lines are plain text, but strip line breaks so nothing can be
@@ -102,6 +109,18 @@ export async function sendCaseUpdateEmail(input: CaseEmailInput): Promise<{ sent
     ]
       .filter(Boolean)
       .join("\n");
+  } else if (kind === "balance_due" || kind === "balance_overdue") {
+    const balance = input.balance ?? "";
+    const deadline = input.deadline ?? "";
+    html = balanceDueEmail({ clientName, caseTitle, balance, deadline, overdue: kind === "balance_overdue" });
+    textFallback = [
+      `Hi ${clientName},`,
+      "",
+      kind === "balance_overdue"
+        ? `The remaining balance of ${balance} for ${caseTitle} was due by ${deadline} and is now overdue.`
+        : `Your recovery for ${caseTitle} is complete. The remaining balance of ${balance} is due by ${deadline}.`,
+      "Pay by bank transfer and upload your receipt from your case page.",
+    ].join("\n");
   } else if (kind === "payment_confirmed") {
     html = paymentConfirmedEmail({ clientName, caseTitle, agentName });
     textFallback = [
