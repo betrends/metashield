@@ -259,18 +259,13 @@ export default function PortalCaseDetailPage() {
                     />
                   </>
                 ) : (
-                  <div className="mt-4 rounded-xl border border-brand-200 bg-white p-4">
-                    <p className="text-sm text-ink-700">
-                      Before you pay, please read and accept our recovery terms and conditions.
+                  <>
+                    {/* Bank details are visible but faded until the terms are accepted. */}
+                    <BankDetails locked onUnlock={() => setShowTerms(true)} />
+                    <p className="mt-3 text-xs text-ink-500">
+                      Accept the recovery terms to see the full payment details and upload your receipt.
                     </p>
-                    <button
-                      type="button"
-                      onClick={() => setShowTerms(true)}
-                      className="mt-3 rounded-full bg-brand-600 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-700"
-                    >
-                      Read terms and continue to payment
-                    </button>
-                  </div>
+                  </>
                 )}
               </>
             )
@@ -393,9 +388,36 @@ export default function PortalCaseDetailPage() {
   );
 }
 
-function BankDetails() {
+function BankDetails({ locked = false, onUnlock }: { locked?: boolean; onUnlock?: () => void }) {
+  if (locked) {
+    return (
+      <div className="relative mt-4 overflow-hidden rounded-xl border border-brand-200 bg-white">
+        <div aria-hidden="true" className="pointer-events-none select-none opacity-60 blur-[5px]">
+          <BankDetailsGrid />
+        </div>
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/50 p-4 text-center">
+          <p className="text-xs font-semibold text-ink-700">Please accept the recovery terms first</p>
+          <button
+            type="button"
+            onClick={onUnlock}
+            className="rounded-full bg-brand-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-700"
+          >
+            Read terms and show payment details
+          </button>
+        </div>
+      </div>
+    );
+  }
   return (
-    <div className="mt-4 grid gap-3 rounded-xl border border-ink-200 bg-white p-4 sm:grid-cols-3">
+    <div className="mt-4 rounded-xl border border-ink-200 bg-white">
+      <BankDetailsGrid />
+    </div>
+  );
+}
+
+function BankDetailsGrid() {
+  return (
+    <div className="grid gap-3 p-4 sm:grid-cols-3">
       <div>
         <p className="text-xs text-ink-400">Bank</p>
         <p className="text-sm font-semibold text-ink-900">{bankDetails.bankName}</p>
