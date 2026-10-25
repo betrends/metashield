@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { BackLink } from "@/components/BackLink";
 import { useParams } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { ButtonLink } from "@/components/ui/Button";
@@ -29,9 +29,9 @@ export default function PortalAccountDetailPage() {
   if (account === null) {
     return (
       <div>
-        <Link href="/portal/accounts" className="text-sm font-semibold text-ink-500 hover:text-ink-800">
-          ← All accounts
-        </Link>
+        <BackLink fallback="/portal/accounts" className="text-sm font-semibold text-ink-500 hover:text-ink-800">
+          ← Back
+        </BackLink>
         <p className="mt-6 text-sm text-ink-500">
           We couldn&apos;t find that account. It may have been removed or the link may be out of date.
         </p>
@@ -48,12 +48,9 @@ export default function PortalAccountDetailPage() {
 
   return (
     <div>
-      <Link
-        href="/portal/accounts"
-        className="text-sm font-semibold text-ink-500 hover:text-ink-800"
-      >
-        ← All accounts
-      </Link>
+      <BackLink fallback="/portal/accounts" className="text-sm font-semibold text-ink-500 hover:text-ink-800">
+          ← Back
+        </BackLink>
 
       <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>

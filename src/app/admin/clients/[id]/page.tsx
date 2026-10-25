@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { PaymentStatusBadge, PaymentSummaryLine } from "@/components/portal/PaymentStatusBadge";
 import type { PaymentRecord } from "@/lib/portal/payments";
-import Link from "next/link";
+import { BackLink } from "@/components/BackLink";
 import { useParams } from "next/navigation";
 import { getPlan, type PlanId } from "@/lib/portal/billing";
 
@@ -79,9 +79,9 @@ export default function AdminClientDetailPage() {
   if (detail === null) {
     return (
       <div>
-        <Link href="/admin/clients" className="text-sm font-semibold text-brand-600 hover:text-brand-700">
-          ← All clients
-        </Link>
+        <BackLink fallback="/admin/clients" className="text-sm font-semibold text-brand-600 hover:text-brand-700">
+          ← Back
+        </BackLink>
         <p className="mt-6 text-sm text-ink-400">Client not found.</p>
       </div>
     );
@@ -91,9 +91,9 @@ export default function AdminClientDetailPage() {
 
   return (
     <div>
-      <Link href="/admin/clients" className="text-sm font-semibold text-brand-600 hover:text-brand-700">
-        ← All clients
-      </Link>
+      <BackLink fallback="/admin/clients" className="text-sm font-semibold text-brand-600 hover:text-brand-700">
+          ← Back
+        </BackLink>
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <div>

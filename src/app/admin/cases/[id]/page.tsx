@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { BackLink } from "@/components/BackLink";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { PaymentStatusBadge, PaymentSummaryLine } from "@/components/portal/PaymentStatusBadge";
@@ -152,9 +153,9 @@ export default function AdminCaseDetailPage() {
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/admin/cases" className="text-sm font-semibold text-ink-500 hover:text-ink-800">
-          ← All cases
-        </Link>
+        <BackLink fallback="/admin/cases" className="text-sm font-semibold text-ink-500 hover:text-ink-800">
+          ← Back
+        </BackLink>
         <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <div className="flex flex-wrap items-center gap-2">
