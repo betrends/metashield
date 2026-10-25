@@ -11,6 +11,7 @@ import { createClient } from "@/lib/supabase/client";
 import { createCase } from "@/lib/portal/data";
 import { FOLLOWER_RANGES, getFollowerRangeFeeKobo, formatNaira, type FollowerRange } from "@/lib/portal/case-fees";
 import { depositFor } from "@/lib/portal/payments";
+import { useStepHistory } from "@/lib/use-step-history";
 
 const platforms = [
   "Instagram",
@@ -120,11 +121,14 @@ export function EligibilityWizard() {
     }
   };
 
+  // Each step is a browser-history entry: the phone's Back button goes to
+  // the previous question instead of leaving the page.
+  const stepNav = useStepHistory(step, setStep, stepLabels.length - 1);
   function handleNext() {
-    setStep((s) => Math.min(s + 1, stepLabels.length - 1));
+    stepNav.next();
   }
   function handleBack() {
-    setStep((s) => Math.max(s - 1, 0));
+    stepNav.back();
   }
 
   async function handleSubmitCase() {

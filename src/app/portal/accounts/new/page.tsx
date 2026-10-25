@@ -1,14 +1,14 @@
 "use client";
 
-import Link from "next/link";
+import { BackLink } from "@/components/BackLink";
 import { HealthCheckWizard } from "@/components/HealthCheckWizard";
 
 export default function PortalNewAccountPage() {
   return (
     <div>
-      <Link href="/portal/accounts" className="text-sm font-semibold text-ink-500 hover:text-ink-800">
-        ← All accounts
-      </Link>
+      <BackLink fallback="/portal/accounts" className="text-sm font-semibold text-ink-500 hover:text-ink-800">
+          ← Back
+        </BackLink>
 
       <div className="mt-4">
         <h1 className="text-2xl font-semibold text-ink-900">Add an Account</h1>

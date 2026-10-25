@@ -16,6 +16,7 @@ import {
 import { setLocalAccount } from "@/lib/portal/local-records";
 import { createClient } from "@/lib/supabase/client";
 import { createAccount } from "@/lib/portal/data";
+import { useStepHistory } from "@/lib/use-step-history";
 
 const platforms = [
   { value: "instagram", label: "Instagram" },
@@ -99,6 +100,9 @@ export function HealthCheckWizard() {
   const t = useT();
   const cardRef = useRef<HTMLDivElement>(null);
   const [step, setStep] = useState(0);
+  // Each step is a browser-history entry: the phone's Back button goes to
+  // the previous question instead of leaving the page.
+  const stepNav = useStepHistory(step, setStep, stepLabels.length - 1);
   const [platform, setPlatform] = useState("");
   const [accountUsername, setAccountUsername] = useState("");
   const [accountType, setAccountType] = useState("");
@@ -242,15 +246,15 @@ export function HealthCheckWizard() {
       }
       setSubmittingResult(false);
     }
-    setStep((s) => Math.min(s + 1, stepLabels.length - 1));
+    stepNav.next();
   }
 
   function handleBack() {
-    setStep((s) => Math.max(s - 1, 0));
+    stepNav.back();
   }
 
   function handleRestart() {
-    setStep(0);
+    stepNav.restart();
     setPlatform("");
     setAccountUsername("");
     setAccountType("");

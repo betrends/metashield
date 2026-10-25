@@ -2,6 +2,7 @@
 
 import { FormEvent, Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import { BackLink } from "@/components/BackLink";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { brandName } from "@/lib/site-config";
@@ -160,17 +161,17 @@ function LoginForm() {
 
   return (
     <div className="w-full max-w-sm">
-      {/* Back to home */}
+      {/* Back to the previous page (home if they opened this page directly) */}
       <div className="mb-6 text-center">
-        <Link
-          href="/"
+        <BackLink
+          fallback="/"
           className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-500 hover:text-brand-700 transition-colors"
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
             <path d="M19 12H5m7-7-7 7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          Back to home
-        </Link>
+          Back
+        </BackLink>
       </div>
 
       <div className="text-center">

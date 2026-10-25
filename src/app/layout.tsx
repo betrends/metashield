@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { brandName, brandTagline } from "@/lib/site-config";
 import { PwaRegister } from "@/components/PwaRegister";
+import { NavigationTracker } from "@/components/NavigationTracker";
 import { getLocale, getT } from "@/lib/i18n/server";
 
 const geistSans = Geist({
@@ -64,6 +65,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-white text-ink-900">
+        <NavigationTracker />
         {children}
         <PwaRegister />
       </body>
