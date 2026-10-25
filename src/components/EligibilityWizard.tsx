@@ -267,11 +267,6 @@ export function EligibilityWizard() {
               />
             ))}
           </div>
-          {followerRange ? (
-            <div className="mt-6">
-              <FeeBreakdown totalKobo={getFollowerRangeFeeKobo(followerRange)} t={t} />
-            </div>
-          ) : null}
         </div>
       ) : null}
 
