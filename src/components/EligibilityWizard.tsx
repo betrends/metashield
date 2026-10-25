@@ -54,7 +54,7 @@ export function EligibilityWizard() {
   const [dragging, setDragging] = useState(false);
   const [contactInfo, setContactInfo] = useState({ name: "", email: "", phone: "" });
   // Opt-in for one follow-up email about the result (off by default).
-  const [emailConsent, setEmailConsent] = useState(false);
+  const [emailConsent, setEmailConsent] = useState(true);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
