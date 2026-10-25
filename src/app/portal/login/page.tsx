@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, Suspense, useState } from "react";
+import { FormEvent, Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
@@ -13,6 +13,13 @@ import { migratePendingLocalRecords } from "@/lib/portal/data";
 // just run means "go tell them to enroll in Account Protection" (the
 // account detail page already has that as its recommended next step), a
 // case just filed means the case itself, otherwise the general dashboard.
+// Where the "confirm your email" link lands: the sign-in page, with a
+// note that the email is confirmed. This URL must be allowed in Supabase →
+// Authentication → URL Configuration → Redirect URLs.
+function confirmRedirectUrl() {
+  return `${window.location.origin}/portal/login?confirmed=1`;
+}
+
 async function redirectAfterAuth(
   router: ReturnType<typeof useRouter>,
   email?: string | null,
@@ -66,13 +73,14 @@ function LoginForm() {
   const isAdminLogin = next?.startsWith("/admin") ?? false;
   const cameFromCase = Boolean(prefillEmail);
   const requestedSignUp = searchParams.get("mode") === "sign-up";
+  const justConfirmed = searchParams.get("confirmed") === "1";
 
   // Arriving with a name/email already filled in (from a wizard), or via
   // an explicit ?mode=sign-up link (e.g. the header's Sign Up button),
   // strongly suggests this is a first-time visitor — default to creating
   // an account, but let them switch either way.
   const [mode, setMode] = useState<"sign-in" | "sign-up">(
-    isAdminLogin ? "sign-in" : cameFromCase || requestedSignUp ? "sign-up" : "sign-in"
+    isAdminLogin || justConfirmed ? "sign-in" : cameFromCase || requestedSignUp ? "sign-up" : "sign-in"
   );
   const [email, setEmail] = useState(prefillEmail);
   const [password, setPassword] = useState("");
@@ -80,10 +88,38 @@ function LoginForm() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [checkEmail, setCheckEmail] = useState(false);
+  const [notice, setNotice] = useState<string | null>(
+    justConfirmed ? "Your email is confirmed. Sign in below to continue." : null
+  );
+  const [resent, setResent] = useState<"idle" | "sending" | "sent" | "failed">("idle");
+
+  // An expired or already-used link comes back with the error in the URL
+  // hash (Supabase), so it can only be read in the browser.
+  useEffect(() => {
+    const hash = new URLSearchParams(window.location.hash.slice(1));
+    if (!hash.get("error_code") && !hash.get("error")) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setNotice(null);
+    setError(
+      "This confirmation link has expired or was already used. Try signing in — if your email isn't confirmed yet, create the account again and we'll send a new link."
+    );
+    window.history.replaceState(null, "", window.location.pathname + window.location.search);
+  }, []);
+
+  async function resendConfirmation() {
+    setResent("sending");
+    const { error: resendError } = await createClient().auth.resend({
+      type: "signup",
+      email,
+      options: { emailRedirectTo: confirmRedirectUrl() },
+    });
+    setResent(resendError ? "failed" : "sent");
+  }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    setNotice(null);
     setSubmitting(true);
 
     try {
@@ -93,7 +129,7 @@ function LoginForm() {
         const { data, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { full_name: name } },
+          options: { data: { full_name: name }, emailRedirectTo: confirmRedirectUrl() },
         });
         if (signUpError) throw signUpError;
 
@@ -184,9 +220,30 @@ function LoginForm() {
             We sent a confirmation link to <strong>{email}</strong>. Click it
             to activate your account, then come back and sign in.
           </p>
-          <Button className="mt-5 w-full" onClick={() => setMode("sign-in")}>
+          <Button
+            className="mt-5 w-full"
+            onClick={() => {
+              setCheckEmail(false);
+              setMode("sign-in");
+              setPassword("");
+            }}
+          >
             Back to sign in
           </Button>
+          <button
+            type="button"
+            onClick={resendConfirmation}
+            disabled={resent === "sending" || resent === "sent"}
+            className="mt-3 w-full text-center text-xs font-semibold text-brand-700 hover:text-brand-800 disabled:text-ink-400"
+          >
+            {resent === "sending"
+              ? "Sending…"
+              : resent === "sent"
+                ? "New link sent — check your inbox and spam folder"
+                : resent === "failed"
+                  ? "Couldn't resend — wait a minute and try again"
+                  : "Didn't get it? Send the link again"}
+          </button>
         </div>
       ) : (
         <form
@@ -231,6 +288,12 @@ function LoginForm() {
               placeholder="••••••••"
             />
           </label>
+
+          {notice ? (
+            <p className="rounded-xl bg-risk-low-bg px-3.5 py-2.5 text-xs font-medium text-risk-low">
+              {notice}
+            </p>
+          ) : null}
 
           {error ? (
             <p className="rounded-xl bg-risk-high-bg px-3.5 py-2.5 text-xs font-medium text-risk-high">
