@@ -209,12 +209,13 @@ export function AgentDashboardScreen({
           icon="check"
           hint={`${d.stats.resolvedTotal} resolved in total`}
           onClick={() => setFilter("done")}
+          className="col-span-2 sm:col-span-1"
         />
       </section>
 
-      <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.6fr_1fr] xl:items-start">
         {/* To-do */}
-        <section className="rounded-2xl border border-ink-100 bg-white p-5 shadow-sm sm:p-6">
+        <section className="min-w-0 rounded-2xl border border-ink-100 bg-white p-5 shadow-sm sm:p-6">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold text-ink-900">Your to-do</h2>
             <span className="text-xs text-ink-400">Most urgent first</span>
@@ -258,7 +259,7 @@ export function AgentDashboardScreen({
           )}
         </section>
 
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           {/* Pipeline */}
           <section className="rounded-2xl border border-ink-100 bg-white p-5 shadow-sm sm:p-6">
             <h2 className="text-base font-semibold text-ink-900">Your pipeline</h2>
@@ -331,7 +332,7 @@ export function AgentDashboardScreen({
         ) : visible.length === 0 ? (
           <p className="mt-6 text-center text-sm text-ink-400">No cases match.</p>
         ) : (
-          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
             {visible.map((c) => (
               <CaseCard key={c.id} c={c} now={now} />
             ))}
@@ -350,6 +351,7 @@ function Stat({
   hint,
   href,
   onClick,
+  className = "",
 }: {
   label: string;
   value: number;
@@ -358,6 +360,7 @@ function Stat({
   hint?: string;
   href?: string;
   onClick?: () => void;
+  className?: string;
 }) {
   const tones = {
     brand: "bg-brand-50 text-brand-700",
@@ -385,7 +388,7 @@ function Stat({
       {hint ? <p className="mt-0.5 text-[11px] text-ink-400">{hint}</p> : null}
     </>
   );
-  const cls = "rounded-2xl border border-ink-100 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md";
+  const cls = `flex h-full flex-col items-start justify-start rounded-2xl border border-ink-100 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${className}`;
   return href ? (
     <Link href={href} className={cls}>
       {body}
@@ -423,7 +426,7 @@ function CaseCard({ c, now }: { c: AgentCaseCard; now: number }) {
   const step = PROGRESS.indexOf(c.stage);
   return (
     <article
-      className={`flex flex-col rounded-2xl border bg-white p-5 shadow-sm ${
+      className={`flex min-w-0 flex-col rounded-2xl border bg-white p-5 shadow-sm ${
         c.action.priority === "urgent" ? "border-risk-high/30" : "border-ink-100"
       } ${c.cancelled ? "opacity-60" : ""}`}
     >
