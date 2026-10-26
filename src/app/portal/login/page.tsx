@@ -68,7 +68,7 @@ async function redirectAfterAuth(
     if (res.ok) {
       const { role } = await res.json();
       if (role?.type === "agent") {
-        router.push("/admin/cases");
+        router.push("/admin/agent-dashboard");
         router.refresh();
         return;
       }
