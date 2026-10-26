@@ -54,11 +54,13 @@ export function ButtonLink({
   size = "md",
   className = "",
   target,
-}: CommonProps & { href: string; target?: string }) {
+  onClick,
+}: CommonProps & { href: string; target?: string; onClick?: () => void }) {
   return (
     <Link
       href={href}
       target={target}
+      onClick={onClick}
       className={`${base} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
     >
       {children}

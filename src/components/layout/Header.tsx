@@ -7,7 +7,6 @@ import { brandName, servicesNav } from "@/lib/site-config";
 import { ButtonLink } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { useT } from "@/lib/i18n/client";
-import { LanguageToggle } from "@/components/layout/LanguageToggle";
 
 // Secondary nav links, shown alongside services in the header. Pricing
 // and About are intentionally left out of the nav bar — still reachable
@@ -131,7 +130,6 @@ export function Header() {
         </nav>
 
         <div className="hidden lg:flex shrink-0 items-center gap-2">
-          <LanguageToggle />
           <ButtonLink href="/portal/login" variant="ghost" size="sm">
             {t("Log In")}
           </ButtonLink>
@@ -140,8 +138,15 @@ export function Header() {
           </ButtonLink>
         </div>
 
-        {/* Language toggle stays visible in the mobile bar, next to the menu button */}
-        <LanguageToggle className="ml-auto lg:hidden" />
+        {/* Log In / Sign Up stay visible in the mobile bar, next to the menu button */}
+        <div className="ml-auto flex items-center gap-1 lg:hidden">
+          <ButtonLink href="/portal/login" variant="ghost" size="sm" className="!px-2.5">
+            {t("Log In")}
+          </ButtonLink>
+          <ButtonLink href="/portal/login?mode=sign-up" size="sm" className="!px-3">
+            {t("Sign Up")}
+          </ButtonLink>
+        </div>
 
         {/* Mobile / tablet toggle */}
         <button

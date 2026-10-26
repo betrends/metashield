@@ -117,6 +117,26 @@ function LoginForm() {
   );
   const [resent, setResent] = useState<"idle" | "sending" | "sent" | "failed">("idle");
 
+  // Name/email typed in the account health check (see HealthCheckWizard).
+  useEffect(() => {
+    if (prefillEmail) return;
+    try {
+      const saved = JSON.parse(sessionStorage.getItem("ms-signup-prefill") ?? "null");
+      if (!saved) return;
+      sessionStorage.removeItem("ms-signup-prefill");
+      if (typeof saved.name === "string" && saved.name) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setName((n) => n || saved.name);
+      }
+      if (typeof saved.email === "string" && saved.email) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setEmail((e) => e || saved.email);
+      }
+    } catch {
+      // Nothing saved, or storage blocked.
+    }
+  }, [prefillEmail]);
+
   // An expired or already-used link comes back with the error in the URL
   // hash (Supabase), so it can only be read in the browser.
   useEffect(() => {
