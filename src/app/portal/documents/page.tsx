@@ -19,6 +19,7 @@ import {
   type PortalDocument,
 } from "@/lib/portal/data";
 import { documentTypeLabel } from "@/lib/portal/workflow";
+import { BrandLoader } from "@/components/BrandLoader";
 
 const STATUS: Record<PortalDocument["reviewStatus"], [string, string]> = {
   submitted: ["Awaiting review", "bg-risk-medium-bg text-risk-medium"],
@@ -118,7 +119,7 @@ export default function PortalDocumentsPage() {
                 Document uploads open once the deposit for this case is confirmed.
               </p>
             ) : (
-              <p className="text-sm text-ink-400">Loading…</p>
+              <BrandLoader label="Loading…" />
             )}
           </>
         )}
@@ -145,7 +146,7 @@ export default function PortalDocumentsPage() {
               {documents === "loading" ? (
                 <tr>
                   <td colSpan={6} className="px-5 py-8 text-center text-sm text-ink-400">
-                    Loading documents…
+                    <BrandLoader size="inline" label="Loading documents…" />
                   </td>
                 </tr>
               ) : documents.length === 0 ? (

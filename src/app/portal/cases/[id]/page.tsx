@@ -24,6 +24,7 @@ import { formatNaira } from "@/lib/portal/case-fees";
 import { bankDetails } from "@/lib/portal/bank-details";
 import { PaymentStatusBadge, formatBalanceDeadline } from "@/components/portal/PaymentStatusBadge";
 import { summarizePayment, type PaymentKind } from "@/lib/portal/payments";
+import { BrandLoader } from "@/components/BrandLoader";
 
 export default function PortalCaseDetailPage() {
   const params = useParams<{ id: string }>();
@@ -100,7 +101,7 @@ export default function PortalCaseDetailPage() {
   }
 
   if (portalCase === undefined) {
-    return <p className="text-sm text-ink-400">Loading case…</p>;
+    return <BrandLoader label="Loading case…" />;
   }
 
   if (portalCase === null) {

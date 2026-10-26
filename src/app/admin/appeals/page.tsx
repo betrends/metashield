@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { type CaseStage } from "@/lib/portal/mock-data";
 import { PaymentStatusBadge } from "@/components/portal/PaymentStatusBadge";
 import type { PaymentRecord } from "@/lib/portal/payments";
+import { BrandLoader } from "@/components/BrandLoader";
 
 const APPEAL_ISSUE = "Appeal already rejected";
 
@@ -104,7 +105,7 @@ export default function AdminAppealsPage() {
       <p className="mt-1 text-sm text-ink-500">Cases where the platform already rejected an appeal.</p>
 
       {cases === "loading" ? (
-        <p className="mt-8 text-sm text-ink-400">Loading…</p>
+        <BrandLoader label="Loading…" />
       ) : cases.length === 0 ? (
         <div className="mt-8 rounded-2xl border border-ink-100 bg-white p-10 text-center shadow-sm">
           <p className="text-sm text-ink-400">No appeal cases right now.</p>

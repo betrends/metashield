@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { BrandLoader } from "@/components/BrandLoader";
 
 type ClientDocument = {
   id: string;
@@ -42,7 +43,7 @@ export default function AdminDocumentsPage() {
           <p className="mt-1 text-sm text-ink-500">All files uploaded by clients for their cases.</p>
         </div>
         <div className="rounded-2xl border border-ink-100 bg-white p-12 text-center">
-          <p className="text-sm text-ink-400">Loading documents…</p>
+          <BrandLoader label="Loading documents…" />
         </div>
       </div>
     );

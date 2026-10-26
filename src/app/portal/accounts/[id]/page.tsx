@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { ButtonLink } from "@/components/ui/Button";
 import { RiskBadge } from "@/components/ui/RiskBadge";
 import { fetchAccount, type PortalAccount } from "@/lib/portal/data";
+import { BrandLoader } from "@/components/BrandLoader";
 
 export default function PortalAccountDetailPage() {
   const params = useParams<{ id: string }>();
@@ -23,7 +24,7 @@ export default function PortalAccountDetailPage() {
   }, [params.id]);
 
   if (account === undefined) {
-    return <p className="text-sm text-ink-400">Loading account…</p>;
+    return <BrandLoader label="Loading account…" />;
   }
 
   if (account === null) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { BrandLoader } from "@/components/BrandLoader";
 
 type Ticket = {
   id: string;
@@ -87,7 +88,7 @@ export default function AdminSupportPage() {
 
       <div className="mt-6 space-y-3">
         {tickets === "loading" ? (
-          <p className="text-sm text-ink-400">Loading…</p>
+          <BrandLoader label="Loading…" />
         ) : visible.length === 0 ? (
           <div className="rounded-2xl border border-ink-100 bg-white p-10 text-center shadow-sm">
             <p className="text-sm text-ink-400">

@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { ButtonLink } from "@/components/ui/Button";
 import { PaymentStatusBadge } from "@/components/portal/PaymentStatusBadge";
 import { fetchCases, migratePendingLocalRecords, type PortalCase } from "@/lib/portal/data";
+import { BrandLoader } from "@/components/BrandLoader";
 
 export default function PortalCasesPage() {
   const [cases, setCases] = useState<PortalCase[] | "loading">("loading");
@@ -31,7 +32,7 @@ export default function PortalCasesPage() {
       </p>
 
       {cases === "loading" ? (
-        <p className="mt-8 text-sm text-ink-400">Loading your cases…</p>
+        <BrandLoader label="Loading your cases…" />
       ) : cases.length === 0 ? (
         <Card className="mt-8 flex flex-col items-center gap-3 py-12 text-center">
           <p className="text-sm text-ink-500">You haven&apos;t opened any cases yet.</p>

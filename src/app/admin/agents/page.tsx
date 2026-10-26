@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { BrandLoader } from "@/components/BrandLoader";
 
 type Agent = {
   id: string;
@@ -221,7 +222,7 @@ export default function AdminAgentsPage() {
               {agents === "loading" ? (
                 <tr>
                   <td colSpan={6} className="px-5 py-8 text-center text-ink-400">
-                    Loading…
+                    <BrandLoader size="inline" label="Loading…" />
                   </td>
                 </tr>
               ) : agents.length === 0 ? (

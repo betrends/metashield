@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { BrandLoader } from "@/components/BrandLoader";
 
 const adminNavItems = [
   { label: "Dashboard", href: "/admin", icon: "grid" },
@@ -242,7 +243,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   if (status === "loading") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-ink-50">
-        <p className="text-sm text-ink-400">Loading…</p>
+        <BrandLoader size="page" label="Loading admin portal…" />
       </div>
     );
   }

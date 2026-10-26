@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { formatNaira } from "@/lib/portal/case-fees";
 import { PaymentStatusBadge, PaymentSummaryLine } from "@/components/portal/PaymentStatusBadge";
 import { summarizePayment, type PaymentKind, type PaymentRecord } from "@/lib/portal/payments";
+import { BrandLoader } from "@/components/BrandLoader";
 
 type AdminCaseRow = {
   id: string;
@@ -151,7 +152,7 @@ export default function AdminPaymentsPage() {
       </p>
 
       {cases === "loading" ? (
-        <p className="mt-8 text-sm text-ink-400">Loading…</p>
+        <BrandLoader label="Loading…" />
       ) : cases.length === 0 ? (
         <div className="mt-8 rounded-2xl border border-ink-100 bg-white p-10 text-center shadow-sm">
           <p className="text-sm text-ink-400">Nothing pending — every case is paid up.</p>

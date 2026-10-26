@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { BrandLoader } from "@/components/BrandLoader";
 
 type Client = {
   id: string;
@@ -43,7 +44,7 @@ export default function AdminClientsPage() {
       </p>
 
       {clients === "loading" ? (
-        <p className="mt-8 text-sm text-ink-400">Loading…</p>
+        <BrandLoader label="Loading…" />
       ) : clients.length === 0 ? (
         <div className="mt-8 rounded-2xl border border-ink-100 bg-white p-10 text-center shadow-sm">
           <p className="text-sm text-ink-400">No one has signed up yet.</p>
