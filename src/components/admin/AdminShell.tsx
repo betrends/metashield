@@ -12,6 +12,7 @@ const adminNavItems = [
   { label: "Clients", href: "/admin/clients", icon: "users" },
   { label: "Documents", href: "/admin/documents", icon: "doc" },
   { label: "Agents", href: "/admin/agents", icon: "headset" },
+  { label: "Agent View", href: "/admin/agent-dashboard", icon: "grid" },
   { label: "Appeals", href: "/admin/appeals", icon: "flag" },
   { label: "Payments", href: "/admin/payments", icon: "card" },
   { label: "Subscriptions", href: "/admin/subscriptions", icon: "repeat" },
@@ -22,6 +23,7 @@ const adminNavItems = [
 ];
 
 const agentNavItems = [
+  { label: "Dashboard", href: "/admin/agent-dashboard", icon: "grid" },
   { label: "My Cases", href: "/admin/cases", icon: "folder" },
   { label: "Messages", href: "/admin/messages", icon: "mail" },
   { label: "Documents", href: "/admin/documents", icon: "doc" },
@@ -207,15 +209,15 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       const { role } = await res.json();
       if (role.type === "agent") {
         setRoleInfo({ type: "agent", email: user.email ?? "", agentName: role.agentName });
-        // Agents have no dashboard — send them straight to their cases
+        // Agents land on their own dashboard (the admin dashboard is admin-only)
         if (pathname === "/admin" || pathname === "/admin/") {
-          router.replace("/admin/cases");
+          router.replace("/admin/agent-dashboard");
           return;
         }
-        // Block agent-only pages they shouldn't access
-        const agentAllowed = ["/admin/cases", "/admin/messages", "/admin/documents"];
+        // Block pages agents shouldn't access
+        const agentAllowed = ["/admin/agent-dashboard", "/admin/cases", "/admin/messages", "/admin/documents"];
         if (!agentAllowed.some((p) => pathname.startsWith(p))) {
-          router.replace("/admin/cases");
+          router.replace("/admin/agent-dashboard");
           return;
         }
       } else {
@@ -302,7 +304,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               />
             </svg>
           </span>
-          <span className="text-sm font-semibold text-ink-900">MetaShield Admin Portal</span>
+          <span className="text-sm font-semibold text-ink-900">MetaShield {isAgent ? "Agent" : "Admin"} Portal</span>
         </div>
         <button
           onClick={() => setMobileNavOpen((v) => !v)}
@@ -318,7 +320,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       {/* Desktop top bar with notification bell */}
       <div className="hidden border-b border-ink-100 bg-white lg:block">
         <div className="mx-auto flex max-w-[1600px] items-center justify-between px-8 py-3">
-          <div className="text-sm text-ink-500">Admin Portal</div>
+          <div className="text-sm text-ink-500">{isAgent ? "Agent Portal" : "Admin Portal"}</div>
           <button className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-500 hover:bg-ink-50 transition-colors">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -335,7 +337,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             mobileNavOpen ? "flex" : "hidden"
           }`}
         >
-          <Link href="/admin" className="hidden items-center gap-2 px-2 lg:flex">
+          <Link href={isAgent ? "/admin/agent-dashboard" : "/admin"} className="hidden items-center gap-2 px-2 lg:flex">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-white">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                 <path
@@ -353,7 +355,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             </span>
             <div>
               <p className="text-sm font-semibold text-ink-900">MetaShield</p>
-              <p className="text-[11px] text-ink-400">Admin Portal</p>
+              <p className="text-[11px] text-ink-400">{isAgent ? "Agent Portal" : "Admin Portal"}</p>
             </div>
           </Link>
 
