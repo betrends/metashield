@@ -357,7 +357,9 @@ export async function GET() {
   const { data: nameRows } = nameIds.size
     ? await admin.from("profiles").select("id, full_name, email").in("id", Array.from(nameIds))
     : { data: [] as { id: string; full_name: string | null; email: string | null }[] };
-  const names = new Map((nameRows ?? []).map((r) => [r.id as string, (r.full_name as string | null) || (r.email as string | null) || "A client"]));
+  const names = new Map<string, string>(
+    (nameRows ?? []).map((r) => [r.id as string, (r.full_name as string | null) || (r.email as string | null) || "A client"])
+  );
   const attentionItems: AttentionItem[] = topAttention.map(({ userId, ...a }) => ({ ...a, clientName: names.get(userId) ?? "A client" }));
 
   // ── Cases per stage (cancelled cases left out) ───────────────────────
