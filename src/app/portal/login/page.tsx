@@ -129,7 +129,6 @@ function LoginForm() {
         setName((n) => n || saved.name);
       }
       if (typeof saved.email === "string" && saved.email) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setEmail((e) => e || saved.email);
       }
     } catch {
