@@ -21,6 +21,28 @@ function confirmRedirectUrl() {
   return `${window.location.origin}/portal/login?confirmed=1`;
 }
 
+// Browsers report a dropped connection as "Load failed" (Safari) or
+// "Failed to fetch" (Chrome). Retry once, then explain it in plain words.
+function isNetworkError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err ?? "");
+  const name = err instanceof Error ? err.name : "";
+  return /load failed|failed to fetch|networkerror|network request failed/i.test(msg) || name === "AuthRetryableFetchError";
+}
+
+async function withRetry<T extends { error: unknown }>(call: () => Promise<T>): Promise<T> {
+  try {
+    const first = await call();
+    if (!first.error || !isNetworkError(first.error)) return first;
+  } catch (err) {
+    if (!isNetworkError(err)) throw err;
+  }
+  await new Promise((r) => setTimeout(r, 1200));
+  return call();
+}
+
+const NETWORK_MESSAGE =
+  "We couldn't connect to the sign-in server. Please check your internet connection and try again. If you use a VPN, ad blocker or data saver, turn it off for this site, or try another network (Wi-Fi or mobile data).";
+
 async function redirectAfterAuth(
   router: ReturnType<typeof useRouter>,
   email?: string | null,
@@ -127,11 +149,11 @@ function LoginForm() {
       const supabase = createClient();
 
       if (mode === "sign-up") {
-        const { data, error: signUpError } = await supabase.auth.signUp({
+        const { data, error: signUpError } = await withRetry(() => supabase.auth.signUp({
           email,
           password,
           options: { data: { full_name: name }, emailRedirectTo: confirmRedirectUrl() },
-        });
+        }));
         if (signUpError) throw signUpError;
 
         if (data.session) {
@@ -141,18 +163,19 @@ function LoginForm() {
           setCheckEmail(true);
         }
       } else {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+        const { error: signInError } = await withRetry(() =>
+          supabase.auth.signInWithPassword({ email, password })
+        );
         if (signInError) throw signInError;
         await redirectAfterAuth(router, email, next);
       }
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : "Something went wrong — please try again."
+        isNetworkError(err)
+          ? NETWORK_MESSAGE
+          : err instanceof Error
+            ? err.message
+            : "Something went wrong — please try again."
       );
     } finally {
       setSubmitting(false);
