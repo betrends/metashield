@@ -174,6 +174,19 @@ export function HealthCheckWizard() {
     setFiles((prev) => prev.filter((f) => f.name !== name));
   }
 
+  // Carry the name/email they typed over to the sign-up form (kept out of
+  // the URL so personal details don't end up in browser history or logs).
+  function rememberSignupDetails() {
+    try {
+      sessionStorage.setItem(
+        "ms-signup-prefill",
+        JSON.stringify({ name: contactInfo.name, email: contactInfo.email })
+      );
+    } catch {
+      // Storage blocked — they can type it on the sign-up form.
+    }
+  }
+
   async function handleNext() {
     if (step === 3) {
       const computed = scoreHealthCheck(describe);
@@ -527,7 +540,8 @@ export function HealthCheckWizard() {
                 <ButtonLink href="/portal/billing" size="sm" className="mt-4 w-full">{t("Get Account Protection")}</ButtonLink>
               ) : (
                 <ButtonLink
-                  href={`/portal/login?name=${encodeURIComponent(contactInfo.name)}&email=${encodeURIComponent(contactInfo.email)}`}
+                  href="/portal/login?mode=sign-up"
+                  onClick={rememberSignupDetails}
                   size="sm"
                   className="mt-4 w-full"
                 >{t("Get Account Protection Now")}</ButtonLink>
@@ -549,7 +563,8 @@ export function HealthCheckWizard() {
                 <ButtonLink href="/portal/billing" size="sm" className="mt-4 !bg-white !text-brand-700 hover:!bg-brand-50">{t("Subscribe to Account Protection")}</ButtonLink>
               ) : (
                 <ButtonLink
-                  href={`/portal/login?name=${encodeURIComponent(contactInfo.name)}&email=${encodeURIComponent(contactInfo.email)}`}
+                  href="/portal/login?mode=sign-up"
+                  onClick={rememberSignupDetails}
                   size="sm"
                   className="mt-4 !bg-white !text-brand-700 hover:!bg-brand-50"
                 >{t("Sign Up for Account Protection")}</ButtonLink>
