@@ -139,7 +139,7 @@ export function Header() {
         </div>
 
         {/* Log In / Sign Up stay visible in the mobile bar, next to the menu button */}
-        <div className="ml-auto flex items-center gap-1 lg:hidden">
+        <div className="ml-auto flex items-center gap-1 whitespace-nowrap lg:hidden">
           <ButtonLink href="/portal/login" variant="ghost" size="sm" className="!px-2.5">
             {t("Log In")}
           </ButtonLink>
@@ -150,7 +150,7 @@ export function Header() {
 
         {/* Mobile / tablet toggle */}
         <button
-          className="lg:hidden inline-flex h-10 w-10 items-center justify-center rounded-full text-ink-700 hover:bg-ink-50"
+          className="lg:hidden inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink-700 hover:bg-ink-50"
           aria-label={t("Toggle menu")}
           aria-expanded={mobileOpen}
           onClick={() => setMobileOpen((v) => !v)}
