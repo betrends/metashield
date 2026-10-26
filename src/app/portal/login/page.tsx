@@ -29,10 +29,11 @@ function isNetworkError(err: unknown): boolean {
   return /load failed|failed to fetch|networkerror|network request failed/i.test(msg) || name === "AuthRetryableFetchError";
 }
 
-async function withRetry<T extends { error: unknown }>(call: () => Promise<T>): Promise<T> {
+async function withRetry<T>(call: () => Promise<T>): Promise<T> {
   try {
     const first = await call();
-    if (!first.error || !isNetworkError(first.error)) return first;
+    const error = (first as { error?: unknown } | null)?.error;
+    if (!error || !isNetworkError(error)) return first;
   } catch (err) {
     if (!isNetworkError(err)) throw err;
   }
