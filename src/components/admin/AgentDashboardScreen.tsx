@@ -144,7 +144,7 @@ export function AgentDashboardScreen({
   const isAdminView = data.viewer === "admin";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       {isAdminView ? (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-brand-200 bg-brand-50 px-4 py-2.5 text-xs text-brand-800">
           <span>
@@ -157,7 +157,7 @@ export function AgentDashboardScreen({
       ) : null}
 
       {/* Greeting */}
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-600 via-brand-700 to-brand-900 p-6 text-white shadow-lg sm:p-8">
+      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-600 via-brand-700 to-brand-900 p-5 text-white shadow-lg sm:p-8">
         <div aria-hidden className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-white/10 blur-2xl" />
         <div aria-hidden className="pointer-events-none absolute -bottom-24 right-24 h-56 w-56 rounded-full bg-brand-400/30 blur-3xl" />
         <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
@@ -215,7 +215,7 @@ export function AgentDashboardScreen({
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.6fr_1fr] xl:items-start">
         {/* To-do */}
-        <section className="min-w-0 rounded-2xl border border-ink-100 bg-white p-5 shadow-sm sm:p-6">
+        <section className="min-w-0 rounded-2xl border border-ink-100 bg-white p-4 shadow-sm sm:p-6">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold text-ink-900">Your to-do</h2>
             <span className="text-xs text-ink-400">Most urgent first</span>
@@ -261,13 +261,13 @@ export function AgentDashboardScreen({
 
         <div className="min-w-0 space-y-6">
           {/* Pipeline */}
-          <section className="rounded-2xl border border-ink-100 bg-white p-5 shadow-sm sm:p-6">
+          <section className="rounded-2xl border border-ink-100 bg-white p-4 shadow-sm sm:p-6">
             <h2 className="text-base font-semibold text-ink-900">Your pipeline</h2>
             <PipelineBars pipeline={d.pipeline} />
           </section>
 
           {/* Activity */}
-          <section className="rounded-2xl border border-ink-100 bg-white p-5 shadow-sm sm:p-6">
+          <section className="rounded-2xl border border-ink-100 bg-white p-4 shadow-sm sm:p-6">
             <h2 className="text-base font-semibold text-ink-900">Recent activity</h2>
             {d.activity.length === 0 ? (
               <p className="mt-4 text-sm text-ink-400">No activity on your cases yet.</p>
@@ -378,17 +378,20 @@ function Stat({
   };
   const body = (
     <>
-      <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${tones[tone]}`}>
+      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${tones[tone]}`}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
           {paths[icon]}
         </svg>
       </span>
-      <p className="mt-3 text-2xl font-semibold text-ink-900">{value}</p>
-      <p className="text-xs font-medium text-ink-500">{label}</p>
-      {hint ? <p className="mt-0.5 text-[11px] text-ink-400">{hint}</p> : null}
+      <span className="min-w-0 sm:mt-3">
+        <span className="block text-xl font-semibold leading-tight text-ink-900 sm:text-2xl">{value}</span>
+        <span className="block text-xs font-medium leading-tight text-ink-500">{label}</span>
+        {hint ? <span className="mt-0.5 block text-[11px] text-ink-400">{hint}</span> : null}
+      </span>
     </>
   );
-  const cls = `flex h-full flex-col items-start justify-start rounded-2xl border border-ink-100 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${className}`;
+  // Phones: icon beside the number (short tiles). Larger screens: stacked.
+  const cls = `flex h-full items-center gap-3 rounded-2xl border border-ink-100 bg-white p-3.5 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:flex-col sm:items-start sm:gap-0 sm:p-4 ${className}`;
   return href ? (
     <Link href={href} className={cls}>
       {body}

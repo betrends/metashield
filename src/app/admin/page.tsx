@@ -79,6 +79,17 @@ const PLATFORM_COLORS = [
 ];
 
 const STATUS_COLORS = ["var(--color-accent-green)", "var(--color-accent-blue)", "var(--color-accent-orange)"];
+// A distinct colour per stage, so no two slices of the status chart match.
+const STAGE_COLORS: Record<string, string> = {
+  "New Lead": "var(--color-ink-300)",
+  "Assessment Pending": "var(--color-ink-500)",
+  "Payment Pending": "var(--color-accent-orange)",
+  "Documents Required": "var(--color-accent-blue)",
+  "Under Review": "var(--color-brand-400)",
+  "Recovery Process": "var(--color-brand-700)",
+  "Awaiting Platform Response": "var(--color-risk-medium)",
+  Resolved: "var(--color-accent-green)",
+};
 
 function DeltaBadge({ pct }: { pct: number | null }) {
   if (pct === null) return null;
@@ -104,18 +115,18 @@ function StatCard({
   footer?: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-ink-100 bg-white p-5 shadow-sm">
-      <div className="flex items-center gap-3">
+    <div className="min-w-0 rounded-2xl border border-ink-100 bg-white p-4 shadow-sm sm:p-5">
+      <div className="flex items-center gap-2.5 sm:gap-3">
         <span
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white sm:h-11 sm:w-11"
           style={{ backgroundColor: color }}
         >
           {icon}
         </span>
-        <p className="text-sm font-medium text-ink-500">{label}</p>
+        <p className="text-xs font-medium leading-tight text-ink-500 sm:text-sm">{label}</p>
       </div>
-      <p className="mt-3 text-2xl font-semibold text-ink-900">{value}</p>
-      {footer ? <div className="mt-1 flex items-center gap-1.5 text-xs text-ink-400">{footer}</div> : null}
+      <p className="mt-3 truncate text-xl font-semibold text-ink-900 sm:text-2xl">{value}</p>
+      {footer ? <div className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[11px] text-ink-400 sm:text-xs">{footer}</div> : null}
     </div>
   );
 }
@@ -199,7 +210,7 @@ export default function AdminDashboardPage() {
   const statusSegments = statusBreakdown.map((s, i) => ({
     label: s.label,
     value: s.count,
-    color: STATUS_COLORS[i % STATUS_COLORS.length],
+    color: STAGE_COLORS[s.label] ?? STATUS_COLORS[i % STATUS_COLORS.length],
   }));
 
   return (
@@ -219,11 +230,13 @@ export default function AdminDashboardPage() {
             { label: "Documents to review", value: data.needsAction.documentsToReview, href: "/admin/documents" },
             { label: "Unread client messages", value: data.needsAction.unreadClientMessages, href: "/admin/messages" },
             { label: "Cancellation requests", value: data.needsAction.cancellationRequests, href: "/admin/cases" },
-          ].map((item) => (
+          ].map((item, i, all) => (
             <Link
               key={item.label}
               href={item.href}
               className={`rounded-2xl border p-4 shadow-sm transition-colors hover:bg-ink-50 ${
+                i === all.length - 1 ? "col-span-2 sm:col-span-1" : ""
+              } ${
                 item.value > 0 ? "border-brand-200 bg-brand-50/60" : "border-ink-100 bg-white"
               }`}
             >
@@ -235,7 +248,7 @@ export default function AdminDashboardPage() {
       ) : null}
 
       {/* Stat cards */}
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard
           icon={<IconDoc />}
           color="var(--color-accent-blue)"
@@ -275,15 +288,15 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Requests overview + platform breakdown */}
-      <div className="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-[2fr_1fr]">
-        <div className="rounded-2xl border border-ink-100 bg-white p-6 shadow-sm">
+      <div className="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-[2fr_1fr] [&>*]:min-w-0">
+        <div className="rounded-2xl border border-ink-100 bg-white p-4 shadow-sm sm:p-6">
           <h2 className="text-base font-semibold text-ink-900">Requests Overview</h2>
           <p className="text-sm text-ink-400">Last 7 days</p>
           <div className="mt-4">
             <LineChart data={requestsOverview} />
           </div>
         </div>
-        <div className="rounded-2xl border border-ink-100 bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-ink-100 bg-white p-4 shadow-sm sm:p-6">
           <h2 className="text-base font-semibold text-ink-900">Requests by Platform</h2>
           <div className="mt-4 flex flex-col items-center gap-6">
             <DonutChart segments={platformSegments} total={platformTotal} centerLabel="Total" />
@@ -295,14 +308,42 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Recent requests */}
-      <div className="mt-6 rounded-2xl border border-ink-100 bg-white p-6 shadow-sm">
+      <div className="mt-6 rounded-2xl border border-ink-100 bg-white p-4 shadow-sm sm:p-6">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold text-ink-900">Recent Recovery Requests</h2>
           <Link href="/admin/cases" className="text-sm font-semibold text-brand-600 hover:text-brand-700">
             View all →
           </Link>
         </div>
-        <div className="mt-4 overflow-x-auto">
+        <ul className="mt-3 divide-y divide-ink-100 md:hidden">
+          {recentRequests.length === 0 ? (
+            <li className="py-6 text-center text-sm text-ink-400">No recovery requests yet.</li>
+          ) : (
+            recentRequests.map((r) => (
+              <li key={r.id}>
+                <Link href={`/admin/cases/${r.id}`} className="block py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-ink-900">{r.clientName || "Unknown"}</p>
+                      <p className="truncate text-xs text-ink-500">
+                        {r.platform} · {r.accountHandle}
+                      </p>
+                    </div>
+                    <span className="shrink-0 text-xs text-ink-400">
+                      {new Date(r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <StagePill stage={r.stage} />
+                    <PaymentStatusBadge payment={r.payment} />
+                    <span className="text-[11px] text-ink-400">{r.agentName ? `· ${r.agentName}` : "· Unassigned"}</span>
+                  </div>
+                </Link>
+              </li>
+            ))
+          )}
+        </ul>
+        <div className="mt-4 hidden overflow-x-auto md:block">
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead className="border-b border-ink-100 text-xs uppercase tracking-wide text-ink-400">
               <tr>
@@ -350,8 +391,8 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Status overview + agent performance */}
-      <div className="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-[1fr_2fr]">
-        <div className="rounded-2xl border border-ink-100 bg-white p-6 shadow-sm">
+      <div className="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-[1fr_2fr] [&>*]:min-w-0">
+        <div className="rounded-2xl border border-ink-100 bg-white p-4 shadow-sm sm:p-6">
           <h2 className="text-base font-semibold text-ink-900">Recovery Status Overview</h2>
           <div className="mt-4 flex flex-col items-center gap-6">
             <DonutChart segments={statusSegments} total={statusTotal} centerLabel="Total" />
@@ -360,14 +401,42 @@ export default function AdminDashboardPage() {
             </div>
           </div>
         </div>
-        <div className="rounded-2xl border border-ink-100 bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-ink-100 bg-white p-4 shadow-sm sm:p-6">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold text-ink-900">Agents Performance</h2>
             <Link href="/admin/agents" className="text-sm font-semibold text-brand-600 hover:text-brand-700">
               View all →
             </Link>
           </div>
-          <div className="mt-4 overflow-x-auto">
+          <ul className="mt-3 divide-y divide-ink-100 md:hidden">
+            {agentsPerformance.length === 0 ? (
+              <li className="py-6 text-center text-sm text-ink-400">No agents yet.</li>
+            ) : (
+              agentsPerformance.map((a) => (
+                <li key={a.id} className="py-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700">
+                      {a.name[0]?.toUpperCase()}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-ink-900">{a.name}</p>
+                      <p className="text-xs text-ink-500">
+                        {a.resolvedCount} resolved · {a.inProgressCount} in progress
+                      </p>
+                    </div>
+                    <span className="text-xs font-semibold text-ink-700">{a.successRate}%</span>
+                  </div>
+                  <span className="mt-2 block h-1.5 overflow-hidden rounded-full bg-ink-100">
+                    <span
+                      className="block h-full rounded-full"
+                      style={{ width: `${a.successRate}%`, backgroundColor: "var(--color-accent-green)" }}
+                    />
+                  </span>
+                </li>
+              ))
+            )}
+          </ul>
+          <div className="mt-4 hidden overflow-x-auto md:block">
             <table className="w-full min-w-[480px] text-left text-sm">
               <thead className="border-b border-ink-100 text-xs uppercase tracking-wide text-ink-400">
                 <tr>
@@ -418,9 +487,26 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Recent transactions */}
-      <div className="mt-6 rounded-2xl border border-ink-100 bg-white p-6 shadow-sm">
+      <div className="mt-6 rounded-2xl border border-ink-100 bg-white p-4 shadow-sm sm:p-6">
         <h2 className="text-base font-semibold text-ink-900">Recent Transactions</h2>
-        <div className="mt-4 overflow-x-auto">
+        <ul className="mt-3 divide-y divide-ink-100 md:hidden">
+          {recentTransactions.length === 0 ? (
+            <li className="py-6 text-center text-sm text-ink-400">No confirmed payments yet.</li>
+          ) : (
+            recentTransactions.map((t) => (
+              <li key={t.id} className="flex items-center justify-between gap-3 py-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-ink-900">{t.clientName}</p>
+                  <p className="truncate text-xs text-ink-500">
+                    {t.label} · {new Date(t.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </p>
+                </div>
+                <span className="shrink-0 text-sm font-semibold text-ink-900">{formatNaira(t.amountKobo)}</span>
+              </li>
+            ))
+          )}
+        </ul>
+        <div className="mt-4 hidden overflow-x-auto md:block">
           <table className="w-full min-w-[560px] text-left text-sm">
             <thead className="border-b border-ink-100 text-xs uppercase tracking-wide text-ink-400">
               <tr>
