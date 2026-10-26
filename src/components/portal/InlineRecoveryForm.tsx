@@ -8,6 +8,7 @@ import { useCallback, useEffect, useState } from "react";
 import { RecoveryFormCard } from "@/components/portal/RecoveryFormCard";
 import { fetchCaseDocuments, fetchCaseWorkflow, type CaseDocumentItem } from "@/lib/portal/data";
 import { TERMS_VERSION } from "@/lib/portal/recovery-terms";
+import { BrandLoader } from "@/components/BrandLoader";
 
 export function InlineRecoveryForm({ caseId }: { caseId: string }) {
   const [state, setState] = useState<{ docs: CaseDocumentItem[]; submittedAt: string | null } | "loading" | "error">("loading");
@@ -22,7 +23,7 @@ export function InlineRecoveryForm({ caseId }: { caseId: string }) {
     load();
   }, [load]);
 
-  if (state === "loading") return <p className="text-xs text-ink-400">Loading form…</p>;
+  if (state === "loading") return <BrandLoader size="inline" label="Loading form…" />;
   if (state === "error")
     return (
       <p className="text-xs text-risk-high">

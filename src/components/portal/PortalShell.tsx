@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 import { AskAIBar } from "@/components/portal/AskAIBar";
 import { ContactSupportMenu } from "@/components/portal/ContactSupportMenu";
 import { EmergencyModal } from "@/components/portal/EmergencyModal";
+import { BrandLoader } from "@/components/BrandLoader";
 
 type PortalSession = { id: string; name: string; email: string };
 const EMERGENCY_PLANS = ["basic", "professional", "business", "one_time"];
@@ -305,7 +306,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
   if (session === "loading" || session === null) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-ink-50">
-        <p className="text-sm text-ink-400">Loading your dashboard…</p>
+        <BrandLoader size="page" label="Loading your dashboard…" />
       </div>
     );
   }

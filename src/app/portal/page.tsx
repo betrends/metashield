@@ -16,6 +16,7 @@ import {
 } from "@/lib/portal/data";
 import { fetchSubscription, type ClientSubscription } from "@/lib/portal/subscriptions";
 import { createClient } from "@/lib/supabase/client";
+import { BrandLoader } from "@/components/BrandLoader";
 
 function greeting() {
   const h = new Date().getHours();
@@ -97,16 +98,7 @@ export default function PortalOverviewPage() {
   }, []);
 
   if (accounts === "loading" || cases === "loading" || subscription === "loading") {
-    return (
-      <div className="space-y-4 animate-pulse">
-        <div className="h-8 w-56 rounded-lg bg-ink-100" />
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="h-28 rounded-2xl bg-ink-100" />
-          ))}
-        </div>
-      </div>
-    );
+    return <BrandLoader size="page" label="Loading your dashboard…" />;
   }
 
   const hasActiveSubscription = subscription?.status === "active";

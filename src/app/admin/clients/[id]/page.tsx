@@ -6,6 +6,7 @@ import type { PaymentRecord } from "@/lib/portal/payments";
 import { BackLink } from "@/components/BackLink";
 import { useParams } from "next/navigation";
 import { getPlan, type PlanId } from "@/lib/portal/billing";
+import { BrandLoader } from "@/components/BrandLoader";
 
 type Detail = {
   client: { id: string; name: string | null; email: string | null; phone: string | null; joinedAt: string };
@@ -74,7 +75,7 @@ export default function AdminClientDetailPage() {
     return <p className="text-sm text-ink-500">You don&apos;t have access to this page.</p>;
   }
   if (detail === "loading") {
-    return <p className="text-sm text-ink-400">Loading…</p>;
+    return <BrandLoader label="Loading…" />;
   }
   if (detail === null) {
     return (

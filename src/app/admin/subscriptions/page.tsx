@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getPlan, plans, type PlanId } from "@/lib/portal/billing";
+import { BrandLoader } from "@/components/BrandLoader";
 
 type Subscription = {
   id: string;
@@ -109,7 +110,7 @@ export default function AdminSubscriptionsPage() {
               {subs === "loading" ? (
                 <tr>
                   <td colSpan={6} className="px-5 py-8 text-center text-ink-400">
-                    Loading…
+                    <BrandLoader size="inline" label="Loading…" />
                   </td>
                 </tr>
               ) : visible.length === 0 ? (

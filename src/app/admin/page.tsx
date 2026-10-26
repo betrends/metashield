@@ -7,6 +7,7 @@ import Link from "next/link";
 import { formatNaira } from "@/lib/portal/case-fees";
 import { DonutChart, DonutLegend } from "@/components/admin/DonutChart";
 import { LineChart } from "@/components/admin/LineChart";
+import { BrandLoader } from "@/components/BrandLoader";
 
 type NeedsAction = {
   paymentsToVerify: number;
@@ -182,7 +183,7 @@ export default function AdminDashboardPage() {
     return <p className="text-sm text-ink-500">You don&apos;t have access to this page.</p>;
   }
   if (data === "loading") {
-    return <p className="text-sm text-ink-400">Loading…</p>;
+    return <BrandLoader label="Loading…" />;
   }
 
   const { stats, requestsOverview, platformBreakdown, statusBreakdown, agentsPerformance, recentRequests, recentTransactions } =

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { formatNaira } from "@/lib/portal/case-fees";
+import { BrandLoader } from "@/components/BrandLoader";
 
 type Report = {
   months: { key: string; label: string; requests: number; revenueKobo: number }[];
@@ -29,7 +30,7 @@ export default function AdminReportsPage() {
     return <p className="text-sm text-ink-500">You don&apos;t have access to this page.</p>;
   }
   if (data === "loading") {
-    return <p className="text-sm text-ink-400">Loading…</p>;
+    return <BrandLoader label="Loading…" />;
   }
 
   const maxMonthRequests = Math.max(1, ...data.months.map((m) => m.requests));

@@ -12,6 +12,7 @@ import {
   type ClientSubscription,
   type ClientInvoice,
 } from "@/lib/portal/subscriptions";
+import { BrandLoader } from "@/components/BrandLoader";
 
 function formatNaira(kobo: number) {
   return `₦${(kobo / 100).toLocaleString("en-NG")}`;
@@ -110,7 +111,7 @@ export default function BillingPage() {
   }
 
   if (subscription === "loading") {
-    return <p className="text-sm text-ink-400">Loading billing details…</p>;
+    return <BrandLoader label="Loading billing details…" />;
   }
 
   const activePlan = subscription ? getPlan(subscription.planId) : null;

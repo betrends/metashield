@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { ButtonLink } from "@/components/ui/Button";
 import { RiskBadge } from "@/components/ui/RiskBadge";
 import { fetchAccounts, migratePendingLocalRecords, type PortalAccount } from "@/lib/portal/data";
+import { BrandLoader } from "@/components/BrandLoader";
 
 export default function PortalAccountsPage() {
   const [accounts, setAccounts] = useState<PortalAccount[] | "loading">("loading");
@@ -39,7 +40,7 @@ export default function PortalAccountsPage() {
       </div>
 
       {accounts === "loading" ? (
-        <p className="mt-8 text-sm text-ink-400">Loading your accounts…</p>
+        <BrandLoader label="Loading your accounts…" />
       ) : accounts.length === 0 ? (
         <Card className="mt-8 flex flex-col items-center gap-3 py-12 text-center">
           <p className="text-sm text-ink-500">You haven&apos;t added any accounts yet.</p>

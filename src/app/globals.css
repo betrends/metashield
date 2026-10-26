@@ -255,3 +255,134 @@ html {
     animation: none;
   }
 }
+
+/* ── Brand loader (components/BrandLoader.tsx) ─────────────────────────
+   Shield draws its outline, ticks its check mark, and breathes, inside a
+   spinning gradient ring with two orbiting sparks. */
+.ms-loader {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+.ms-loader > * {
+  grid-area: 1 / 1;
+}
+.ms-loader-glow {
+  width: 78%;
+  height: 78%;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgb(139 92 246 / 0.45), rgb(139 92 246 / 0) 70%);
+  filter: blur(6px);
+  animation: ms-loader-breathe 2.4s ease-in-out infinite;
+}
+.ms-loader-ring {
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+  background: conic-gradient(from 0deg, rgb(124 58 237 / 0) 0deg, #c4b5fd 120deg, #7c3aed 250deg, #4c1d95 330deg, rgb(124 58 237 / 0) 360deg);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+  animation: ms-loader-spin 1.1s linear infinite;
+}
+.ms-loader-orbit {
+  width: 118%;
+  height: 118%;
+  animation: ms-loader-spin 2.6s linear infinite reverse;
+}
+.ms-loader-orbit--slow {
+  width: 86%;
+  height: 86%;
+  animation: ms-loader-spin 3.4s linear infinite;
+}
+.ms-loader-orbit i {
+  display: block;
+  width: 7px;
+  height: 7px;
+  margin: 0 auto;
+  border-radius: 9999px;
+  background: #a78bfa;
+  box-shadow: 0 0 10px 2px rgb(167 139 250 / 0.8);
+}
+.ms-loader-orbit--slow i {
+  width: 5px;
+  height: 5px;
+  background: #ede9fe;
+}
+.ms-loader-shield {
+  overflow: visible;
+  filter: drop-shadow(0 6px 14px rgb(91 33 182 / 0.35));
+  animation: ms-loader-float 2.4s ease-in-out infinite;
+}
+.ms-loader-body {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ms-loader-body 2.4s ease-in-out infinite;
+}
+.ms-loader-outline {
+  stroke-dasharray: 100;
+  animation: ms-loader-draw 2.4s ease-in-out infinite;
+}
+.ms-loader-check {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: ms-loader-check 2.4s ease-in-out infinite;
+}
+.ms-loader-label {
+  background: linear-gradient(90deg, #8b98a9 0%, #8b98a9 35%, #7c3aed 50%, #8b98a9 65%, #8b98a9 100%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: ms-loader-shimmer 1.8s linear infinite;
+}
+
+@keyframes ms-loader-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes ms-loader-breathe {
+  0%, 100% { opacity: 0.55; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.12); }
+}
+@keyframes ms-loader-float {
+  0%, 100% { transform: translateY(1px); }
+  50% { transform: translateY(-3px); }
+}
+@keyframes ms-loader-body {
+  0%, 15% { opacity: 0.25; transform: scale(0.82); }
+  45%, 85% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0.25; transform: scale(0.82); }
+}
+@keyframes ms-loader-draw {
+  0% { stroke-dashoffset: 100; }
+  45%, 80% { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: -100; }
+}
+@keyframes ms-loader-check {
+  0%, 40% { stroke-dashoffset: 100; }
+  60%, 85% { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: -100; }
+}
+@keyframes ms-loader-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -150% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ms-loader-glow,
+  .ms-loader-ring,
+  .ms-loader-orbit,
+  .ms-loader-shield,
+  .ms-loader-body,
+  .ms-loader-outline,
+  .ms-loader-check,
+  .ms-loader-label {
+    animation: none;
+  }
+  .ms-loader-check,
+  .ms-loader-outline {
+    stroke-dashoffset: 0;
+  }
+  .ms-loader-label {
+    color: #8b98a9;
+  }
+}

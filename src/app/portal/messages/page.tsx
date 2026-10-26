@@ -28,6 +28,7 @@ function fileSize(bytes?: number) {
   return bytes < 1024 * 1024 ? `${Math.round(bytes / 1024)} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 import { createClient } from "@/lib/supabase/client";
+import { BrandLoader } from "@/components/BrandLoader";
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/);
@@ -214,7 +215,7 @@ export default function PortalMessagesPage() {
             </div>
           ) : null}
           {messages === "loading" ? (
-            <p className="text-sm text-ink-400">Loading messages…</p>
+            <BrandLoader label="Loading messages…" />
           ) : messages === "error" ? (
             <p className="text-sm text-risk-high">Couldn&apos;t load your messages — check your connection. We&apos;ll keep trying.</p>
           ) : messages.length === 0 && outbox.length === 0 ? (

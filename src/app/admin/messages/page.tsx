@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { BrandLoader } from "@/components/BrandLoader";
 
 type Conversation = {
   key: string;
@@ -187,7 +188,7 @@ export default function AdminMessagesPage() {
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-[320px_1fr]">
         <div className="overflow-hidden rounded-2xl border border-ink-100 bg-white shadow-sm">
           {conversations === "loading" ? (
-            <p className="p-6 text-sm text-ink-400">Loading…</p>
+            <BrandLoader label="Loading…" />
           ) : conversations === "error" ? (
             <p className="p-6 text-sm text-risk-high">Couldn&apos;t load conversations — retrying.</p>
           ) : conversations.length === 0 ? (
@@ -245,7 +246,7 @@ export default function AdminMessagesPage() {
               </div>
               <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-5 py-4" style={{ minHeight: 320, maxHeight: 480 }}>
                 {thread === "loading" ? (
-                  <p className="text-sm text-ink-400">Loading…</p>
+                  <BrandLoader label="Loading…" />
                 ) : thread === "error" ? (
                   <p className="text-sm text-risk-high">Couldn&apos;t load this conversation — retrying.</p>
                 ) : thread.length === 0 && outbox.length === 0 ? (

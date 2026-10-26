@@ -10,6 +10,7 @@ import { formatNaira } from "@/lib/portal/case-fees";
 import { documentTypeLabel } from "@/lib/portal/workflow";
 import { RECOVERY_FORM_LABELS } from "@/lib/portal/recovery-form";
 import type { PaymentRecord } from "@/lib/portal/payments";
+import { BrandLoader } from "@/components/BrandLoader";
 
 type Detail = {
   role: "admin" | "agent";
@@ -143,7 +144,7 @@ export default function AdminCaseDetailPage() {
     }
   }
 
-  if (data === "loading") return <p className="text-sm text-ink-400">Loading case…</p>;
+  if (data === "loading") return <BrandLoader label="Loading case…" />;
   if (data === "forbidden") return <p className="text-sm text-ink-500">You don&apos;t have access to this case.</p>;
   if (data === "error") return <p className="text-sm text-risk-high">Couldn&apos;t load this case.</p>;
 
