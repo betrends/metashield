@@ -6,7 +6,7 @@
 
 type Size = "page" | "section" | "inline";
 
-const PX: Record<Size, number> = { page: 112, section: 84, inline: 22 };
+const PX: Record<Size, number> = { page: 68, section: 52, inline: 20 };
 
 export function BrandLoader({
   label = "Loading…",
