@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import {
   MESSAGE_PAGE_SIZE,
+  fetchCases,
   fetchMessages,
   getFileUrl,
   markTeamMessagesRead,
@@ -12,6 +13,8 @@ import {
   type PortalMessage,
 } from "@/lib/portal/data";
 import { InlineRecoveryForm } from "@/components/portal/InlineRecoveryForm";
+import { CallButton } from "@/components/CallButton";
+import { contact } from "@/lib/site-config";
 
 // A message the client has sent that hasn't been confirmed by the server
 // yet. `key` is reused on retry so the server stores it only once.
@@ -75,6 +78,34 @@ export default function PortalMessagesPage() {
   const [sendError, setSendError] = useState<string | null>(null);
   const [userName, setUserName] = useState("You");
   const scrollRef = useRef<HTMLDivElement>(null);
+  // Who the Call button rings: the agent on this case (or the client's
+  // newest open case); MetaShield's line until an agent is assigned.
+  const [callee, setCallee] = useState<{ name: string; phone: string | null } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchCases()
+      .then((cases) => {
+        if (cancelled) return;
+        const wanted = new URLSearchParams(window.location.search).get("case");
+        const live = cases.filter((c) => !c.cancelledAt);
+        const chosen =
+          live.find((c) => c.id === wanted) ??
+          live.find((c) => c.stage !== "Resolved" && c.agentPhone) ??
+          live.find((c) => c.agentPhone);
+        setCallee(
+          chosen?.agentPhone
+            ? { name: chosen.agentName ? chosen.agentName.split(" ")[0] : "your agent", phone: chosen.agentPhone }
+            : { name: "MetaShield", phone: contact.phone }
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setCallee({ name: "MetaShield", phone: contact.phone });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     createClient()
@@ -193,11 +224,14 @@ export default function PortalMessagesPage() {
 
   return (
     <div className="flex h-[calc(100vh-8rem)] max-h-[820px] flex-col">
-      <div>
-        <h1 className="text-2xl font-semibold text-ink-900">Messages</h1>
-        <p className="mt-1 text-sm text-ink-500">
-          Case Team · usually replies within 24 hours
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold text-ink-900">Messages</h1>
+          <p className="mt-1 text-sm text-ink-500">
+            Case Team · usually replies within 24 hours
+          </p>
+        </div>
+        {callee ? <CallButton phone={callee.phone} label={`Call ${callee.name}`} /> : null}
       </div>
 
       <Card className="mt-6 flex flex-1 flex-col overflow-hidden p-0">
@@ -314,7 +348,7 @@ export default function PortalMessagesPage() {
 
         <form
           onSubmit={handleSend}
-          className="flex items-center gap-2 border-t border-ink-100 p-4"
+          className="flex items-center gap-2 border-t border-ink-100 p-3 sm:p-4"
         >
           <label className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-ink-400 hover:bg-ink-50 hover:text-ink-700">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -340,9 +374,9 @@ export default function PortalMessagesPage() {
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder={attachment ? `Attached: ${attachment.name}` : "Type a message…"}
-            className="flex-1 rounded-full border border-ink-200 px-4 py-2.5 text-sm text-ink-900 outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+            className="min-w-0 flex-1 rounded-full border border-ink-200 px-4 py-2.5 text-sm text-ink-900 outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
           />
-          <Button type="submit" size="sm" disabled={sending}>
+          <Button type="submit" size="sm" disabled={sending} className="shrink-0">
             {sending ? "Sending…" : "Send"}
           </Button>
         </form>

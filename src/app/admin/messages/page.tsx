@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CallButton } from "@/components/CallButton";
 import { useEffect, useRef, useState } from "react";
 import { BrandLoader } from "@/components/BrandLoader";
 
@@ -61,6 +62,29 @@ export default function AdminMessagesPage() {
   const [conversations, setConversations] = useState<Conversation[] | "loading" | "unauthorized" | "error">("loading");
   const [selected, setSelected] = useState<Conversation | null>(null);
   const [thread, setThread] = useState<ThreadMessage[] | "loading" | "error">("loading");
+  // The client's phone number for the Call button (looked up per conversation).
+  const [clientPhone, setClientPhone] = useState<{ key: string; phone: string | null; source: string | null } | null>(null);
+
+  const selectedKey = selected?.key ?? null;
+  const selectedUser = selected?.userId ?? null;
+  const selectedCase = selected?.caseId ?? null;
+  useEffect(() => {
+    if (!selectedKey || !selectedUser) return;
+    let cancelled = false;
+    const params = new URLSearchParams({ userId: selectedUser });
+    if (selectedCase) params.set("caseId", selectedCase);
+    fetch(`/api/admin/messages/contact?${params.toString()}`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : { phone: null, source: null }))
+      .then((d) => {
+        if (!cancelled) setClientPhone({ key: selectedKey, phone: d.phone ?? null, source: d.source ?? null });
+      })
+      .catch(() => {
+        if (!cancelled) setClientPhone({ key: selectedKey, phone: null, source: null });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedKey, selectedUser, selectedCase]);
   const [reply, setReply] = useState("");
   const [outbox, setOutbox] = useState<Outgoing[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -234,15 +258,25 @@ export default function AdminMessagesPage() {
           ) : (
             <>
               <div className="flex items-start justify-between gap-3 border-b border-ink-100 px-5 py-4">
-                <div>
-                  <p className="text-sm font-semibold text-ink-900">{selected.clientName || selected.clientEmail}</p>
-                  <p className="text-xs text-ink-400">{selected.caseTitle || "General"}</p>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-ink-900">{selected.clientName || selected.clientEmail}</p>
+                  <p className="truncate text-xs text-ink-400">{selected.caseTitle || "General"}</p>
+                  {clientPhone?.key === selected.key && clientPhone.source ? (
+                    <p className="mt-0.5 truncate text-[11px] text-ink-400">Number: {clientPhone.source.toLowerCase()}</p>
+                  ) : null}
                 </div>
-                {selected.caseId ? (
-                  <Link href={`/admin/cases/${selected.caseId}`} className="shrink-0 text-xs font-semibold text-brand-600 hover:text-brand-700">
-                    Open case →
-                  </Link>
-                ) : null}
+                <div className="flex shrink-0 flex-col items-end gap-1.5">
+                  {clientPhone?.key === selected.key ? (
+                    <CallButton phone={clientPhone.phone} label="Call client" emptyText="No phone on file" />
+                  ) : (
+                    <span className="h-7 w-24 animate-pulse rounded-full bg-ink-100" aria-hidden="true" />
+                  )}
+                  {selected.caseId ? (
+                    <Link href={`/admin/cases/${selected.caseId}`} className="text-xs font-semibold text-brand-600 hover:text-brand-700">
+                      Open case →
+                    </Link>
+                  ) : null}
+                </div>
               </div>
               <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-5 py-4" style={{ minHeight: 320, maxHeight: 480 }}>
                 {thread === "loading" ? (
@@ -307,7 +341,7 @@ export default function AdminMessagesPage() {
                   onChange={(e) => setReply(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleReply()}
                   placeholder="Type a reply…"
-                  className="flex-1 rounded-lg border border-ink-200 px-3 py-2 text-sm outline-none focus:border-brand-500"
+                  className="min-w-0 flex-1 rounded-lg border border-ink-200 px-3 py-2 text-sm outline-none focus:border-brand-500"
                 />
                 <button
                   onClick={handleReply}
