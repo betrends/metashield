@@ -3,14 +3,8 @@
 
 import { NextResponse } from "next/server";
 import { createClient as createServerClient, createAdminClient } from "@/lib/supabase/server";
-import { getPlan, type PlanId } from "@/lib/portal/billing";
+import { getPlan, isPlanId, planEndsOn } from "@/lib/portal/billing";
 import { subscriptionWelcomeEmail } from "@/lib/email-templates";
-
-function nextRenewalDate(): string {
-  const d = new Date();
-  d.setMonth(d.getMonth() + 1);
-  return d.toISOString().slice(0, 10);
-}
 
 export async function POST(request: Request) {
   const supabase = await createServerClient();
@@ -47,14 +41,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "payment_not_successful", detail: data.message }, { status: 400 });
   }
 
-  const planId = data.data?.metadata?.planId as PlanId | undefined;
-  if (!planId || !["basic", "professional", "business", "one_time"].includes(planId)) {
+  const planId = data.data?.metadata?.planId as unknown;
+  if (!isPlanId(planId)) {
     return NextResponse.json({ error: "invalid_plan_in_metadata" }, { status: 400 });
   }
 
   const plan = getPlan(planId);
+  // The amount actually paid (Korapay reports Naira) must cover the package.
+  const paidNaira = Number(data.data?.amount_paid ?? data.data?.amount ?? 0);
+  if (!(paidNaira * 100 >= plan.priceKobo)) {
+    console.error("Korapay amount below package price:", { reference, paidNaira, plan: plan.id });
+    return NextResponse.json({ error: "amount_mismatch" }, { status: 400 });
+  }
   const admin = createAdminClient();
-  const renewsOn = nextRenewalDate();
+  // Monthly packages run a month, Annual a year, Lifetime never ends.
+  const renewsOn = planEndsOn(plan);
 
   const { data: existing } = await admin
     .from("subscriptions")
@@ -131,7 +132,7 @@ export async function POST(request: Request) {
       await resend.emails.send({
         from: fromAddress,
         to: user.email,
-        subject: `Welcome to Account Protection — ${plan.name} Plan`,
+        subject: `Welcome to ${plan.name}`,
         html: subscriptionWelcomeEmail({
           clientName,
           planName: plan.name,

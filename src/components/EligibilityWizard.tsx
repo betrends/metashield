@@ -12,6 +12,8 @@ import { createCase } from "@/lib/portal/data";
 import { FOLLOWER_RANGES, getFollowerRangeFeeKobo, formatNaira, type FollowerRange } from "@/lib/portal/case-fees";
 import { depositFor } from "@/lib/portal/payments";
 import { useStepHistory } from "@/lib/use-step-history";
+import { fetchSubscription } from "@/lib/portal/subscriptions";
+import { getPlan, isPlanId, packageCovers } from "@/lib/portal/billing";
 
 const platforms = [
   "Instagram",
@@ -61,6 +63,19 @@ export function EligibilityWizard() {
   const [submitted, setSubmitted] = useState(false);
   const [submittingCase, setSubmittingCase] = useState(false);
   const [termsAgreed, setTermsAgreed] = useState(false);
+  // A signed-in client's active package (covered recoveries have no fee).
+  const [packagePlanId, setPackagePlanId] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetchSubscription()
+      .then((sub) => {
+        if (!cancelled && sub && sub.status === "active" && isPlanId(sub.planId)) setPackagePlanId(sub.planId);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   // Set only when this wizard runs inside the portal for an
   // already-signed-in user — the case then saves straight to their real
   // account instead of the anonymous localStorage + "sign up to see it"
@@ -511,7 +526,16 @@ export function EligibilityWizard() {
                 <dd className="text-ink-800">{t(hasAccountAccess ? "Yes" : "No")}</dd>
               </dl>
 
-              {followerRange ? (
+              {packagePlanId && packageCovers(getPlan(packagePlanId), platform) ? (
+                <div className="mx-auto mt-6 max-w-sm rounded-xl border border-accent-green/30 bg-accent-green-bg/60 p-4 text-left">
+                  <p className="text-sm font-semibold text-ink-900">
+                    {t("Covered by your package")} · {getPlan(packagePlanId).name}
+                  </p>
+                  <p className="mt-1 text-xs text-ink-600">
+                    {t("No recovery fee and no deposit for this case. Recovery isn't guaranteed — Meta makes the final decisions.")}
+                  </p>
+                </div>
+              ) : followerRange ? (
                 <div className="mx-auto mt-6 max-w-sm">
                   <FeeBreakdown totalKobo={getFollowerRangeFeeKobo(followerRange)} t={t} />
                 </div>

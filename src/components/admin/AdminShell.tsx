@@ -15,7 +15,7 @@ const adminNavItems = [
   { label: "Agent View", href: "/admin/agent-dashboard", icon: "grid" },
   { label: "Appeals", href: "/admin/appeals", icon: "flag" },
   { label: "Payments", href: "/admin/payments", icon: "card" },
-  { label: "Subscriptions", href: "/admin/subscriptions", icon: "repeat" },
+  { label: "Packages", href: "/admin/subscriptions", icon: "repeat" },
   { label: "Reports", href: "/admin/reports", icon: "chart" },
   { label: "Messages", href: "/admin/messages", icon: "mail" },
   { label: "Support Tickets", href: "/admin/support", icon: "ticket" },

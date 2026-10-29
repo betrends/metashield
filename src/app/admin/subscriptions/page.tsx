@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getPlan, plans, type PlanId } from "@/lib/portal/billing";
+import { getPlan, monthlyValueKobo, plans, type AnyPlanId as PlanId } from "@/lib/portal/billing";
 import { BrandLoader } from "@/components/BrandLoader";
 
 type Subscription = {
@@ -42,7 +42,8 @@ export default function AdminSubscriptionsPage() {
 
   const all = subs === "loading" ? [] : subs;
   const active = all.filter((s) => s.status === "active");
-  const mrrKobo = active.reduce((sum, s) => sum + getPlan(s.planId).priceKobo, 0);
+  // Monthly value: Annual counts 1/12 per month; Lifetime is a one-off payment.
+  const mrrKobo = active.reduce((sum, s) => sum + monthlyValueKobo(getPlan(s.planId)), 0);
   const planCounts = plans.map((p) => ({
     plan: p,
     count: active.filter((s) => s.planId === p.id).length,
@@ -52,12 +53,15 @@ export default function AdminSubscriptionsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-ink-900">Subscriptions</h1>
-      <p className="mt-1 text-sm text-ink-500">Every client&apos;s Account Protection plan.</p>
+      <h1 className="text-2xl font-semibold text-ink-900">Packages</h1>
+      <p className="mt-1 text-sm text-ink-500">
+        Every client&apos;s MetaShield package. To switch one on after a WhatsApp or bank payment, open the client
+        (Clients → client → Package).
+      </p>
 
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="rounded-2xl border border-ink-100 bg-white p-5 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">Active Subscriptions</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">Active Packages</p>
           <p className="mt-2 text-2xl font-semibold text-ink-900">{active.length}</p>
         </div>
         <div className="rounded-2xl border border-ink-100 bg-white p-5 shadow-sm">
@@ -65,11 +69,11 @@ export default function AdminSubscriptionsPage() {
           <p className="mt-2 text-2xl font-semibold text-ink-900">{formatNaira(mrrKobo)}</p>
         </div>
         <div className="rounded-2xl border border-ink-100 bg-white p-5 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">By Plan</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">By Package</p>
           <div className="mt-2 space-y-1 text-sm">
             {planCounts.map(({ plan, count }) => (
               <div key={plan.id} className="flex justify-between">
-                <span className="text-ink-600">{plan.name}</span>
+                <span className="text-ink-600">{plan.name.replace("MetaShield ", "")}</span>
                 <span className="font-semibold text-ink-900">{count}</span>
               </div>
             ))}
@@ -99,9 +103,9 @@ export default function AdminSubscriptionsPage() {
             <thead className="border-b border-ink-100 text-xs uppercase tracking-wide text-ink-400">
               <tr>
                 <th className="px-5 py-3 font-medium">Client</th>
-                <th className="px-5 py-3 font-medium">Plan</th>
+                <th className="px-5 py-3 font-medium">Package</th>
                 <th className="px-5 py-3 font-medium">Status</th>
-                <th className="px-5 py-3 font-medium">Renews</th>
+                <th className="px-5 py-3 font-medium">Active until</th>
                 <th className="px-5 py-3 font-medium">Lifetime Paid</th>
                 <th className="px-5 py-3 font-medium">Started</th>
               </tr>
@@ -116,7 +120,7 @@ export default function AdminSubscriptionsPage() {
               ) : visible.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-5 py-8 text-center text-ink-400">
-                    No subscriptions {filter === "active" ? "active" : "yet"}.
+                    No packages {filter === "active" ? "active" : "yet"}.
                   </td>
                 </tr>
               ) : (
@@ -139,7 +143,9 @@ export default function AdminSubscriptionsPage() {
                     <td className="px-5 py-3.5 text-ink-600">
                       {s.renewsOn
                         ? new Date(s.renewsOn).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-                        : "—"}
+                        : s.planId === "lifetime"
+                          ? "Lifetime"
+                          : "—"}
                     </td>
                     <td className="px-5 py-3.5 font-medium text-ink-900">{formatNaira(s.lifetimePaidKobo)}</td>
                     <td className="px-5 py-3.5 text-ink-400">

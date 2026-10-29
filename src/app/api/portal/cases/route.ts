@@ -8,6 +8,9 @@
 //   - a real active agent from the roster, or no agent (shows as
 //     "Unassigned" for the admin) — never a placeholder name without an
 //     id, which made cases invisible to every agent.
+//   - a client whose active MetaShield package covers this platform pays
+//     nothing: no fee, no deposit, and the case goes straight to the
+//     recovery form (lib/server/packages.ts).
 
 import { NextResponse } from "next/server";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
@@ -15,6 +18,8 @@ import { formatNaira, getFollowerRangeFeeKobo, FOLLOWER_RANGES } from "@/lib/por
 import { sendCaseUpdateEmail } from "@/lib/email/case-update";
 import { depositFor } from "@/lib/portal/payments";
 import { postCaseMessage } from "@/lib/server/case-events";
+import { coveringPackage } from "@/lib/server/packages";
+import { COVERED_FORM_REQUEST_MESSAGE, RECOVERY_FORM_VERSION } from "@/lib/portal/recovery-form";
 
 const MAX = { title: 120, platform: 60, handle: 120, issue: 2000, event: 200, events: 5 };
 
@@ -61,14 +66,15 @@ export async function POST(request: Request) {
   const followerRange = FOLLOWER_RANGES.some((r) => r.value === body.followerRange)
     ? (body.followerRange as string)
     : "0-500";
-  const feeKobo = getFollowerRangeFeeKobo(followerRange);
-  const depositKobo = depositFor(feeKobo);
+  const admin = createAdminClient();
+  const covered = await coveringPackage(admin, user.id, platform);
+  const feeKobo = covered ? 0 : getFollowerRangeFeeKobo(followerRange);
+  const depositKobo = covered ? 0 : depositFor(feeKobo);
+  const startStage = covered ? "Documents Required" : "Payment Pending";
   const clientEvents = (Array.isArray(body.timeline) ? body.timeline : [])
     .map((t) => str((t as { event?: unknown })?.event, MAX.event))
     .filter(Boolean)
     .slice(0, MAX.events);
-
-  const admin = createAdminClient();
 
   const { data: roster } = await admin.from("agents").select("id, name, phone, email").eq("active", true);
   const agent = roster && roster.length > 0 ? roster[Math.floor(Math.random() * roster.length)] : null;
@@ -80,7 +86,7 @@ export async function POST(request: Request) {
       title,
       platform,
       account_handle: accountHandle,
-      stage: "Payment Pending",
+      stage: startStage,
       agent_id: agent?.id ?? null,
       agent_name: agent?.name ?? null,
       agent_phone: agent?.phone ?? null,
@@ -88,7 +94,8 @@ export async function POST(request: Request) {
       issue: issue || null,
       fee_amount_kobo: feeKobo,
       deposit_amount_kobo: depositKobo,
-      payment_status: "unpaid",
+      payment_status: covered ? "paid" : "unpaid",
+      ...(covered ? { deposit_paid_at: new Date().toISOString() } : {}),
       terms_accepted_at: new Date().toISOString(),
       screenshot_url: safeScreenshotUrl(body.screenshotUrl),
     })
@@ -102,15 +109,17 @@ export async function POST(request: Request) {
   const events = [
     ...clientEvents,
     agent ? `Assigned to ${agent.name}` : "Awaiting agent assignment",
-    `Deposit of ${formatNaira(depositKobo)} (50% of ${formatNaira(feeKobo)}) required to begin recovery`,
+    covered
+      ? `Covered by ${covered.plan.name} — no recovery fee`
+      : `Deposit of ${formatNaira(depositKobo)} (50% of ${formatNaira(feeKobo)}) required to begin recovery`,
   ];
   const { error: historyError } = await admin.from("case_stage_history").insert({
     case_id: created.id,
     from_stage: null,
-    to_stage: "Payment Pending",
+    to_stage: startStage,
     actor_role: "client",
     actor: user.email ?? null,
-    reason: "Case opened",
+    reason: covered ? `Case opened — covered by ${covered.plan.name}` : "Case opened",
   });
   if (historyError) console.error("Case created but stage history insert failed:", historyError);
 
@@ -127,7 +136,13 @@ export async function POST(request: Request) {
     authorName,
     kind: "message",
     dedupeKey: `welcome:${created.id}`,
-    body: agent
+    body: covered
+      ? `Hi ${firstName}, ${agent ? `I'm ${agent.name} and I'll be handling` : "thanks for opening"} your case (${title}). Your ${
+          covered.plan.name
+        } package covers this recovery, so there's no recovery fee and no deposit to pay${
+          agent?.phone ? `. You can reach me directly at ${agent.phone}` : ""
+        }.`
+      : agent
       ? `Hi ${firstName}, I'm ${agent.name} and I'll be handling your case (${title}). The total recovery fee is ${formatNaira(
           feeKobo
         )}. Once the 50% deposit of ${formatNaira(
@@ -142,6 +157,20 @@ export async function POST(request: Request) {
         )} is confirmed, recovery starts right away — you can pay from this case's page any time.`,
   });
 
+  // Covered: nothing to pay, so the recovery form comes straight away (the
+  // same message a confirmed deposit sends, under the same once-only key).
+  if (covered) {
+    await postCaseMessage(admin, {
+      userId: user.id,
+      caseId: created.id,
+      authorName,
+      kind: "form_request",
+      dedupeKey: `deposit_confirmed:${created.id}`,
+      metadata: { formVersion: RECOVERY_FORM_VERSION, coveredBy: covered.plan.id },
+      body: COVERED_FORM_REQUEST_MESSAGE,
+    });
+  }
+
 
   if (user.email) {
     await sendCaseUpdateEmail({
@@ -154,5 +183,5 @@ export async function POST(request: Request) {
     });
   }
 
-  return NextResponse.json({ id: created.id });
+  return NextResponse.json({ id: created.id, coveredBy: covered ? covered.plan.name : null });
 }

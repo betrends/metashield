@@ -540,12 +540,12 @@ export function subscriptionWelcomeEmail(opts: {
   const { clientName, planName, planPrice, priceSuffix, features, renewsOn } = escapeOpts(opts);
   const firstName = clientName.split(" ")[0];
   return wrapper(`
-    <div style="margin-bottom:8px;">${statusBadge("Account Protection Active", GREEN, GREEN_BG)}</div>
+    <div style="margin-bottom:8px;">${statusBadge("Package Active", GREEN, GREEN_BG)}</div>
     <h1 style="margin:16px 0 8px;color:${BRAND_DARK};font-size:24px;font-weight:700;line-height:1.3;">
-      Welcome to Account Protection, ${firstName}! 🛡️
+      Welcome to ${planName}, ${firstName}! 🛡️
     </h1>
     <p style="margin:0 0 24px;color:${TEXT_MID};font-size:15px;line-height:1.7;">
-      You're now on the <strong>${planName} Plan</strong>. Your accounts are being actively monitored — here's what's included.
+      Your package is active. Eligible recoveries covered by your plan have no recovery fee — here's what's included.
     </p>
 
     <div style="background:${BRAND_LIGHT};border-radius:12px;padding:20px 24px;margin-bottom:24px;">
@@ -564,16 +564,16 @@ export function subscriptionWelcomeEmail(opts: {
 
     ${renewsOn ? `
     <p style="margin:0 0 24px;color:${TEXT_MID};font-size:14px;">
-      📅 Next billing date: <strong>${new Date(renewsOn).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</strong>
+      📅 Active until: <strong>${new Date(renewsOn).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</strong>
     </p>
     ` : ""}
 
     <table cellpadding="0" cellspacing="0" width="100%">
       ${[
-        ["🔍", "Proactive monitoring", "We watch your accounts for policy violations and risk signals before they become problems."],
-        ["⚡", "Priority support", "If anything goes wrong, you jump to the front of the queue."],
-        ["📊", "Monthly reports", "Get a clear picture of your account health every month."],
-        ["💬", "Direct access", "Message your account manager anytime from your portal."],
+        ["🛡️", "Recovery included", "Open a recovery case for an account your plan covers — no recovery fee and no deposit."],
+        ["🧭", "Guidance at every step", "We guide you through the recovery, review and appeal processes available to you."],
+        ["💬", "Direct access", "Message or call your agent from your portal."],
+        ["ℹ️", "Good to know", "Recovery and appeal approval aren't guaranteed — Meta makes the final decisions."],
       ].map(([icon, title, desc]) => `
         <tr>
           <td style="padding:10px 0;vertical-align:top;width:36px;"><span style="font-size:20px;">${icon}</span></td>

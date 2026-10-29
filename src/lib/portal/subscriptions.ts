@@ -6,7 +6,7 @@
 // service-role-backed API route can activate or cancel one).
 
 import { createClient } from "@/lib/supabase/client";
-import type { PlanId } from "@/lib/portal/billing";
+import type { AnyPlanId as PlanId } from "@/lib/portal/billing";
 
 export type ClientSubscription = {
   planId: PlanId;
@@ -38,6 +38,8 @@ export async function fetchSubscription(): Promise<ClientSubscription | null> {
   if (error) throw error;
   if (!data) return null;
   const row = data as SubscriptionRow;
+  // A package whose paid period has ended no longer counts as active.
+  if (row.renews_on && new Date(row.renews_on).getTime() < Date.now()) return null;
   return { planId: row.plan_id, status: row.status, renewsOn: row.renews_on };
 }
 
