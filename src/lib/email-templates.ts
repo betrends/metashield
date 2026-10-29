@@ -638,38 +638,258 @@ export function staffAlertEmail(opts: { title: string; lines: string[]; link?: s
   `);
 }
 
-// Follow-up for someone who checked eligibility but didn't open a case.
+
+
+
+// Package renewal reminder: a few days before it ends, and when it ends.
+export function packageRenewalEmail(opts: {
+  name: string;
+  planName: string;
+  price: string;
+  priceSuffix: string;
+  endsOn: string;
+  kind: "ending_soon" | "ended";
+  renewUrl: string;
+}) {
+  const { name, planName, price, priceSuffix } = escapeOpts({
+    name: opts.name,
+    planName: opts.planName,
+    price: opts.price,
+    priceSuffix: opts.priceSuffix,
+  });
+  const renewUrl = escapeHtml(opts.renewUrl);
+  const date = new Date(opts.endsOn).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+  const ended = opts.kind === "ended";
+  return wrapper(`
+    <div style="margin-bottom:8px;">${statusBadge(ended ? "Package ended" : "Renewal reminder", ended ? "#b42318" : BRAND_PURPLE, ended ? "#fdecea" : BRAND_LIGHT)}</div>
+    <h1 style="margin:16px 0 8px;color:${BRAND_DARK};font-size:22px;font-weight:700;line-height:1.3;">
+      ${ended ? `Your ${planName} package has ended` : `Your ${planName} package ends on ${date}`}
+    </h1>
+    <p style="margin:0 0 16px;color:${TEXT_MID};font-size:15px;line-height:1.7;">
+      Hi ${name.split(" ")[0] || "there"}, ${
+        ended
+          ? `your package ended on <strong>${date}</strong>. Until you renew, new recovery cases are charged the normal recovery fee.`
+          : `renew before <strong>${date}</strong> to keep account recovery at no extra recovery fee. Renewing early adds the new period on top — you don't lose any days.`
+      }
+    </p>
+    <p style="margin:0 0 20px;color:${TEXT_DARK};font-size:15px;"><strong>${planName}</strong> · ${price}${priceSuffix ? ` ${priceSuffix}` : ""}</p>
+    ${ctaButton("Renew now", renewUrl)}
+    <p style="margin:16px 0 0;color:${TEXT_LIGHT};font-size:12px;line-height:1.6;">
+      You'll pay securely by card through Korapay. Questions? Reply to this email or contact us at ${PORTAL_URL}/contact.
+    </p>
+  `);
+}
+
+// ── Follow-up emails (eligibility check, account health check) ──────────
+// Honest urgency only: real reasons to act now, no invented deadlines,
+// no guarantees.
+
+function preheader(text: string) {
+  return `<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${text}</div>`;
+}
+
+function urgencyHero(chip: string, chipColor: string, headline: string, sub: string) {
+  return `
+    <div style="background:linear-gradient(135deg,#1e1b4b 0%,#4c1d95 100%);background-color:#1e1b4b;border-radius:14px;padding:28px 26px;margin:0 0 24px;">
+      <span style="display:inline-block;background:${chipColor};color:#ffffff;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;border-radius:999px;padding:6px 12px;">${chip}</span>
+      <h1 style="margin:16px 0 10px;color:#ffffff;font-size:26px;font-weight:800;line-height:1.25;">${headline}</h1>
+      <p style="margin:0;color:#ddd6fe;font-size:15px;line-height:1.6;">${sub}</p>
+    </div>`;
+}
+
+function iconList(title: string, items: string[], icon: string, color: string) {
+  return `
+    <p style="margin:0 0 10px;color:${TEXT_DARK};font-size:15px;font-weight:800;">${title}</p>
+    <table cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 22px;">
+      ${items
+        .map(
+          (t) => `
+      <tr>
+        <td style="width:28px;vertical-align:top;padding:6px 0;color:${color};font-size:16px;font-weight:800;">${icon}</td>
+        <td style="vertical-align:top;padding:6px 0;color:${TEXT_MID};font-size:14px;line-height:1.6;">${t}</td>
+      </tr>`
+        )
+        .join("")}
+    </table>`;
+}
+
+function bigButton(text: string, href: string) {
+  return `
+    <table cellpadding="0" cellspacing="0" width="100%" style="margin:6px 0 22px;">
+      <tr><td align="center" style="background:${BRAND_PURPLE};border-radius:12px;">
+        <a href="${href}" style="display:block;padding:17px 24px;color:#ffffff;font-size:17px;font-weight:800;text-decoration:none;">${text}</a>
+      </td></tr>
+    </table>`;
+}
+
+// Sent the morning after someone checked their recovery eligibility (and
+// left "email me" ticked) but hasn't opened a case. No prices.
+export function eligibilityFollowupSubject(opts: { name: string; platform?: string | null; final?: boolean }) {
+  const first = opts.name.split(" ")[0] || "";
+  if (opts.final) return `Last reminder: ${first ? `${first}, still` : "still"} want your ${opts.platform || "account"} back?`;
+  return `⏳ ${first ? `${first}, don't` : "Don't"} let your ${opts.platform || "account"} go for good`;
+}
+
 export function eligibilityFollowupEmail(opts: {
   name: string;
   platform?: string | null;
   issue?: string | null;
   unsubscribeUrl: string;
+  final?: boolean; // the second and last reminder, 3 days after the first
 }) {
   const { name, platform, issue } = escapeOpts({ name: opts.name, platform: opts.platform ?? "", issue: opts.issue ?? "" });
   const unsubscribeUrl = escapeHtml(opts.unsubscribeUrl);
+  const first = name.split(" ")[0] || "there";
+  const acct = platform ? `${platform} account` : "account";
   return wrapper(`
-    <h1 style="margin:0 0 8px;color:${BRAND_DARK};font-size:22px;font-weight:700;line-height:1.3;">
-      Still need help getting your account back, ${name.split(" ")[0] || "there"}?
-    </h1>
-    <p style="margin:0 0 16px;color:${TEXT_MID};font-size:15px;line-height:1.7;">
-      You recently checked your recovery eligibility with MetaShield${platform ? ` for your <strong>${platform}</strong> account` : ""}${
-        issue ? ` (<strong>${issue}</strong>)` : ""
-      }. Your situation looked like a case we can work on.
+    ${preheader(
+      opts.final
+        ? "This is our last email about your eligibility check. Meta's appeal window doesn't stay open forever."
+        : "Meta only gives a limited time to appeal. It takes about 2 minutes to start your case."
+    )}
+    ${
+      opts.final
+        ? urgencyHero(
+            "Last reminder",
+            "#dc2626",
+            `${first}, still locked out of your ${acct}?`,
+            `This is the last time we'll email you about your eligibility check${issue ? ` (<strong style="color:#ffffff;">${issue}</strong>)` : ""}. If you still want your account back, don't leave it any longer — starting your case takes about 2 minutes.`
+          )
+        : urgencyHero(
+            "⏳ Time matters",
+            "#dc2626",
+            `${first}, your ${acct} isn't gone yet. But the clock is running.`,
+            `You checked your recovery eligibility with MetaShield${issue ? ` (<strong style="color:#ffffff;">${issue}</strong>)` : ""}, and your situation looked like a case we can work on. The sooner it's submitted, the better.`
+          )
+    }
+    ${iconList(
+      "Every day you wait:",
+      [
+        "Meta's window to appeal a disabled account keeps closing — once it closes, the account can be gone for good.",
+        "Your followers, customers and messages go unanswered.",
+        "Scammers and impersonators can use your name while you're locked out.",
+      ],
+      "✕",
+      "#dc2626"
+    )}
+    ${iconList(
+      "What MetaShield does for you:",
+      [
+        "We prepare and submit your case through the available Meta support channels.",
+        "Your own agent keeps you updated at every step — message or call them any time.",
+        "You pay a 50% deposit to start. The other 50% is only due after a successful recovery.",
+      ],
+      "✓",
+      "#16a34a"
+    )}
+    ${bigButton("Start my recovery now →", `${PORTAL_URL}/recovery-eligibility`)}
+    <p style="margin:0 0 16px;color:${TEXT_DARK};font-size:14px;line-height:1.7;">
+      <strong>P.S.</strong> ${
+        opts.final
+          ? "We won't email you about this again — if you need us later, we're one message away."
+          : "Waiting rarely brings a disabled account back on its own. It takes about 2 minutes to start your case."
+      }
     </p>
-    <h2 style="margin:0 0 10px;color:${TEXT_DARK};font-size:15px;font-weight:700;">How MetaShield can help</h2>
-    <p style="margin:0 0 8px;color:${TEXT_MID};font-size:14px;line-height:1.7;">
-      We prepare and submit your case for further review through available Meta support channels, and keep you updated at every step.
-    </p>
-    <p style="margin:0 0 16px;color:${TEXT_MID};font-size:14px;line-height:1.7;">
-      <strong>Next steps:</strong> open your case, pay the 50% deposit, and complete the recovery form. The remaining 50% is only due after a successful recovery.
-    </p>
-    ${ctaButton("Start my recovery case", `${PORTAL_URL}/recovery-eligibility`)}
-    <p style="margin:16px 0 0;color:${TEXT_LIGHT};font-size:12px;line-height:1.6;">
+    <p style="margin:0;color:${TEXT_LIGHT};font-size:12px;line-height:1.6;">
       An eligibility check does not guarantee recovery — the final decision remains with Meta.
-      Questions? Reply to this email or contact support at ${PORTAL_URL}/contact.
+      Questions? Reply to this email or contact us at ${PORTAL_URL}/contact.
     </p>
     <p style="margin:12px 0 0;color:${TEXT_LIGHT};font-size:11px;">
       You received this because you asked us to email you about your eligibility result.
+      <a href="${unsubscribeUrl}" style="color:${TEXT_LIGHT};">Unsubscribe</a>
+    </p>
+  `);
+}
+
+// Sent the morning after someone ran the account health check (and left
+// "email me" ticked) but has no package yet: the Account Protection packages.
+export function protectionFollowupSubject(opts: { name: string; handle?: string | null; riskLevel?: string | null; final?: boolean }) {
+  const first = opts.name.split(" ")[0] || "";
+  const acct = opts.handle || "your account";
+  if (opts.final) return `Last reminder: account recovery at no extra cost for ${acct}`;
+  return opts.riskLevel === "high" || opts.riskLevel === "medium"
+    ? `⚠️ Risk found on ${acct} — get account recovery at no extra cost`
+    : `${first ? `${first}, if` : "If"} ${acct} is ever hacked or disabled, we recover it at no extra cost`;
+}
+
+export function protectionFollowupEmail(opts: {
+  name: string;
+  platform?: string | null;
+  handle?: string | null;
+  riskLevel?: string | null;
+  unsubscribeUrl: string;
+  final?: boolean; // the second and last reminder, 3 days after the first
+}) {
+  const { name, platform, handle } = escapeOpts({ name: opts.name, platform: opts.platform ?? "", handle: opts.handle ?? "" });
+  const unsubscribeUrl = escapeHtml(opts.unsubscribeUrl);
+  const first = name.split(" ")[0] || "there";
+  const acct = handle || (platform ? `your ${platform} account` : "your account");
+  const risky = opts.riskLevel === "high" || opts.riskLevel === "medium";
+  const pkg = (n: string, price: string, covers: string, tag = "") => `
+      <tr>
+        <td style="padding:12px 14px;border:1px solid #ede9fe;border-radius:10px;background:#faf8ff;">
+          <table cellpadding="0" cellspacing="0" width="100%"><tr>
+            <td style="color:${TEXT_DARK};font-size:15px;font-weight:800;">${n}${
+              tag ? ` <span style="font-size:10px;font-weight:800;color:${BRAND_PURPLE};background:#ede9fe;border-radius:999px;padding:3px 8px;margin-left:4px;">${tag}</span>` : ""
+            }<div style="color:${TEXT_MID};font-size:12px;font-weight:400;margin-top:3px;">${covers}</div></td>
+            <td align="right" style="color:${BRAND_PURPLE};font-size:15px;font-weight:800;white-space:nowrap;">${price}</td>
+          </tr></table>
+        </td>
+      </tr>
+      <tr><td style="height:8px;"></td></tr>`;
+  return wrapper(`
+    ${preheader("One subscription. Account recovery at no extra cost — from ₦10,000/month.")}
+    ${urgencyHero(
+      opts.final ? "Last reminder" : risky ? "⚠️ Risk found on your account" : "🛡️ Account recovery at no extra cost",
+      opts.final || risky ? "#dc2626" : "#7c3aed",
+      opts.final
+        ? `${first}, ${acct} is still unprotected. Account recovery at no extra cost is one step away.`
+        : `${first}, if ${acct} is ever hacked or disabled, we recover it — at no extra cost.`,
+      `One MetaShield subscription protects your account <strong style="color:#ffffff;">and</strong> covers account recovery at no extra recovery fee.${
+        risky ? ` <strong style="color:#ffffff;">Your health check flagged risk factors on this account — don't wait for something to go wrong.</strong>` : ""
+      }`
+    )}
+    ${iconList(
+      "Accounts are hacked, mass-reported and disabled every day. Without protection:",
+      [
+        "You're locked out of your followers, customers and DMs — overnight.",
+        "Every day offline costs you sales, reach and trust.",
+        "You pay for recovery on top of everything you've already lost.",
+      ],
+      "✕",
+      "#dc2626"
+    )}
+    ${iconList(
+      "With a MetaShield package:",
+      [
+        "<strong>Account recovery at no extra cost</strong> for eligible cases covered by your plan.",
+        "A monthly account security check to catch problems early.",
+        "Guidance through every available recovery and appeal process.",
+      ],
+      "✓",
+      "#16a34a"
+    )}
+    <p style="margin:0 0 10px;color:${TEXT_DARK};font-size:15px;font-weight:800;">Pick your package — recovery included in every one:</p>
+    <table cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 14px;">
+      ${pkg("Watch", "₦10,000/mo", "Instagram + Facebook")}
+      ${pkg("Elite", "₦15,000/mo", "Instagram + Facebook + Meta ad account")}
+      ${pkg("Annual Plan", "₦120,000/yr", "2 Instagram + 2 Facebook")}
+      ${pkg("Lifetime Plan", "₦500,000 once", "Instagram + Facebook + Meta ad account", "No renewals")}
+    </table>
+    ${bigButton("Get recovery at no extra cost →", `${PORTAL_URL}/pricing#packages`)}
+    <p style="margin:0 0 16px;color:${TEXT_DARK};font-size:14px;line-height:1.7;">
+      <strong>P.S.</strong> ${
+        opts.final
+          ? "This is the last email about your account check. Protection only works if it's in place <em>before</em> something goes wrong."
+          : "Protection only works if it's in place <em>before</em> something goes wrong. From ₦10,000/month, recovery is covered — no extra cost."
+      }
+    </p>
+    <p style="margin:0;color:${TEXT_LIGHT};font-size:12px;line-height:1.6;">
+      Account recovery is provided at no additional recovery service fee for eligible cases covered by your plan.
+      Recovery, appeal approval and restriction removal are not guaranteed — Meta makes the final decisions.
+    </p>
+    <p style="margin:12px 0 0;color:${TEXT_LIGHT};font-size:11px;">
+      You received this because you asked us to email you about your account check.
       <a href="${unsubscribeUrl}" style="color:${TEXT_LIGHT};">Unsubscribe</a>
     </p>
   `);

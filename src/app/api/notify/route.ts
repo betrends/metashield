@@ -76,7 +76,7 @@ export async function POST(request: Request) {
       message,
       metadata,
       // Only the eligibility wizard asks for follow-up consent (opt-in).
-      email_consent: source === "recovery_eligibility" && body.emailConsent === true,
+      email_consent: (source === "recovery_eligibility" || source === "health_check") && body.emailConsent === true,
     });
     if (error) throw error;
   } catch (err) {
