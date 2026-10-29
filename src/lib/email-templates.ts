@@ -664,13 +664,6 @@ export function eligibilityFollowupEmail(opts: {
       <strong>Next steps:</strong> open your case, pay the 50% deposit, and complete the recovery form. The remaining 50% is only due after a successful recovery.
     </p>
     ${ctaButton("Start my recovery case", `${PORTAL_URL}/recovery-eligibility`)}
-    <div style="margin:20px 0 0;background:${BRAND_LIGHT};border-radius:12px;padding:16px 20px;">
-      <p style="margin:0 0 6px;color:${TEXT_DARK};font-size:14px;font-weight:700;">Prefer recovery included?</p>
-      <p style="margin:0;color:${TEXT_MID};font-size:13px;line-height:1.6;">
-        MetaShield packages start from <strong>₦10,000/month</strong> and include account recovery at no extra recovery fee for
-        eligible cases covered by your plan. <a href="${PORTAL_URL}/pricing#packages" style="color:${BRAND_PURPLE};font-weight:600;">See the packages</a>
-      </p>
-    </div>
     <p style="margin:16px 0 0;color:${TEXT_LIGHT};font-size:12px;line-height:1.6;">
       An eligibility check does not guarantee recovery — the final decision remains with Meta.
       Questions? Reply to this email or contact support at ${PORTAL_URL}/contact.
