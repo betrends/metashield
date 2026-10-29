@@ -54,8 +54,14 @@ export async function POST(request: Request) {
       reference,
       amount: plan.priceKobo / 100, // Korapay uses Naira, not kobo
       currency: "NGN",
-      redirect_url: `${appUrl}/portal/billing`,
-      customer: { email: user.email },
+      // Our own "kpref" brings the client back to confirm this exact payment
+      // (not relying on how Korapay adds parameters to the return address).
+      redirect_url: `${appUrl}/portal/billing?kpref=${encodeURIComponent(reference)}`,
+      customer: {
+        email: user.email,
+        ...(user.user_metadata?.full_name ? { name: String(user.user_metadata.full_name).slice(0, 100) } : {}),
+      },
+      narration: `${plan.name} package`,
       metadata: { planId: plan.id, userId: user.id },
     }),
   });

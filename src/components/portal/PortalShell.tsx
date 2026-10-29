@@ -181,7 +181,9 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
       if (cancelled) return;
 
       if (!user) {
-        router.replace("/portal/login");
+        // Come back here after signing in (e.g. a package picked on Pricing).
+        const here = window.location.pathname + window.location.search;
+        router.replace(here.startsWith("/portal/") ? `/portal/login?next=${encodeURIComponent(here)}` : "/portal/login");
         return;
       }
 

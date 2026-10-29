@@ -55,6 +55,13 @@ async function redirectAfterAuth(
     router.refresh();
     return;
   }
+  // A client sent to sign in from a portal page (e.g. paying for a package)
+  // goes back to it. Only our own /portal/ pages, never another site.
+  if (next && next.startsWith("/portal/") && !next.startsWith("//") && !next.startsWith("/portal/login")) {
+    router.push(next);
+    router.refresh();
+    return;
+  }
 
   if (email && email === process.env.NEXT_PUBLIC_ADMIN_EMAIL) {
     router.push("/admin");

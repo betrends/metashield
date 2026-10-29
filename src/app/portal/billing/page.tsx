@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { getPlan, type PlanId } from "@/lib/portal/billing";
+import { cardPaymentsEnabled, getPlan, isPlanId, type PlanId } from "@/lib/portal/billing";
 import { PackagesGrid } from "@/components/PackagesGrid";
 import {
   fetchSubscription,
@@ -38,9 +38,14 @@ export default function BillingPage() {
     load();
   }, []);
 
-  // After Paystack redirects back, verify the payment and activate the plan
+  // A package picked on the Pricing page (?plan=…): offer to pay for it here.
+  const pickedPlanId = searchParams.get("plan");
+  const picked = isPlanId(pickedPlanId) && cardPaymentsEnabled() ? getPlan(pickedPlanId) : null;
+
+  // After Korapay sends the client back, confirm the payment and activate
+  // the package. "kpref" is our own reference added to the return address.
   useEffect(() => {
-    const reference = searchParams.get("reference") || searchParams.get("trxref");
+    const reference = searchParams.get("kpref") || searchParams.get("reference") || searchParams.get("trxref");
     if (!reference) return;
     setBusy(true);
     fetch("/api/subscribe/verify", {
@@ -51,10 +56,12 @@ export default function BillingPage() {
       .then((r) => r.json())
       .then((data) => {
         if (data.ok) {
-          setConfirmation(`Your ${data.planName} package is active. Welcome!`);
+          setConfirmation(`Payment received — your ${data.planName} package is active. Welcome!`);
           load();
+        } else if (data.error === "payment_not_successful") {
+          setError("Your card payment wasn't completed, so nothing was charged. You can try again below.");
         } else {
-          setError("Payment verification failed — please contact support if you were charged.");
+          setError("We couldn't confirm your payment. If money left your account, message us on WhatsApp and we'll sort it out.");
         }
       })
       .catch(() => setError("Could not verify payment — please contact support."))
@@ -77,9 +84,13 @@ export default function BillingPage() {
       });
       const data = await res.json();
       if (!res.ok || !data.checkoutUrl) {
-        throw new Error(data.error || "Could not start checkout.");
+        throw new Error(
+          data.error === "card_payments_disabled"
+            ? "Card payment isn't available yet — please use WhatsApp to get this package."
+            : "We couldn't open the card payment page. Please try again in a moment."
+        );
       }
-      // Redirect to Paystack checkout
+      // Go to Korapay's secure payment page
       window.location.href = data.checkoutUrl;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
@@ -135,6 +146,21 @@ export default function BillingPage() {
         <p className="mt-6 rounded-xl bg-risk-high-bg px-4 py-3 text-sm font-medium text-risk-high">
           {error}
         </p>
+      ) : null}
+
+      {picked && !confirmation && (!subscription || subscription.planId !== picked.id) ? (
+        <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-brand-200 bg-brand-50 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-ink-900">You picked {picked.name}</p>
+            <p className="mt-0.5 text-sm text-ink-600">
+              {picked.price} {picked.period === "lifetime" ? "one-time payment" : picked.priceSuffix} · paid securely by card
+              through Korapay
+            </p>
+          </div>
+          <Button onClick={() => handleChoosePlan(picked.id as PlanId)} disabled={busy} className="shrink-0">
+            {busy ? "Please wait…" : `Pay ${picked.price}`}
+          </Button>
+        </div>
       ) : null}
 
       <Card className="mt-6">
