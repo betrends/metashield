@@ -54,14 +54,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "amount_mismatch" }, { status: 400 });
   }
   const admin = createAdminClient();
-  // Monthly packages run a month, Annual a year, Lifetime never ends.
-  const renewsOn = planEndsOn(plan);
-
   const { data: existing } = await admin
     .from("subscriptions")
-    .select("id")
+    .select("id, plan_id, status, renews_on")
     .eq("user_id", user.id)
     .maybeSingle();
+
+  // Monthly packages run a month, Annual a year, Lifetime never ends.
+  // Renewing the same package early adds the new period on top of what's
+  // left, so the client doesn't lose days.
+  const now = new Date();
+  const currentEnd = existing?.renews_on ? new Date(existing.renews_on) : null;
+  const extendFrom =
+    existing?.status === "active" && existing.plan_id === plan.id && currentEnd && currentEnd > now ? currentEnd : now;
+  const renewsOn = planEndsOn(plan, extendFrom);
 
   // The charge must belong to the signed-in user, so one client can't
   // activate a plan with someone else's payment reference.

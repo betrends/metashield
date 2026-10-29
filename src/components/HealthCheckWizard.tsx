@@ -100,6 +100,8 @@ export function HealthCheckWizard() {
   const t = useT();
   const cardRef = useRef<HTMLDivElement>(null);
   const [step, setStep] = useState(0);
+  // "Email me how MetaShield can protect this account" (ticked by default).
+  const [emailConsent, setEmailConsent] = useState(true);
   // Each step is a browser-history entry: the phone's Back button goes to
   // the previous question instead of leaving the page.
   const stepNav = useStepHistory(step, setStep, stepLabels.length - 1);
@@ -247,6 +249,7 @@ export function HealthCheckWizard() {
               name: contactInfo.name,
               email: contactInfo.email,
               phone: contactInfo.phone || null,
+              emailConsent,
               metadata: {
                 platform: platformLabel,
                 handle: accountUsername,
@@ -450,6 +453,20 @@ export function HealthCheckWizard() {
             <span className="text-xs text-ink-400">{t("Screenshots, PDFs or emails")}</span>
             <input type="file" multiple className="hidden" onChange={handleFileChange} />
           </label>
+
+          {contactInfo.email ? (
+            <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-xl border border-ink-100 bg-ink-50/60 p-3.5">
+              <input
+                type="checkbox"
+                checked={emailConsent}
+                onChange={(e) => setEmailConsent(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-brand-600"
+              />
+              <span className="text-xs leading-relaxed text-ink-600">
+                {t("Email me my results and how MetaShield can protect this account. You can unsubscribe at any time.")}
+              </span>
+            </label>
+          ) : null}
 
           {files.length > 0 ? (
             <ul className="mt-4 space-y-2">

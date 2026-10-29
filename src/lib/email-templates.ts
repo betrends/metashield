@@ -664,6 +664,13 @@ export function eligibilityFollowupEmail(opts: {
       <strong>Next steps:</strong> open your case, pay the 50% deposit, and complete the recovery form. The remaining 50% is only due after a successful recovery.
     </p>
     ${ctaButton("Start my recovery case", `${PORTAL_URL}/recovery-eligibility`)}
+    <div style="margin:20px 0 0;background:${BRAND_LIGHT};border-radius:12px;padding:16px 20px;">
+      <p style="margin:0 0 6px;color:${TEXT_DARK};font-size:14px;font-weight:700;">Prefer recovery included?</p>
+      <p style="margin:0;color:${TEXT_MID};font-size:13px;line-height:1.6;">
+        MetaShield packages start from <strong>₦10,000/month</strong> and include account recovery at no extra recovery fee for
+        eligible cases covered by your plan. <a href="${PORTAL_URL}/pricing#packages" style="color:${BRAND_PURPLE};font-weight:600;">See the packages</a>
+      </p>
+    </div>
     <p style="margin:16px 0 0;color:${TEXT_LIGHT};font-size:12px;line-height:1.6;">
       An eligibility check does not guarantee recovery — the final decision remains with Meta.
       Questions? Reply to this email or contact support at ${PORTAL_URL}/contact.
@@ -671,6 +678,100 @@ export function eligibilityFollowupEmail(opts: {
     <p style="margin:12px 0 0;color:${TEXT_LIGHT};font-size:11px;">
       You received this because you asked us to email you about your eligibility result.
       <a href="${unsubscribeUrl}" style="color:${TEXT_LIGHT};">Unsubscribe</a>
+    </p>
+  `);
+}
+
+
+// Follow-up to someone who ran the account health check but has no
+// package yet (only sent if they left "email me" ticked).
+export function protectionFollowupEmail(opts: {
+  name: string;
+  platform?: string | null;
+  handle?: string | null;
+  riskLevel?: string | null;
+  unsubscribeUrl: string;
+}) {
+  const { name, platform, handle } = escapeOpts({ name: opts.name, platform: opts.platform ?? "", handle: opts.handle ?? "" });
+  const unsubscribeUrl = escapeHtml(opts.unsubscribeUrl);
+  const risky = opts.riskLevel === "high" || opts.riskLevel === "medium";
+  return wrapper(`
+    <h1 style="margin:0 0 8px;color:${BRAND_DARK};font-size:22px;font-weight:700;line-height:1.3;">
+      Keep ${handle ? `<strong>${handle}</strong>` : "your account"} protected, ${name.split(" ")[0] || "there"}
+    </h1>
+    <p style="margin:0 0 16px;color:${TEXT_MID};font-size:15px;line-height:1.7;">
+      You recently checked the health of your ${platform ? `<strong>${platform}</strong> ` : ""}account with MetaShield.${
+        risky ? " Your result showed some risk factors worth acting on." : ""
+      }
+    </p>
+    <h2 style="margin:0 0 10px;color:${TEXT_DARK};font-size:15px;font-weight:700;">One subscription. Account recovery at no extra cost.</h2>
+    <table cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 16px;">
+      ${[
+        ["Watch", "₦10,000/month", "Instagram + Facebook"],
+        ["Elite", "₦15,000/month", "Instagram + Facebook + Meta ad account"],
+        ["Annual Plan", "₦120,000/year", "2 Instagram + 2 Facebook"],
+        ["Lifetime Plan", "₦500,000 once", "Instagram + Facebook + Meta ad account"],
+      ]
+        .map(
+          ([n, price, covers]) => `
+        <tr>
+          <td style="padding:8px 0;border-bottom:1px solid #eee;color:${TEXT_DARK};font-size:14px;font-weight:700;">${n}</td>
+          <td style="padding:8px 0;border-bottom:1px solid #eee;color:${TEXT_DARK};font-size:14px;">${price}</td>
+          <td style="padding:8px 0;border-bottom:1px solid #eee;color:${TEXT_MID};font-size:13px;">${covers}</td>
+        </tr>`
+        )
+        .join("")}
+    </table>
+    <p style="margin:0 0 16px;color:${TEXT_MID};font-size:14px;line-height:1.7;">
+      Every package includes a monthly account security check, guidance through available recovery and appeal processes,
+      and recovery at no extra recovery fee for eligible cases covered by your plan.
+    </p>
+    ${ctaButton("See the packages", `${PORTAL_URL}/pricing#packages`)}
+    <p style="margin:16px 0 0;color:${TEXT_LIGHT};font-size:12px;line-height:1.6;">
+      Recovery, appeal approval and restriction removal are not guaranteed — Meta makes the final decisions.
+    </p>
+    <p style="margin:12px 0 0;color:${TEXT_LIGHT};font-size:11px;">
+      You received this because you asked us to email you about your account check.
+      <a href="${unsubscribeUrl}" style="color:${TEXT_LIGHT};">Unsubscribe</a>
+    </p>
+  `);
+}
+
+// Package renewal reminder: a few days before it ends, and when it ends.
+export function packageRenewalEmail(opts: {
+  name: string;
+  planName: string;
+  price: string;
+  priceSuffix: string;
+  endsOn: string;
+  kind: "ending_soon" | "ended";
+  renewUrl: string;
+}) {
+  const { name, planName, price, priceSuffix } = escapeOpts({
+    name: opts.name,
+    planName: opts.planName,
+    price: opts.price,
+    priceSuffix: opts.priceSuffix,
+  });
+  const renewUrl = escapeHtml(opts.renewUrl);
+  const date = new Date(opts.endsOn).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+  const ended = opts.kind === "ended";
+  return wrapper(`
+    <div style="margin-bottom:8px;">${statusBadge(ended ? "Package ended" : "Renewal reminder", ended ? "#b42318" : BRAND_PURPLE, ended ? "#fdecea" : BRAND_LIGHT)}</div>
+    <h1 style="margin:16px 0 8px;color:${BRAND_DARK};font-size:22px;font-weight:700;line-height:1.3;">
+      ${ended ? `Your ${planName} package has ended` : `Your ${planName} package ends on ${date}`}
+    </h1>
+    <p style="margin:0 0 16px;color:${TEXT_MID};font-size:15px;line-height:1.7;">
+      Hi ${name.split(" ")[0] || "there"}, ${
+        ended
+          ? `your package ended on <strong>${date}</strong>. Until you renew, new recovery cases are charged the normal recovery fee.`
+          : `renew before <strong>${date}</strong> to keep account recovery at no extra recovery fee. Renewing early adds the new period on top — you don't lose any days.`
+      }
+    </p>
+    <p style="margin:0 0 20px;color:${TEXT_DARK};font-size:15px;"><strong>${planName}</strong> · ${price}${priceSuffix ? ` ${priceSuffix}` : ""}</p>
+    ${ctaButton("Renew now", renewUrl)}
+    <p style="margin:16px 0 0;color:${TEXT_LIGHT};font-size:12px;line-height:1.6;">
+      You'll pay securely by card through Korapay. Questions? Reply to this email or contact us at ${PORTAL_URL}/contact.
     </p>
   `);
 }
