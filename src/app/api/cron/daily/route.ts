@@ -16,7 +16,13 @@ import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/server";
 import { sendCaseUpdateEmail } from "@/lib/email/case-update";
 import { sendStaffAlert } from "@/lib/email/staff-alert";
-import { eligibilityFollowupEmail, packageRenewalEmail, protectionFollowupEmail } from "@/lib/email-templates";
+import {
+  eligibilityFollowupEmail,
+  eligibilityFollowupSubject,
+  packageRenewalEmail,
+  protectionFollowupEmail,
+  protectionFollowupSubject,
+} from "@/lib/email-templates";
 import { getPlan, isPlanId } from "@/lib/portal/billing";
 import { activePackageFor } from "@/lib/server/packages";
 import { formatNaira } from "@/lib/portal/case-fees";
@@ -164,7 +170,16 @@ export async function GET(request: Request) {
       const { error } = await new Resend(resendKey).emails.send({
         from: process.env.RESEND_FROM_EMAIL || "MetaShield <onboarding@resend.dev>",
         to: email,
-        subject: isHealthCheck ? "Keep your account protected — recovery included" : "Still need help recovering your account?",
+        subject: isHealthCheck
+          ? protectionFollowupSubject({
+              name: String(s.name ?? ""),
+              handle: typeof meta.handle === "string" ? meta.handle : null,
+              riskLevel: typeof meta.riskLevel === "string" ? meta.riskLevel : null,
+            })
+          : eligibilityFollowupSubject({
+              name: String(s.name ?? ""),
+              platform: typeof meta.platform === "string" ? meta.platform : null,
+            }),
         html: isHealthCheck
           ? protectionFollowupEmail({
               name: String(s.name ?? ""),
