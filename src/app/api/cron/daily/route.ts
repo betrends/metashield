@@ -1,12 +1,14 @@
 // Daily job (Vercel Cron, see vercel.json). Safe to run more than once:
 //  1. Overdue final balances — post one reminder in the case chat and
 //     email the client and the team, once per case (de-duplicated).
-//  2. Follow-ups — one email, 24 hours later, to people who left "email me"
+//  2. Follow-ups — an email 24 hours later to people who left "email me"
 //     ticked on the recovery eligibility check (recovery email) or the
-//     account health check (packages email). Skips unsubscribed addresses,
-//     people who already became clients (a case or an active package) and
-//     addresses emailed in the last 30 days. Every outcome is logged on the
-//     submission (followup_status / followup_sent_at / followup_error).
+//     account health check (packages email), then one last reminder 3 days
+//     after that if they still haven't acted. Never more than two. Skips
+//     unsubscribed addresses, people who already became clients (a case or
+//     an active package) and addresses already emailed for another form.
+//     Every outcome is logged on the submission (followup_status, with "_2"
+//     for the last reminder / followup_sent_at / followup_error).
 //  3. Package renewal reminders — an email 3 days before a package's end
 //     date and one the morning after it ends, each with a "Renew now" button
 //     straight to card payment. Once per package period (package_reminders).
@@ -91,48 +93,69 @@ export async function GET(request: Request) {
   }
 
   // ── 2. Follow-ups (eligibility check + account health check) ──────
-  const { data: subs, error: subsError } = await admin
-    .from("contact_submissions")
-    .select("id, source, name, email, metadata, created_at")
-    .in("source", ["recovery_eligibility", "health_check"])
-    .eq("email_consent", true)
-    .is("followup_status", null)
-    .lt("created_at", new Date(Date.now() - DAY).toISOString())
-    .gt("created_at", new Date(Date.now() - 14 * DAY).toISOString())
-    .order("created_at", { ascending: true })
-    .limit(50);
+  // First email 24h after the form; a second, last reminder 3 days after
+  // the first for people who still haven't acted. Nothing after that.
+  const [{ data: firsts, error: subsError }, { data: finals, error: finalsError }] = await Promise.all([
+    admin
+      .from("contact_submissions")
+      .select("id, source, name, email, metadata, created_at")
+      .in("source", ["recovery_eligibility", "health_check"])
+      .eq("email_consent", true)
+      .is("followup_status", null)
+      .lt("created_at", new Date(Date.now() - DAY).toISOString())
+      .gt("created_at", new Date(Date.now() - 14 * DAY).toISOString())
+      .order("created_at", { ascending: true })
+      .limit(50),
+    admin
+      .from("contact_submissions")
+      .select("id, source, name, email, metadata, created_at")
+      .in("source", ["recovery_eligibility", "health_check"])
+      .eq("email_consent", true)
+      .eq("followup_status", "sent")
+      .lt("followup_sent_at", new Date(Date.now() - 3 * DAY + 60 * 60 * 1000).toISOString()) // ~3 days (1h slack for cron timing)
+      .gt("followup_sent_at", new Date(Date.now() - 10 * DAY).toISOString())
+      .order("followup_sent_at", { ascending: true })
+      .limit(50),
+  ]);
   if (subsError) console.error("[cron] follow-up query failed:", subsError);
+  if (finalsError) console.error("[cron] last-reminder query failed:", finalsError);
 
   const resendKey = process.env.RESEND_API_KEY;
-  for (const s of subs ?? []) {
+  const queue = [
+    ...(firsts ?? []).map((s) => ({ s, final: false })),
+    ...(finals ?? []).map((s) => ({ s, final: true })),
+  ];
+  for (const { s, final } of queue) {
     const email = String(s.email ?? "").trim().toLowerCase();
+    const sfx = final ? "_2" : "";
     // Claim the row first so overlapping runs can't both send.
-    const { data: claimed } = await admin
-      .from("contact_submissions")
-      .update({ followup_status: "sending" })
-      .eq("id", s.id)
-      .is("followup_status", null)
+    const claim = admin.from("contact_submissions").update({ followup_status: `sending${sfx}` }).eq("id", s.id);
+    const { data: claimed } = await (final ? claim.eq("followup_status", "sent") : claim.is("followup_status", null))
       .select("id")
       .maybeSingle();
     if (!claimed) continue;
 
     const finish = (status: string, extra: Record<string, unknown> = {}) =>
-      admin.from("contact_submissions").update({ followup_status: status, ...extra }).eq("id", s.id);
+      admin.from("contact_submissions").update({ followup_status: `${status}${sfx}`, ...extra }).eq("id", s.id);
 
     if (!email.includes("@")) {
       await finish("skipped_no_email");
       result.followups.skipped++;
       continue;
     }
+    // Another of this person's forms was emailed recently (30 days for the
+    // first email, 3 days for the last reminder) — don't double up.
+    const recentQuery = admin
+      .from("contact_submissions")
+      .select("id")
+      .ilike("email", email)
+      .neq("id", s.id)
+      .not("followup_sent_at", "is", null)
+      .gt("followup_sent_at", new Date(Date.now() - (final ? 3 : 30) * DAY).toISOString())
+      .limit(1);
     const [{ data: unsub }, { data: recent }, { data: profile }] = await Promise.all([
       admin.from("email_unsubscribes").select("email").eq("email", email).maybeSingle(),
-      admin
-        .from("contact_submissions")
-        .select("id")
-        .ilike("email", email)
-        .not("followup_sent_at", "is", null)
-        .gt("followup_sent_at", new Date(Date.now() - 30 * DAY).toISOString())
-        .limit(1),
+      recentQuery,
       admin.from("profiles").select("id").ilike("email", email).maybeSingle(),
     ]);
     if (unsub) {
@@ -166,33 +189,25 @@ export async function GET(request: Request) {
       continue;
     }
     const meta = (s.metadata ?? {}) as Record<string, unknown>;
+    const name = String(s.name ?? "");
+    const platform = typeof meta.platform === "string" ? meta.platform : null;
+    const handle = typeof meta.handle === "string" ? meta.handle : null;
+    const riskLevel = typeof meta.riskLevel === "string" ? meta.riskLevel : null;
     try {
       const { error } = await new Resend(resendKey).emails.send({
         from: process.env.RESEND_FROM_EMAIL || "MetaShield <onboarding@resend.dev>",
         to: email,
         subject: isHealthCheck
-          ? protectionFollowupSubject({
-              name: String(s.name ?? ""),
-              handle: typeof meta.handle === "string" ? meta.handle : null,
-              riskLevel: typeof meta.riskLevel === "string" ? meta.riskLevel : null,
-            })
-          : eligibilityFollowupSubject({
-              name: String(s.name ?? ""),
-              platform: typeof meta.platform === "string" ? meta.platform : null,
-            }),
+          ? protectionFollowupSubject({ name, handle, riskLevel, final })
+          : eligibilityFollowupSubject({ name, platform, final }),
         html: isHealthCheck
-          ? protectionFollowupEmail({
-              name: String(s.name ?? ""),
-              platform: typeof meta.platform === "string" ? meta.platform : null,
-              handle: typeof meta.handle === "string" ? meta.handle : null,
-              riskLevel: typeof meta.riskLevel === "string" ? meta.riskLevel : null,
-              unsubscribeUrl: unsubscribeUrl(email),
-            })
+          ? protectionFollowupEmail({ name, platform, handle, riskLevel, unsubscribeUrl: unsubscribeUrl(email), final })
           : eligibilityFollowupEmail({
-              name: String(s.name ?? ""),
-              platform: typeof meta.platform === "string" ? meta.platform : null,
+              name,
+              platform,
               issue: typeof meta.issue === "string" ? meta.issue : null,
               unsubscribeUrl: unsubscribeUrl(email),
+              final,
             }),
         headers: { "List-Unsubscribe": `<${unsubscribeUrl(email)}>` },
       });

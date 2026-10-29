@@ -724,8 +724,9 @@ function bigButton(text: string, href: string) {
 
 // Sent the morning after someone checked their recovery eligibility (and
 // left "email me" ticked) but hasn't opened a case. No prices.
-export function eligibilityFollowupSubject(opts: { name: string; platform?: string | null }) {
+export function eligibilityFollowupSubject(opts: { name: string; platform?: string | null; final?: boolean }) {
   const first = opts.name.split(" ")[0] || "";
+  if (opts.final) return `Last reminder: ${first ? `${first}, still` : "still"} want your ${opts.platform || "account"} back?`;
   return `⏳ ${first ? `${first}, don't` : "Don't"} let your ${opts.platform || "account"} go for good`;
 }
 
@@ -734,19 +735,33 @@ export function eligibilityFollowupEmail(opts: {
   platform?: string | null;
   issue?: string | null;
   unsubscribeUrl: string;
+  final?: boolean; // the second and last reminder, 3 days after the first
 }) {
   const { name, platform, issue } = escapeOpts({ name: opts.name, platform: opts.platform ?? "", issue: opts.issue ?? "" });
   const unsubscribeUrl = escapeHtml(opts.unsubscribeUrl);
   const first = name.split(" ")[0] || "there";
   const acct = platform ? `${platform} account` : "account";
   return wrapper(`
-    ${preheader("Meta only gives a limited time to appeal. It takes about 2 minutes to start your case.")}
-    ${urgencyHero(
-      "⏳ Time matters",
-      "#dc2626",
-      `${first}, your ${acct} isn't gone yet. But the clock is running.`,
-      `You checked your recovery eligibility with MetaShield${issue ? ` (<strong style="color:#ffffff;">${issue}</strong>)` : ""}, and your situation looked like a case we can work on. The sooner it's submitted, the better.`
+    ${preheader(
+      opts.final
+        ? "This is our last email about your eligibility check. Meta's appeal window doesn't stay open forever."
+        : "Meta only gives a limited time to appeal. It takes about 2 minutes to start your case."
     )}
+    ${
+      opts.final
+        ? urgencyHero(
+            "Last reminder",
+            "#dc2626",
+            `${first}, still locked out of your ${acct}?`,
+            `This is the last time we'll email you about your eligibility check${issue ? ` (<strong style="color:#ffffff;">${issue}</strong>)` : ""}. If you still want your account back, don't leave it any longer — starting your case takes about 2 minutes.`
+          )
+        : urgencyHero(
+            "⏳ Time matters",
+            "#dc2626",
+            `${first}, your ${acct} isn't gone yet. But the clock is running.`,
+            `You checked your recovery eligibility with MetaShield${issue ? ` (<strong style="color:#ffffff;">${issue}</strong>)` : ""}, and your situation looked like a case we can work on. The sooner it's submitted, the better.`
+          )
+    }
     ${iconList(
       "Every day you wait:",
       [
@@ -769,7 +784,11 @@ export function eligibilityFollowupEmail(opts: {
     )}
     ${bigButton("Start my recovery now →", `${PORTAL_URL}/recovery-eligibility`)}
     <p style="margin:0 0 16px;color:${TEXT_DARK};font-size:14px;line-height:1.7;">
-      <strong>P.S.</strong> Waiting rarely brings a disabled account back on its own. It takes about 2 minutes to start your case.
+      <strong>P.S.</strong> ${
+        opts.final
+          ? "We won't email you about this again — if you need us later, we're one message away."
+          : "Waiting rarely brings a disabled account back on its own. It takes about 2 minutes to start your case."
+      }
     </p>
     <p style="margin:0;color:${TEXT_LIGHT};font-size:12px;line-height:1.6;">
       An eligibility check does not guarantee recovery — the final decision remains with Meta.
@@ -784,9 +803,10 @@ export function eligibilityFollowupEmail(opts: {
 
 // Sent the morning after someone ran the account health check (and left
 // "email me" ticked) but has no package yet: the Account Protection packages.
-export function protectionFollowupSubject(opts: { name: string; handle?: string | null; riskLevel?: string | null }) {
+export function protectionFollowupSubject(opts: { name: string; handle?: string | null; riskLevel?: string | null; final?: boolean }) {
   const first = opts.name.split(" ")[0] || "";
   const acct = opts.handle || "your account";
+  if (opts.final) return `Last reminder: account recovery at no extra cost for ${acct}`;
   return opts.riskLevel === "high" || opts.riskLevel === "medium"
     ? `⚠️ Risk found on ${acct} — get account recovery at no extra cost`
     : `${first ? `${first}, if` : "If"} ${acct} is ever hacked or disabled, we recover it at no extra cost`;
@@ -798,6 +818,7 @@ export function protectionFollowupEmail(opts: {
   handle?: string | null;
   riskLevel?: string | null;
   unsubscribeUrl: string;
+  final?: boolean; // the second and last reminder, 3 days after the first
 }) {
   const { name, platform, handle } = escapeOpts({ name: opts.name, platform: opts.platform ?? "", handle: opts.handle ?? "" });
   const unsubscribeUrl = escapeHtml(opts.unsubscribeUrl);
@@ -819,9 +840,11 @@ export function protectionFollowupEmail(opts: {
   return wrapper(`
     ${preheader("One subscription. Account recovery at no extra cost — from ₦10,000/month.")}
     ${urgencyHero(
-      risky ? "⚠️ Risk found on your account" : "🛡️ Account recovery at no extra cost",
-      risky ? "#dc2626" : "#7c3aed",
-      `${first}, if ${acct} is ever hacked or disabled, we recover it — at no extra cost.`,
+      opts.final ? "Last reminder" : risky ? "⚠️ Risk found on your account" : "🛡️ Account recovery at no extra cost",
+      opts.final || risky ? "#dc2626" : "#7c3aed",
+      opts.final
+        ? `${first}, ${acct} is still unprotected. Account recovery at no extra cost is one step away.`
+        : `${first}, if ${acct} is ever hacked or disabled, we recover it — at no extra cost.`,
       `One MetaShield subscription protects your account <strong style="color:#ffffff;">and</strong> covers account recovery at no extra recovery fee.${
         risky ? ` <strong style="color:#ffffff;">Your health check flagged risk factors on this account — don't wait for something to go wrong.</strong>` : ""
       }`
@@ -855,8 +878,11 @@ export function protectionFollowupEmail(opts: {
     </table>
     ${bigButton("Get recovery at no extra cost →", `${PORTAL_URL}/pricing#packages`)}
     <p style="margin:0 0 16px;color:${TEXT_DARK};font-size:14px;line-height:1.7;">
-      <strong>P.S.</strong> Protection only works if it's in place <em>before</em> something goes wrong. From ₦10,000/month,
-      recovery is covered — no extra cost.
+      <strong>P.S.</strong> ${
+        opts.final
+          ? "This is the last email about your account check. Protection only works if it's in place <em>before</em> something goes wrong."
+          : "Protection only works if it's in place <em>before</em> something goes wrong. From ₦10,000/month, recovery is covered — no extra cost."
+      }
     </p>
     <p style="margin:0;color:${TEXT_LIGHT};font-size:12px;line-height:1.6;">
       Account recovery is provided at no additional recovery service fee for eligible cases covered by your plan.
