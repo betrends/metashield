@@ -552,7 +552,13 @@ export function HealthCheckWizard() {
                 </svg>
               </span>
               <p className="mt-3 text-base font-bold text-ink-900">{t("This account needs protection — now")}</p>
-              <p className="mt-1.5 mx-auto max-w-[16rem] text-xs text-ink-500">{t("One or more risk factors on this account are serious. Account Protection gives you monthly monitoring and early intervention before platforms act.")}</p>
+              <p className="mt-1.5 mx-auto max-w-[17rem] text-xs text-ink-500">{t("Serious risk factors were found. With a MetaShield package we watch this account every month — and if it's ever hacked or disabled, we recover it at no extra cost.")}</p>
+              <div className="mt-3">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                {t("Account recovery at no extra cost")}
+              </span>
+              </div>
               {createdAccountId ? (
                 <ButtonLink href="/portal/billing" size="sm" className="mt-4 w-full">{t("Get Account Protection")}</ButtonLink>
               ) : (
@@ -563,7 +569,7 @@ export function HealthCheckWizard() {
                   className="mt-4 w-full"
                 >{t("Get Account Protection Now")}</ButtonLink>
               )}
-              <p className="mt-2 text-xs text-ink-400">{t("Takes 2 minutes to set up")}</p>
+              <p className="mt-2 text-xs text-ink-400">{t("From ₦10,000/month · takes 2 minutes to set up")}</p>
             </div>
           ) : (
             <div className="mx-auto mt-6 max-w-sm overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 p-6 text-center shadow-lg">
@@ -575,7 +581,13 @@ export function HealthCheckWizard() {
                 </svg>
               </span>
               <p className="mt-3 text-base font-bold text-white">{t("Protect this account")}</p>
-              <p className="mt-1.5 mx-auto max-w-[15rem] text-xs text-brand-100">{t("A one-off check shows the risk — Account Protection keeps you monitored and intervenes before a restriction hits.")}</p>
+              <p className="mt-1.5 mx-auto max-w-[17rem] text-xs text-brand-100">{t("A one-off check shows the risk. A MetaShield package keeps this account watched — and if it's ever hacked or disabled, we recover it at no extra cost.")}</p>
+              <div className="mt-3">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/20 px-3 py-1 text-xs font-bold text-emerald-100 ring-1 ring-emerald-300/40">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                {t("Account recovery at no extra cost")}
+              </span>
+              </div>
               {createdAccountId ? (
                 <ButtonLink href="/portal/billing" size="sm" className="mt-4 !bg-white !text-brand-700 hover:!bg-brand-50">{t("Subscribe to Account Protection")}</ButtonLink>
               ) : (

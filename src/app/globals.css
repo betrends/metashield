@@ -256,6 +256,156 @@ html {
   }
 }
 
+/* ── Package cards (components/PackagesGrid.tsx) ───────────────────── */
+@property --pkg-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+@keyframes pkg-spin {
+  to {
+    --pkg-angle: 360deg;
+  }
+}
+@keyframes pkg-sweep {
+  0%, 70% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(120%);
+  }
+}
+@keyframes pkg-ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  80%, 100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+@keyframes pkg-rise {
+  from {
+    opacity: 0;
+    transform: translateY(28px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.pkg-card {
+  transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 0.35s ease, border-color 0.35s ease;
+}
+@media (hover: hover) {
+  .pkg-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 24px 48px -16px rgb(76 29 149 / 0.28);
+  }
+  .pkg-card:not(.pkg-featured):hover {
+    border-color: rgb(196 181 253);
+  }
+  .pkg-card:hover .pkg-icon {
+    transform: rotate(-6deg) scale(1.08);
+  }
+}
+.pkg-icon {
+  transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+/* Moving glow border on the featured card */
+.pkg-featured {
+  isolation: isolate;
+}
+.pkg-featured::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  z-index: -1;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(from var(--pkg-angle), #a78bfa, #e879f9, #22d3ee, #7c3aed, #a78bfa);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: pkg-spin 5s linear infinite;
+}
+/* Light sweep across the buttons */
+.pkg-shine {
+  position: relative;
+  overflow: hidden;
+}
+.pkg-shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.4) 50%, transparent 70%);
+  transform: translateX(-120%);
+  transition: transform 0.7s ease;
+  pointer-events: none;
+}
+.pkg-shine:hover::after {
+  transform: translateX(120%);
+}
+.pkg-shine-auto::after {
+  background: linear-gradient(110deg, transparent 30%, rgb(167 139 250 / 0.35) 50%, transparent 70%);
+  animation: pkg-sweep 3.6s ease-in-out infinite;
+}
+/* Soft ping behind the "recovery at no extra cost" shield */
+.pkg-pulse::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: rgb(16 185 129);
+  animation: pkg-ping 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+  z-index: -1;
+}
+.pkg-pulse {
+  isolation: isolate;
+}
+/* Cards rise in one after another when the row scrolls into view */
+.pkg-row[data-reveal="pending"] .pkg-reveal {
+  opacity: 0;
+}
+.pkg-row[data-reveal="shown"] .pkg-reveal {
+  animation: pkg-rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+@media (prefers-reduced-motion: reduce) {
+  .pkg-featured::before,
+  .pkg-shine-auto::after,
+  .pkg-pulse::before,
+  .pkg-row[data-reveal] .pkg-reveal {
+    animation: none;
+    opacity: 1;
+  }
+  .pkg-card,
+  .pkg-icon {
+    transition: none;
+  }
+}
+
+/* ── "Recovery at no extra cost" band (components/NoExtraCostBanner.tsx) */
+@keyframes nec-glow {
+  0%, 100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.08);
+  }
+}
+.nec-glow {
+  animation: nec-glow 5s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .nec-glow {
+    animation: none;
+  }
+}
+
 /* ── Brand loader (components/BrandLoader.tsx) ─────────────────────────
    Shield draws its outline, ticks its check mark, and breathes, inside a
    spinning gradient ring with two orbiting sparks. */

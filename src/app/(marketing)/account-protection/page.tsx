@@ -8,6 +8,7 @@ import { Section, SectionHeading, Eyebrow } from "@/components/ui/Section";
 import { Container } from "@/components/ui/Container";
 import { RiskBadge } from "@/components/ui/RiskBadge";
 import { ProtectionDashboardPreview } from "@/components/ProtectionDashboardPreview";
+import { NoExtraCostBanner } from "@/components/NoExtraCostBanner";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getT();
@@ -64,6 +65,17 @@ export default async function AccountProtectionPage() {
               <Eyebrow>{t("Account Protection & Risk Assessment")}</Eyebrow>
               <h1 className="mt-4 text-balance text-4xl font-bold tracking-tight text-ink-900 sm:text-5xl">{t("Reduce risk")}{" "}<span className="text-brand-600">{t("before")}</span>{" "}{t("it becomes a restriction.")}</h1>
               <p className="mt-5 text-lg text-ink-600">{t("Account Protection is proactive risk reduction, not a guarantee of immunity. We help you spot and fix the things that commonly lead to restrictions — before they happen.")}</p>
+              <p className="mt-5 flex items-start gap-3 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-900 ring-1 ring-emerald-200">
+                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M20 6 9 17l-5-5" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+                <span>
+                  <strong>{t("Account recovery at no extra cost.")}</strong>{" "}
+                  {t("If a protected account is ever hacked or disabled, we recover it with no recovery fee on top.")}
+                </span>
+              </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <ButtonLink href="/check-my-account" size="lg">{t("Start Your Health Check")}</ButtonLink>
                 <ButtonLink href="#subscriptions" variant="outline" size="lg">{t("See Packages")}</ButtonLink>
@@ -110,6 +122,9 @@ export default async function AccountProtectionPage() {
           </div>
         </Container>
       </section>
+
+      {/* Main selling point */}
+      <NoExtraCostBanner packagesHref="#subscriptions" />
 
       {/* Health check steps */}
       <Section>
