@@ -7,7 +7,7 @@
 // "true" in Vercel. Until then clients ask for a package on WhatsApp and the
 // admin switches it on from the client's page (Activate package).
 
-export type PlanId = "watch" | "guard" | "elite" | "elite_plus" | "annual" | "lifetime";
+export type PlanId = "watch" | "elite" | "annual" | "lifetime";
 // Plans sold before October 2026 — only kept so old records still display.
 export type LegacyPlanId = "basic" | "professional" | "business" | "one_time";
 export type AnyPlanId = PlanId | LegacyPlanId;
@@ -43,24 +43,6 @@ export const plans: Plan[] = [
     priceKobo: 10_000_00,
     priceSuffix: "/month",
     period: "month",
-    tagline: "Free Instagram account recovery",
-    description: "For one Instagram account.",
-    features: [
-      "One registered Instagram account",
-      "Help with account access issues",
-      "Guidance through available recovery and appeal processes",
-      "Monthly account security check",
-      "Help with account warnings and security settings",
-    ],
-    covers: { instagram: true, facebook: false, ads: false },
-  },
-  {
-    id: "guard",
-    name: "MetaShield Guard",
-    price: "₦15,000",
-    priceKobo: 15_000_00,
-    priceSuffix: "/month",
-    period: "month",
     tagline: "Free Instagram & Facebook account recovery",
     description: "For one Instagram and one Facebook account.",
     features: [
@@ -68,45 +50,27 @@ export const plans: Plan[] = [
       "One registered Facebook account",
       "Help with account access issues",
       "Guidance through available recovery and appeal processes",
-      "Account security guidance",
+      "Monthly account security check",
+      "Help with account warnings and security settings",
     ],
     covers: { instagram: true, facebook: true, ads: false },
   },
   {
     id: "elite",
     name: "MetaShield Elite",
-    price: "₦20,000",
-    priceKobo: 20_000_00,
+    price: "₦15,000",
+    priceKobo: 15_000_00,
     priceSuffix: "/month",
     period: "month",
-    tagline: "Free account recovery + advertising issue support",
-    description: "Instagram, Facebook and help with Meta advertising issues.",
-    features: [
-      "One registered Instagram account",
-      "One registered Facebook account",
-      "Help with eligible Meta advertising issues",
-      "Guidance on advertising restrictions and access problems",
-      "Help understanding available advertising reviews and appeals",
-      "Account security guidance",
-    ],
-    note: "Advertising issue support is included, but registration of a Meta advertising account is not.",
-    covers: { instagram: true, facebook: true, ads: true },
-  },
-  {
-    id: "elite_plus",
-    name: "MetaShield Elite Plus",
-    price: "₦25,000",
-    priceKobo: 25_000_00,
-    priceSuffix: "/month",
-    period: "month",
-    tagline: "Free account recovery + ad account support",
+    tagline: "Free account recovery + ad account issue support",
     description: "Instagram, Facebook and one Meta advertising account.",
     features: [
       "One registered Instagram account",
       "One registered Facebook account",
       "One registered Meta advertising account",
-      "Help with eligible advertising account access issues and restrictions",
-      "Guidance through available reviews and appeals",
+      "Help with eligible Meta advertising issues",
+      "Guidance on advertising restrictions and access problems",
+      "Help understanding available advertising reviews and appeals",
       "Monthly account security check",
       "Priority support during published support hours",
     ],
@@ -116,8 +80,8 @@ export const plans: Plan[] = [
   {
     id: "annual",
     name: "MetaShield Annual Plan",
-    price: "₦100,000",
-    priceKobo: 100_000_00,
+    price: "₦120,000",
+    priceKobo: 120_000_00,
     priceSuffix: "/year",
     period: "year",
     tagline: "12 months of account recovery support",

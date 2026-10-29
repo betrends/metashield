@@ -13,7 +13,7 @@ import { BrandLoader } from "@/components/BrandLoader";
 
 type PortalSession = { id: string; name: string; email: string };
 // Any package (current or an older plan) includes the emergency button.
-const EMERGENCY_PLANS = ["watch", "guard", "elite", "elite_plus", "annual", "lifetime", "basic", "professional", "business", "one_time"];
+const EMERGENCY_PLANS = ["watch", "elite", "annual", "lifetime", "basic", "professional", "business", "one_time"];
 
 const seenKey = (userId: string) => `metashield:notifications-seen:${userId}`;
 function readSeenAt(userId: string): number {

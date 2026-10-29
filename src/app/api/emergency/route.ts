@@ -7,7 +7,7 @@ import { createClient as createServerClient, createAdminClient } from "@/lib/sup
 import { Resend } from "resend";
 
 // Any package (current or an older plan) includes emergency support.
-const ELIGIBLE_PLANS = ["watch", "guard", "elite", "elite_plus", "annual", "lifetime", "basic", "professional", "business", "one_time"];
+const ELIGIBLE_PLANS = ["watch", "elite", "annual", "lifetime", "basic", "professional", "business", "one_time"];
 
 const INCIDENT_LABELS: Record<string, string> = {
   hacked: "Account hacked",

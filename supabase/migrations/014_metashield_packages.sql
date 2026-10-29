@@ -1,5 +1,5 @@
--- MetaShield packages (October 2026): Watch, Guard, Elite, Elite Plus,
--- Annual and Lifetime. Additive and safe to run more than once.
+-- MetaShield packages (October 2026): Watch, Elite, Annual and
+-- Lifetime. Additive and safe to run more than once.
 --
 -- 1. Allow the new package ids. The old plan ids stay allowed so existing
 --    subscription rows (if any) remain valid.
@@ -7,7 +7,7 @@ alter table public.subscriptions drop constraint if exists subscriptions_plan_id
 alter table public.subscriptions
   add constraint subscriptions_plan_id_check
   check (plan_id in (
-    'watch', 'guard', 'elite', 'elite_plus', 'annual', 'lifetime',
+    'watch', 'elite', 'annual', 'lifetime',
     'basic', 'professional', 'business', 'one_time'
   ));
 
