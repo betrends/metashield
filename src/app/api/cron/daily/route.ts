@@ -7,8 +7,8 @@
 //     people who already became clients (a case or an active package) and
 //     addresses emailed in the last 30 days. Every outcome is logged on the
 //     submission (followup_status / followup_sent_at / followup_error).
-//  3. Package renewal reminders — an email when a package has 3 days left
-//     and one the morning after it ends, each with a "Renew now" button
+//  3. Package renewal reminders — an email 3 days before a package's end
+//     date and one the morning after it ends, each with a "Renew now" button
 //     straight to card payment. Once per package period (package_reminders).
 
 import { NextResponse } from "next/server";
@@ -206,11 +206,13 @@ export async function GET(request: Request) {
   const portalUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
   for (const p of packages ?? []) {
     if (!isPlanId(p.plan_id)) continue; // old plans: no reminders
-    // A package is valid through the whole of its end date.
-    const endsAt = new Date(String(p.renews_on).slice(0, 10) + "T00:00:00Z").getTime() + DAY;
-    // Ends within 3 days → "ending soon"; the morning after → "ended".
+    // A package is valid through the whole of its end date (lastDay).
+    const lastDay = new Date(String(p.renews_on).slice(0, 10) + "T00:00:00Z").getTime();
+    const endsAt = lastDay + DAY;
+    // From 3 days before the end date (e.g. ends 10 Nov → reminder on the
+    // morning of 7 Nov) → "ending soon"; the morning after it ends → "ended".
     const kind: "ending_soon" | "ended" | null =
-      endsAt <= now ? "ended" : endsAt - now <= 3 * DAY ? "ending_soon" : null;
+      endsAt <= now ? "ended" : lastDay - now <= 3 * DAY ? "ending_soon" : null;
     if (!kind) continue;
     const periodEnd = String(p.renews_on).slice(0, 10);
 
