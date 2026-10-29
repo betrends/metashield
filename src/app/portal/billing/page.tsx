@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { cardPaymentsEnabled, getPlan, isPlanId, type PlanId } from "@/lib/portal/billing";
+import { getPlan, isPlanId, type PlanId } from "@/lib/portal/billing";
+import { startPackageCheckout } from "@/lib/portal/start-package";
 import { PackagesGrid } from "@/components/PackagesGrid";
 import {
   fetchSubscription,
@@ -38,9 +39,18 @@ export default function BillingPage() {
     load();
   }, []);
 
-  // A package picked on the Pricing page (?plan=…): offer to pay for it here.
+  // A package picked on the Pricing page (?plan=…): offer to pay for it here,
+  // and with &pay=1 (just signed in to buy it) go straight on to Korapay.
   const pickedPlanId = searchParams.get("plan");
-  const picked = isPlanId(pickedPlanId) && cardPaymentsEnabled() ? getPlan(pickedPlanId) : null;
+  const picked = isPlanId(pickedPlanId) ? getPlan(pickedPlanId) : null;
+  const autoPayStarted = useRef(false);
+  useEffect(() => {
+    if (!picked || searchParams.get("pay") !== "1" || autoPayStarted.current) return;
+    if (searchParams.get("kpref") || searchParams.get("reference")) return;
+    autoPayStarted.current = true;
+    void handleChoosePlan(picked.id as PlanId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // After Korapay sends the client back, confirm the payment and activate
   // the package. "kpref" is our own reference added to the return address.
@@ -76,26 +86,12 @@ export default function BillingPage() {
   async function handleChoosePlan(planId: PlanId) {
     setError(null);
     setBusy(true);
-    try {
-      const res = await fetch("/api/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.checkoutUrl) {
-        throw new Error(
-          data.error === "card_payments_disabled"
-            ? "Card payment isn't available yet — please use WhatsApp to get this package."
-            : "We couldn't open the card payment page. Please try again in a moment."
-        );
-      }
-      // Go to Korapay's secure payment page
-      window.location.href = data.checkoutUrl;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+    const message = await startPackageCheckout(getPlan(planId));
+    if (message) {
+      setError(message);
       setBusy(false);
     }
+    // Otherwise the page is moving on to Korapay (or WhatsApp).
   }
 
   async function handleCancel() {
@@ -158,7 +154,7 @@ export default function BillingPage() {
             </p>
           </div>
           <Button onClick={() => handleChoosePlan(picked.id as PlanId)} disabled={busy} className="shrink-0">
-            {busy ? "Please wait…" : `Pay ${picked.price}`}
+            {busy ? "Opening payment…" : `Pay ${picked.price}`}
           </Button>
         </div>
       ) : null}
@@ -213,12 +209,7 @@ export default function BillingPage() {
       <div className="mt-10">
         <h2 className="text-lg font-semibold text-ink-900">{activePlan ? "Change package" : "Choose a package"}</h2>
         <div className="mt-4">
-          <PackagesGrid
-            mode="portal"
-            currentPlanId={subscription?.planId ?? null}
-            busy={busy}
-            onCheckout={handleChoosePlan}
-          />
+          <PackagesGrid mode="portal" currentPlanId={subscription?.planId ?? null} />
         </div>
       </div>
 

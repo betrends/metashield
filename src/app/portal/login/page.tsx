@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/Button";
 import { brandName } from "@/lib/site-config";
 import { createClient } from "@/lib/supabase/client";
 import { migratePendingLocalRecords } from "@/lib/portal/data";
+import { payAfterSignInPath, takePendingPackage } from "@/lib/portal/start-package";
+import { isPlanId } from "@/lib/portal/billing";
 
 // After signing in, land wherever is most useful: the admin account goes
 // straight to the admin dashboard (not the client portal), a health check
@@ -82,6 +84,15 @@ async function redirectAfterAuth(
     }
   } catch {
     // Not an agent or check failed — fall through to client portal
+  }
+
+  // Picked a package, then created an account and confirmed the email:
+  // carry on to paying for it.
+  const pendingPackage = takePendingPackage();
+  if (pendingPackage && isPlanId(pendingPackage)) {
+    router.push(payAfterSignInPath(pendingPackage));
+    router.refresh();
+    return;
   }
 
   const { accountId, caseId } = await migratePendingLocalRecords();

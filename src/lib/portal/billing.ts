@@ -169,9 +169,12 @@ export function packageCovers(plan: Plan, platform: string): boolean {
   return kind ? plan.covers[kind] : false;
 }
 
-// Card checkout is switched on in Vercel once Korapay is set up.
+// Card checkout (server-side check): on when the Korapay secret key is set
+// in Vercel. Setting NEXT_PUBLIC_KORAPAY_ENABLED to "false" switches it
+// off again without removing the key. In the browser the key is never
+// visible, so pages ask the server (POST /api/subscribe) instead.
 export function cardPaymentsEnabled(): boolean {
-  return process.env.NEXT_PUBLIC_KORAPAY_ENABLED === "true";
+  return !!process.env.KORAPAY_SECRET_KEY && process.env.NEXT_PUBLIC_KORAPAY_ENABLED !== "false";
 }
 
 // WhatsApp message asking for a package (used while card payment is off).

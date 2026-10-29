@@ -1,7 +1,9 @@
-// Initializes a Korapay checkout for the chosen plan. The client is
-// redirected to Korapay, pays, and Korapay redirects back to
-// /portal/billing?reference=xxx — the billing page then calls
-// /api/subscribe/verify to confirm and activate the plan.
+// Starts a Korapay checkout for the chosen package. The client is sent to
+// Korapay, pays, and comes back to /portal/billing?kpref=<reference> — the
+// Packages page then calls /api/subscribe/verify to confirm and activate it.
+//
+// Answers, in order: 400 unknown package · 503 card payment not set up
+// (the page falls back to WhatsApp) · 401 sign in first · 200 checkoutUrl.
 
 import { NextResponse } from "next/server";
 import { createClient as createServerClient } from "@/lib/supabase/server";
@@ -12,14 +14,6 @@ function generateRef(): string {
 }
 
 export async function POST(request: Request) {
-  const supabase = await createServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "not_authenticated" }, { status: 401 });
-  }
-
   let body: { planId?: unknown };
   try {
     body = await request.json();
@@ -30,14 +24,18 @@ export async function POST(request: Request) {
   if (!isPlanId(planId)) {
     return NextResponse.json({ error: "invalid_plan" }, { status: 400 });
   }
-  // Card payment is switched off until Korapay is set up.
+  // Card payment isn't set up (no Korapay key, or switched off).
   if (!cardPaymentsEnabled()) {
     return NextResponse.json({ error: "card_payments_disabled" }, { status: 503 });
   }
+  const secretKey = process.env.KORAPAY_SECRET_KEY as string;
 
-  const secretKey = process.env.KORAPAY_SECRET_KEY;
-  if (!secretKey) {
-    return NextResponse.json({ error: "KORAPAY_SECRET_KEY not configured" }, { status: 500 });
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "not_authenticated" }, { status: 401 });
   }
 
   const plan = getPlan(planId);
