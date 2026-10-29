@@ -5,7 +5,7 @@ import { PaymentStatusBadge, PaymentSummaryLine } from "@/components/portal/Paym
 import type { PaymentRecord } from "@/lib/portal/payments";
 import { BackLink } from "@/components/BackLink";
 import { useParams } from "next/navigation";
-import { getPlan, type PlanId } from "@/lib/portal/billing";
+import { getPlan, isPlanId, plans, type AnyPlanId as PlanId } from "@/lib/portal/billing";
 import { BrandLoader } from "@/components/BrandLoader";
 
 type Detail = {
@@ -53,6 +53,7 @@ function formatNaira(kobo: number) {
 export default function AdminClientDetailPage() {
   const params = useParams<{ id: string }>();
   const [detail, setDetail] = useState<Detail | null | "loading" | "unauthorized">("loading");
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     async function load() {
@@ -69,7 +70,7 @@ export default function AdminClientDetailPage() {
       setDetail(data);
     }
     load();
-  }, [params.id]);
+  }, [params.id, reloadKey]);
 
   if (detail === "unauthorized") {
     return <p className="text-sm text-ink-500">You don&apos;t have access to this page.</p>;
@@ -114,32 +115,12 @@ export default function AdminClientDetailPage() {
         </p>
       </div>
 
-      {/* Subscription */}
-      <div className="mt-8 rounded-2xl border border-ink-100 bg-white p-6 shadow-sm">
-        <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">Subscription</p>
-        {subscription ? (
-          <div className="mt-2 flex items-center justify-between">
-            <div>
-              <p className="text-lg font-semibold text-ink-900">{getPlan(subscription.planId).name} plan</p>
-              {subscription.renewsOn ? (
-                <p className="mt-0.5 text-xs text-ink-500">
-                  Renews{" "}
-                  {new Date(subscription.renewsOn).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  })}
-                </p>
-              ) : null}
-            </div>
-            <span className="rounded-full bg-risk-low-bg px-2.5 py-1 text-xs font-semibold text-risk-low">
-              Active
-            </span>
-          </div>
-        ) : (
-          <p className="mt-2 text-sm text-ink-500">No active subscription.</p>
-        )}
-      </div>
+      {/* Package */}
+      <PackageManager
+        userId={client.id}
+        subscription={subscription}
+        onChanged={() => setReloadKey((k) => k + 1)}
+      />
 
       {/* Accounts */}
       <div className="mt-8">
@@ -199,6 +180,138 @@ export default function AdminClientDetailPage() {
             ))}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// Shows the client's MetaShield package and lets the admin switch one on
+// after the client pays outside card checkout (WhatsApp / bank transfer).
+function PackageManager({
+  userId,
+  subscription,
+  onChanged,
+}: {
+  userId: string;
+  subscription: Detail["subscription"];
+  onChanged: () => void;
+}) {
+  const [planId, setPlanId] = useState<string>("");
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const current = subscription ? getPlan(subscription.planId) : null;
+  const expired = !!subscription?.renewsOn && new Date(subscription.renewsOn).getTime() < Date.now() - 864e5;
+  const chosen = plans.find((p) => p.id === planId) ?? null;
+
+  async function send(body: Record<string, unknown>, success: string) {
+    setBusy(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/admin/subscriptions/activate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, ...body }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || data.error || "Couldn't update the package.");
+      setMessage({ ok: true, text: success });
+      setPlanId("");
+      setNote("");
+      onChanged();
+    } catch (err) {
+      setMessage({ ok: false, text: err instanceof Error ? err.message : "Couldn't update the package." });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mt-8 rounded-2xl border border-ink-100 bg-white p-6 shadow-sm">
+      <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">Package</p>
+      {subscription && current ? (
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-lg font-semibold text-ink-900">{current.name}</p>
+            <p className="mt-0.5 text-xs text-ink-500">
+              {subscription.renewsOn
+                ? `${expired ? "Ended" : "Active until"} ${new Date(subscription.renewsOn).toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })}`
+                : "Lifetime — never ends"}
+              {isPlanId(subscription.planId) ? "" : " · old plan (no free recovery)"}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span
+              className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                expired ? "bg-ink-100 text-ink-500" : "bg-risk-low-bg text-risk-low"
+              }`}
+            >
+              {expired ? "Ended" : "Active"}
+            </span>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                if (window.confirm(`Switch off ${current.name} for this client?`)) void send({ action: "end" }, "Package switched off.");
+              }}
+              className="text-xs font-semibold text-ink-400 hover:text-risk-high disabled:opacity-50"
+            >
+              Switch off
+            </button>
+          </div>
+        </div>
+      ) : (
+        <p className="mt-2 text-sm text-ink-500">No active package.</p>
+      )}
+
+      <div className="mt-5 border-t border-ink-100 pt-5">
+        <p className="text-sm font-semibold text-ink-900">{subscription ? "Change or renew package" : "Activate a package"}</p>
+        <p className="mt-0.5 text-xs text-ink-500">
+          Use this after the client has paid you (WhatsApp / bank transfer). It records the payment and emails the client.
+        </p>
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+          <select
+            value={planId}
+            onChange={(e) => setPlanId(e.target.value)}
+            className="rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 outline-none focus:border-brand-500 sm:w-64"
+          >
+            <option value="">Choose package…</option>
+            {plans.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} — {p.price}
+                {p.period === "lifetime" ? " one-time" : p.priceSuffix}
+              </option>
+            ))}
+          </select>
+          <input
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Payment note, e.g. bank reference (optional)"
+            className="min-w-0 flex-1 rounded-lg border border-ink-200 px-3 py-2 text-sm outline-none focus:border-brand-500"
+          />
+          <button
+            type="button"
+            disabled={!chosen || busy}
+            onClick={() => {
+              if (!chosen) return;
+              if (window.confirm(`Activate ${chosen.name} (${chosen.price}) for this client and record the payment?`)) {
+                void send({ planId: chosen.id, note }, `${chosen.name} is now active.`);
+              }
+            }}
+            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
+          >
+            {busy ? "Saving…" : "Activate"}
+          </button>
+        </div>
+        {message ? (
+          <p className={`mt-3 rounded-lg px-3 py-2 text-xs font-medium ${message.ok ? "bg-risk-low-bg text-risk-low" : "bg-risk-high-bg text-risk-high"}`}>
+            {message.text}
+          </p>
+        ) : null}
       </div>
     </div>
   );

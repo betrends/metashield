@@ -9,6 +9,9 @@
 export const RECOVERY_FORM_VERSION = "v1-2026-10-25";
 
 export const FORM_REQUEST_MESSAGE = "Payment confirmed! Please fill out the recovery form below to proceed with your case.";
+// Sent instead when the client's package covers the case (no payment step).
+export const COVERED_FORM_REQUEST_MESSAGE =
+  "Your MetaShield package covers this recovery — no payment needed. Please fill out the recovery form below to proceed with your case.";
 
 export type RecoveryFormAnswers = {
   full_name: string;

@@ -196,6 +196,16 @@ export default function PortalCaseDetailPage() {
         </Card>
       ) : null}
 
+      {payment.label === "Covered by package" && !isCancelled ? (
+        <Card className="mt-6 border-accent-green/30 bg-accent-green-bg/60">
+          <p className="text-sm font-semibold text-ink-900">Covered by your MetaShield package</p>
+          <p className="mt-1 text-sm text-ink-600">
+            There&apos;s no recovery fee and no deposit for this case. Recovery and appeal approval aren&apos;t
+            guaranteed — Meta makes the final decisions.
+          </p>
+        </Card>
+      ) : null}
+
       {payment.totalKobo > 0 && !isCancelled ? (
         <Card className="mt-6 border-brand-200 bg-brand-50/60">
           <div className="flex items-center justify-between gap-3">

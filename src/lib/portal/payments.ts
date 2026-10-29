@@ -95,7 +95,11 @@ export function summarizePayment(record: PaymentRecord, now: Date = new Date()):
 
   let label: string;
   let tone: PaymentTone;
-  if (!depositConfirmed) {
+  // A ₦0 case is one a MetaShield package covers (fee 0 is only ever set
+  // for covered cases; older cases with no stored fee are null, not 0).
+  const coveredByPackage = record.fee_amount_kobo === 0 && depositConfirmed;
+  if (coveredByPackage) [label, tone] = ["Covered by package", "success"];
+  else if (!depositConfirmed) {
     if (depositStatus === "pending_review") [label, tone] = ["Deposit under review", "warning"];
     else if (depositStatus === "failed") [label, tone] = ["Deposit not verified", "danger"];
     else [label, tone] = ["Deposit required", "danger"];

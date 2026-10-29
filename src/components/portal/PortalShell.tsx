@@ -12,7 +12,8 @@ import { EmergencyModal } from "@/components/portal/EmergencyModal";
 import { BrandLoader } from "@/components/BrandLoader";
 
 type PortalSession = { id: string; name: string; email: string };
-const EMERGENCY_PLANS = ["basic", "professional", "business", "one_time"];
+// Any package (current or an older plan) includes the emergency button.
+const EMERGENCY_PLANS = ["watch", "guard", "elite", "elite_plus", "annual", "lifetime", "basic", "professional", "business", "one_time"];
 
 const seenKey = (userId: string) => `metashield:notifications-seen:${userId}`;
 function readSeenAt(userId: string): number {
@@ -37,7 +38,7 @@ const navItems = [
   { label: "Cases", href: "/portal/cases", icon: "folder" },
   { label: "Messages", href: "/portal/messages", icon: "chat" },
   { label: "Documents", href: "/portal/documents", icon: "doc" },
-  { label: "Subscriptions", href: "/portal/billing", icon: "card" },
+  { label: "Packages", href: "/portal/billing", icon: "card" },
 ];
 
 function NavIcon({ name }: { name: string }) {

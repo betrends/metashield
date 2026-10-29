@@ -1,16 +1,17 @@
 import { getT } from "@/lib/i18n/server";
 import type { Metadata } from "next";
 import { ButtonLink } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { Section, SectionHeading, Eyebrow } from "@/components/ui/Section";
 import { Container } from "@/components/ui/Container";
+import { PackagesGrid } from "@/components/PackagesGrid";
+import { PACKAGES_HEADLINE } from "@/lib/portal/billing";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getT();
   return {
     title: t("Pricing"),
     description:
-      t("Transparent pricing for account recovery and protection. Assessment is always free. Recovery pricing is based on account size."),
+      t("MetaShield packages from ₦10,000/month include account recovery at no extra cost. Assessment is always free; one-off recovery pricing is based on account size."),
   };
 }
 
@@ -28,25 +29,6 @@ const recoveryTiers = [
   { range: "40,000 – 45,000", price: "₦285,000" },
   { range: "45,000 – 50,000", price: "₦300,000" },
   { range: "50,000+", price: "₦500,000" },
-];
-
-const protectionFeatures = [
-  "Monthly account health review",
-  "Risk score & category breakdown",
-  "Security vulnerability check",
-  "Policy compliance review",
-  "Priority support access",
-  "Early warning alerts",
-];
-
-const businessFeatures = [
-  "Everything in Protection",
-  "Multiple accounts covered",
-  "Business Manager review",
-  "Ad account monitoring",
-  "Multiple admin management",
-  "Dedicated account manager",
-  "Priority case handling",
 ];
 
 export default async function PricingPage() {
@@ -73,8 +55,8 @@ export default async function PricingPage() {
             <div className="space-y-3">
               {[
                 { label: "Account Assessment", price: "Free", icon: "🔍", color: "bg-green-50 border-green-200", priceColor: "text-green-700" },
-                { label: "Standard Recovery", price: "From ₦100,000", icon: "🛡️", color: "bg-brand-50 border-brand-200", priceColor: "text-brand-700" },
-                { label: "Account Protection", price: "₦50,000/mo", icon: "📊", color: "bg-purple-50 border-purple-200", priceColor: "text-purple-700" },
+                { label: "MetaShield packages (recovery included)", price: "From ₦10,000/mo", icon: "🛡️", color: "bg-brand-50 border-brand-200", priceColor: "text-brand-700" },
+                { label: "One-off recovery (no package)", price: "From ₦100,000", icon: "📊", color: "bg-purple-50 border-purple-200", priceColor: "text-purple-700" },
                 { label: "Business / Complex Cases", price: "Custom quote", icon: "🏢", color: "bg-ink-50 border-ink-200", priceColor: "text-ink-700" },
               ].map((item) => (
                 <div
@@ -136,8 +118,8 @@ export default async function PricingPage() {
       <Section className="bg-ink-50/50">
         <SectionHeading
           eyebrow={t("Step 2 — Recovery")}
-          title={t("Disabled Account Recovery Pricing")}
-          description={t("Pricing is based on your follower count at the time of the case. The larger the account, the more complex the recovery process.")}
+          title={t("One-off Recovery Pricing")}
+          description={t("No package? Pricing is based on your follower count at the time of the case. With a MetaShield package, eligible recoveries covered by your plan have no recovery fee.")}
           align="center"
         />
 
@@ -184,85 +166,16 @@ export default async function PricingPage() {
         </div>
       </Section>
 
-      {/* Protection plans */}
-      <Section>
+      {/* MetaShield packages */}
+      <Section id="packages" className="scroll-mt-16">
         <SectionHeading
-          eyebrow={t("Ongoing Protection")}
-          title={t("Keep your account safe after recovery")}
-          description={t("Monthly monitoring plans to reduce the risk of it happening again.")}
+          eyebrow={t("MetaShield packages")}
+          title={t(PACKAGES_HEADLINE)}
+          description={t("Pick the package that matches your accounts. Eligible recoveries covered by your plan come at no extra recovery fee.")}
           align="center"
         />
-
-        <div className="mt-10 grid gap-6 lg:grid-cols-3">
-          {/* Basic */}
-          <Card className="flex flex-col p-7">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-brand-600">{t("Basic")}</p>
-              <div className="mt-2 flex items-end gap-1">
-                <span className="text-4xl font-bold text-ink-900">₦50,000</span>
-                <span className="mb-1 text-sm text-ink-400">{t("/mo")}</span>
-              </div>
-              <p className="mt-1.5 text-sm text-ink-500">{t("A monthly check-in on account health.")}</p>
-            </div>
-            <ul className="mt-6 flex-1 space-y-2.5">
-              {["Monthly account health review", "Risk score breakdown", "Security check", "Email support"].map((f) => (
-                <li key={f} className="flex items-start gap-2.5 text-sm text-ink-600">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="mt-0.5 shrink-0 text-brand-600">
-                    <path d="M20 6 9 17l-5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  {t(f)}
-                </li>
-              ))}
-            </ul>
-            <ButtonLink href="/contact" size="lg" className="mt-8 w-full text-center">{t("Get Started")}</ButtonLink>
-          </Card>
-
-          {/* Professional */}
-          <Card className="relative flex flex-col border-brand-300 p-7 shadow-lg">
-            <div className="absolute right-5 top-5 rounded-full bg-brand-600 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white">{t("Popular")}</div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-brand-600">{t("Professional")}</p>
-              <div className="mt-2 flex items-end gap-1">
-                <span className="text-4xl font-bold text-ink-900">₦65,000</span>
-                <span className="mb-1 text-sm text-ink-400">{t("/mo")}</span>
-              </div>
-              <p className="mt-1.5 text-sm text-ink-500">{t("For creators and single-account businesses.")}</p>
-            </div>
-            <ul className="mt-6 flex-1 space-y-2.5">
-              {protectionFeatures.map((f) => (
-                <li key={f} className="flex items-start gap-2.5 text-sm text-ink-600">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="mt-0.5 shrink-0 text-brand-600">
-                    <path d="M20 6 9 17l-5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  {t(f)}
-                </li>
-              ))}
-            </ul>
-            <ButtonLink href="/contact" size="lg" className="mt-8 w-full text-center">{t("Get Started")}</ButtonLink>
-          </Card>
-
-          {/* Business */}
-          <Card className="flex flex-col p-7">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-brand-600">{t("Business")}</p>
-              <div className="mt-2 flex items-end gap-1">
-                <span className="text-4xl font-bold text-ink-900">₦85,000</span>
-                <span className="mb-1 text-sm text-ink-400">{t("/mo")}</span>
-              </div>
-              <p className="mt-1.5 text-sm text-ink-500">{t("For agencies managing multiple accounts.")}</p>
-            </div>
-            <ul className="mt-6 flex-1 space-y-2.5">
-              {businessFeatures.map((f) => (
-                <li key={f} className="flex items-start gap-2.5 text-sm text-ink-600">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="mt-0.5 shrink-0 text-brand-600">
-                    <path d="M20 6 9 17l-5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  {t(f)}
-                </li>
-              ))}
-            </ul>
-            <ButtonLink href="/contact" size="lg" className="mt-8 w-full text-center">{t("Get Started")}</ButtonLink>
-          </Card>
+        <div className="mt-10">
+          <PackagesGrid mode="public" />
         </div>
       </Section>
 
@@ -296,8 +209,8 @@ export default async function PricingPage() {
               a: "Bank transfer, and other methods discussed during onboarding. We'll confirm the options during your assessment.",
             },
             {
-              q: "Does the monthly plan auto-renew?",
-              a: "Yes, Protection plans are monthly subscriptions. You can cancel any time — just let us know before the next billing date.",
+              q: "Is recovery really included in a package?",
+              a: "Yes — eligible recoveries covered by your plan have no recovery fee and no deposit. Recovery and appeal approval aren't guaranteed; Meta makes the final decision.",
             },
           ].map((item) => (
             <div key={item.q} className="rounded-2xl border border-ink-100 bg-white p-5 shadow-sm">

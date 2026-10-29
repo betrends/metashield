@@ -1,12 +1,12 @@
 import { getT } from "@/lib/i18n/server";
+import { PackagesGrid } from "@/components/PackagesGrid";
+import { PACKAGES_HEADLINE } from "@/lib/portal/billing";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { ButtonLink } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Section, SectionHeading, Eyebrow } from "@/components/ui/Section";
 import { Container } from "@/components/ui/Container";
 import { RiskBadge } from "@/components/ui/RiskBadge";
-import { PricingCard } from "@/components/ui/PricingCard";
 import { ProtectionDashboardPreview } from "@/components/ProtectionDashboardPreview";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -66,7 +66,7 @@ export default async function AccountProtectionPage() {
               <p className="mt-5 text-lg text-ink-600">{t("Account Protection is proactive risk reduction, not a guarantee of immunity. We help you spot and fix the things that commonly lead to restrictions — before they happen.")}</p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <ButtonLink href="/check-my-account" size="lg">{t("Start Your Health Check")}</ButtonLink>
-                <ButtonLink href="#subscriptions" variant="outline" size="lg">{t("See Protection Plans")}</ButtonLink>
+                <ButtonLink href="#subscriptions" variant="outline" size="lg">{t("See Packages")}</ButtonLink>
               </div>
             </div>
 
@@ -201,71 +201,20 @@ export default async function AccountProtectionPage() {
         <div className="mt-10">
           <ProtectionDashboardPreview />
         </div>
-        <p className="mt-4 text-center text-sm text-ink-500">{t("We're reducing risk, not promising immunity from platform enforcement. See plans below.")}</p>
+        <p className="mt-4 text-center text-sm text-ink-500">{t("We're reducing risk, not promising immunity from platform enforcement. See packages below.")}</p>
       </Section>
 
       {/* Subscriptions */}
       <Section id="subscriptions" className="scroll-mt-16 bg-ink-50/50">
         <SectionHeading
-          eyebrow={t("Protection subscription")}
-          title={t("Ongoing coverage, not a one-time fix")}
-          description={t("Monthly plans for individuals, creators and businesses who want continuous account health monitoring.")}
+          eyebrow={t("MetaShield packages")}
+          title={t(PACKAGES_HEADLINE)}
+          description={t("Ongoing account support with recovery included — for individuals, creators and businesses.")}
           align="center"
         />
-        <div className="mt-12 grid gap-6 lg:grid-cols-3">
-          <PricingCard
-            name="Basic"
-            price="₦50,000"
-            priceSuffix="/mo"
-            description={t("A monthly check-in on account health.")}
-            features={[
-              "Monthly account health review",
-              "Risk score breakdown",
-              "Security check",
-              "Email support",
-            ]}
-            cta={t("Get Started")}
-            ctaHref="/contact"
-          />
-          <PricingCard
-            name="Professional"
-            price="₦65,000"
-            priceSuffix="/mo"
-            description={t("For creators and single-account businesses.")}
-            features={[
-              "Monthly review",
-              "Risk assessment",
-              "Security review",
-              "Priority support",
-              "Policy-risk alerts",
-              "Early warning alerts",
-            ]}
-            cta={t("Get Started")}
-            ctaHref="/contact"
-            highlighted
-          />
-          <PricingCard
-            name="Business"
-            price="₦85,000"
-            priceSuffix="/mo"
-            description={t("For agencies and businesses managing multiple accounts.")}
-            features={[
-              "Everything in Professional",
-              "Multiple accounts covered",
-              "Business Manager review",
-              "Ad account monitoring",
-              "Dedicated account manager",
-              "Priority case handling",
-            ]}
-            cta={t("Get Started")}
-            ctaHref="/contact"
-          />
+        <div className="mt-12">
+          <PackagesGrid mode="public" />
         </div>
-        <p className="mt-8 text-center text-sm text-ink-400">{t("Pricing shown is illustrative. See")}{" "}
-          <Link
-            href="/pricing"
-            className="font-semibold text-brand-700 hover:text-brand-800"
-          >{t("Pricing")}</Link>{" "}{t("for full details.")}</p>
       </Section>
 
       {/* CTA */}

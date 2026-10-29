@@ -6,7 +6,8 @@ import { NextResponse } from "next/server";
 import { createClient as createServerClient, createAdminClient } from "@/lib/supabase/server";
 import { Resend } from "resend";
 
-const ELIGIBLE_PLANS = ["basic", "professional", "business", "one_time"];
+// Any package (current or an older plan) includes emergency support.
+const ELIGIBLE_PLANS = ["watch", "guard", "elite", "elite_plus", "annual", "lifetime", "basic", "professional", "business", "one_time"];
 
 const INCIDENT_LABELS: Record<string, string> = {
   hacked: "Account hacked",
