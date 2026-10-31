@@ -9,6 +9,7 @@ import { recoveryPlatforms } from "@/lib/content/recovery";
 import { caseStudies } from "@/lib/content/case-studies";
 import { servicesNav } from "@/lib/site-config";
 import dynamic from "next/dynamic";
+import { NoExtraCostBanner } from "@/components/NoExtraCostBanner";
 
 const Testimonials = dynamic(() => import("@/components/Testimonials").then(m => m.Testimonials));
 const CountUp = dynamic(() => import("@/components/CountUp").then(m => m.CountUp));
@@ -395,6 +396,14 @@ export default async function Home() {
         <Container className="relative py-16 sm:py-24">
           <div className="grid items-center gap-12 lg:grid-cols-2">
             <div className="animate-fade-in-up">
+              <Link
+                href="/pricing#packages"
+                className="group mb-5 inline-flex items-center gap-2 rounded-full bg-white/80 py-1 pl-1 pr-3.5 text-xs font-semibold text-ink-700 shadow-sm ring-1 ring-brand-200 backdrop-blur transition hover:ring-brand-400 sm:text-sm"
+              >
+                <span className="rounded-full bg-emerald-500 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white">{t("New")}</span>
+                {t("Account recovery at no extra cost with any package")}
+                <span aria-hidden="true" className="text-brand-600 transition-transform group-hover:translate-x-0.5">→</span>
+              </Link>
               <h1 className="text-4xl font-semibold tracking-tight text-ink-900 text-balance sm:text-6xl">{t("Advanced Protection &")}{" "}<span className="text-brand-600">{t("Account Recovery.")}</span>
               </h1>
               <p className="mt-6 max-w-xl text-lg text-ink-600 text-balance">{t("Professional account recovery and protection services for businesses and creators. We recover disabled accounts, prevent future issues, and keep your digital presence safe and always accessible.")}</p>
@@ -437,6 +446,9 @@ export default async function Home() {
           </div>
         </Container>
       </section>
+
+      {/* Main selling point: recovery at no extra cost with a package */}
+      <NoExtraCostBanner />
 
       {/* Video Reviews */}
       <VideoReviews />
