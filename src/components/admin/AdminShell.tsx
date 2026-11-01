@@ -18,6 +18,7 @@ const adminNavItems = [
   { label: "Packages", href: "/admin/subscriptions", icon: "repeat" },
   { label: "Reports", href: "/admin/reports", icon: "chart" },
   { label: "Messages", href: "/admin/messages", icon: "mail" },
+  { label: "Email Users", href: "/admin/broadcast", icon: "send" },
   { label: "Support Tickets", href: "/admin/support", icon: "ticket" },
   { label: "Settings", href: "/admin/settings", icon: "gear" },
 ];
@@ -119,6 +120,12 @@ function NavIcon({ name }: { name: string }) {
         <svg {...common}>
           <path d="M4 20V10M11 20V4M18 20v-7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
           <path d="M3 20h18" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+        </svg>
+      );
+    case "send":
+      return (
+        <svg {...common}>
+          <path d="M21 3 10.5 13.5M21 3l-6.5 18-4-7.5L3 9.5 21 3Z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       );
     case "mail":
