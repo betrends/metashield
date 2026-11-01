@@ -894,3 +894,86 @@ export function protectionFollowupEmail(opts: {
     </p>
   `);
 }
+
+// ── Bulk email: new packages + account recovery at no extra cost ─────────
+// Sent by the admin from Admin → Email users (api/admin/broadcast). Goes to
+// registered clients and to form leads who ticked "email me"; always has
+// an unsubscribe link.
+
+export const PACKAGES_ANNOUNCEMENT_SUBJECT = "New: account recovery at no extra cost with MetaShield";
+
+export function packagesAnnouncementEmail(opts: {
+  name: string;
+  unsubscribeUrl: string;
+  reason: "client" | "lead";
+}) {
+  const { name } = escapeOpts({ name: opts.name });
+  const unsubscribeUrl = escapeHtml(opts.unsubscribeUrl);
+  const first = name.trim().split(" ")[0] || "there";
+  const row = (n: string, price: string, covers: string, tag = "") => `
+      <tr>
+        <td style="padding:12px 14px;border:1px solid #ede9fe;border-radius:10px;background:#faf8ff;">
+          <table cellpadding="0" cellspacing="0" width="100%"><tr>
+            <td style="color:${TEXT_DARK};font-size:15px;font-weight:800;">${n}${
+              tag ? ` <span style="font-size:10px;font-weight:800;color:${BRAND_PURPLE};background:#ede9fe;border-radius:999px;padding:3px 8px;margin-left:4px;">${tag}</span>` : ""
+            }<div style="color:${TEXT_MID};font-size:12px;font-weight:400;margin-top:3px;">${covers}</div></td>
+            <td align="right" style="color:${BRAND_PURPLE};font-size:15px;font-weight:800;white-space:nowrap;">${price}</td>
+          </tr></table>
+        </td>
+      </tr>
+      <tr><td style="height:8px;"></td></tr>`;
+  return wrapper(`
+    ${preheader("If your Instagram or Facebook is ever hacked or disabled, we recover it — no recovery fee. From ₦10,000/month.")}
+    ${urgencyHero(
+      "🛡️ New from MetaShield",
+      "#16a34a",
+      `${first}, account recovery now comes at no extra cost.`,
+      `Get one MetaShield package and if your Instagram or Facebook is ever <strong style="color:#ffffff;">hacked, disabled or restricted</strong>, our team handles the recovery — with no recovery fee on top.`
+    )}
+    <table cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 22px;">
+      <tr>
+        <td style="padding:14px 16px;border-radius:12px;background:#fef2f2;border:1px solid #fecaca;">
+          <div style="color:#991b1b;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;">Without a package</div>
+          <div style="color:${TEXT_DARK};font-size:14px;margin-top:4px;">Account hacked or disabled → <strong style="color:#dc2626;">you pay a recovery fee</strong></div>
+        </td>
+      </tr>
+      <tr><td style="height:8px;"></td></tr>
+      <tr>
+        <td style="padding:14px 16px;border-radius:12px;background:${GREEN_BG};border:2px solid #86efac;">
+          <div style="color:#166534;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;">With a MetaShield package</div>
+          <div style="color:${TEXT_DARK};font-size:14px;margin-top:4px;">Account hacked or disabled → <strong style="color:${GREEN};font-size:16px;">₦0 recovery fee</strong></div>
+        </td>
+      </tr>
+    </table>
+    ${iconList(
+      "Every package includes:",
+      [
+        "<strong>Account recovery at no extra cost</strong> for eligible cases covered by your plan.",
+        "Your own recovery agent you can message or call.",
+        "Account security checks to catch problems early.",
+        "Guidance through every available recovery and appeal process.",
+      ],
+      "✓",
+      "#16a34a"
+    )}
+    <p style="margin:0 0 10px;color:${TEXT_DARK};font-size:15px;font-weight:800;">Pick your package:</p>
+    <table cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 14px;">
+      ${row("Watch", "₦10,000/mo", "Instagram + Facebook")}
+      ${row("Elite", "₦15,000/mo", "Instagram + Facebook + Meta ad account", "Recommended")}
+      ${row("Annual Plan", "₦120,000/yr", "2 Instagram + 2 Facebook")}
+      ${row("Lifetime Plan", "₦500,000 once", "Instagram + Facebook + Meta ad account", "No renewals")}
+    </table>
+    ${bigButton("See the packages →", `${PORTAL_URL}/pricing#packages`)}
+    <p style="margin:0 0 16px;color:${TEXT_DARK};font-size:14px;line-height:1.7;">
+      <strong>P.S.</strong> Accounts get hacked and disabled without warning. Protection only works if it's in place <em>before</em> something goes wrong.
+    </p>
+    <p style="margin:0;color:${TEXT_LIGHT};font-size:12px;line-height:1.6;">
+      Account recovery is provided at no additional recovery service fee for eligible cases covered by your plan.
+      Recovery, appeal approval and restriction removal are not guaranteed — Meta makes the final decisions.
+    </p>
+    <p style="margin:12px 0 0;color:${TEXT_LIGHT};font-size:11px;">
+      ${opts.reason === "client" ? "You received this because you have a MetaShield account." : "You received this because you asked MetaShield to email you."}
+      <a href="${unsubscribeUrl}" style="color:${TEXT_LIGHT};">Unsubscribe</a>
+    </p>
+  `);
+}
