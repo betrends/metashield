@@ -5,9 +5,11 @@
 //        → how many people the email would reach, the last few sends, and
 //          whether a real sending address is set up. No addresses are
 //          returned to the browser.
+// POST { action: "count", clients, leads, extra }
+//        → the count again, including pasted emails (and which ones look wrong).
 // POST { action: "test", subject }
 //        → sends the email only to the admin's own address.
-// POST { action: "send", subject, clients, leads, requestId }
+// POST { action: "send", subject, clients, leads, extra, extraConsent, requestId }
 //        → sends to everyone in the audience, 100 per batch through Resend.
 //          Every recipient is logged (email_broadcast_recipients) so the same
 //          send can never email anyone twice; requestId stops a double click
@@ -20,7 +22,7 @@ import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/server";
 import { getAdminRole } from "@/lib/admin/auth";
-import { buildRecipients, parseAudience, senderReady, type Recipient } from "@/lib/server/broadcast";
+import { buildRecipients, parseAudience, parseExtraEmails, senderReady, type Recipient } from "@/lib/server/broadcast";
 import { packagesAnnouncementEmail, PACKAGES_ANNOUNCEMENT_SUBJECT } from "@/lib/email-templates";
 import { unsubscribeUrl } from "@/lib/server/unsubscribe";
 
@@ -89,6 +91,20 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }
+
+  // ── Count: how many people the email would reach (incl. pasted emails) ──
+  if (body.action === "count") {
+    const { valid, invalid } = parseExtraEmails(body.extra);
+    const audience = parseAudience({ clients: body.clients, leads: body.leads, extra: body.extra });
+    try {
+      const count = audience ? (await buildRecipients(createAdminClient(), audience)).length : 0;
+      return NextResponse.json({ count, extraValid: valid.length, invalid });
+    } catch (err) {
+      console.error("[broadcast] count failed:", err);
+      return NextResponse.json({ error: "query_failed" }, { status: 500 });
+    }
+  }
+
   const resendKey = process.env.RESEND_API_KEY;
   if (!resendKey) return NextResponse.json({ error: "email_not_configured" }, { status: 503 });
   const resend = new Resend(resendKey);
@@ -112,8 +128,10 @@ export async function POST(request: Request) {
   let subject: string;
 
   if (body.action === "send") {
-    const audience = parseAudience({ clients: body.clients, leads: body.leads });
+    const audience = parseAudience({ clients: body.clients, leads: body.leads, extra: body.extra });
     if (!audience) return NextResponse.json({ error: "invalid_audience" }, { status: 400 });
+    // Pasted emails: the admin confirms these people know MetaShield.
+    if (audience.extra.length > 0 && body.extraConsent !== true) return NextResponse.json({ error: "extra_consent_required" }, { status: 400 });
     const requestId = typeof body.requestId === "string" ? body.requestId.slice(0, 80) : "";
     if (!requestId) return NextResponse.json({ error: "missing_request_id" }, { status: 400 });
     subject = cleanSubject(body.subject);
@@ -133,7 +151,7 @@ export async function POST(request: Request) {
         request_id: requestId,
         subject,
         template: "packages_announcement",
-        audience,
+        audience: { clients: audience.clients, leads: audience.leads, extraCount: audience.extra.length },
         created_by: role.email,
         status: "sending",
         started_at: new Date().toISOString(),
@@ -162,6 +180,8 @@ export async function POST(request: Request) {
       if (error) {
         await admin.from("email_broadcasts").update({ status: "failed", error: "could not save recipients", finished_at: new Date().toISOString() }).eq("id", broadcastId);
         console.error("[broadcast] recipients insert failed:", error);
+        // 23514: the database doesn't allow pasted emails yet (migration 017).
+        if ((error as { code?: string }).code === "23514") return NextResponse.json({ error: "setup_needed_extra" }, { status: 500 });
         return NextResponse.json({ error: "db_error" }, { status: 500 });
       }
     }
@@ -205,7 +225,7 @@ export async function POST(request: Request) {
       .eq("status", "pending")
       .order("id", { ascending: true })
       .limit(BATCH);
-    const rows = (batch ?? []) as { id: number; email: string; name: string | null; kind: "client" | "lead" }[];
+    const rows = (batch ?? []) as { id: number; email: string; name: string | null; kind: Recipient["kind"] }[];
     if (rows.length === 0) break;
     // Mark the batch as taken before sending, so nobody is emailed twice
     // even if this request is cut off mid-way.
