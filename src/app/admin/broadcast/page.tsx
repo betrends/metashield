@@ -7,6 +7,15 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { BrandLoader } from "@/components/BrandLoader";
+import {
+  BROADCAST_LIMITS,
+  BROADCAST_LINKS,
+  DEFAULT_BROADCAST_CONTENT,
+  type BroadcastContent,
+  type BroadcastLink,
+} from "@/lib/broadcast-content";
+
+const DRAFT_KEY = "ms-broadcast-draft-v1";
 
 type ClientAudience = "all" | "no_package" | "none";
 type HistoryRow = {
@@ -67,6 +76,10 @@ export default function AdminBroadcastPage() {
   const [checkingExtra, setCheckingExtra] = useState(false);
   const requestId = useRef<string>(newRequestId());
   const subjectTouched = useRef(false);
+  const [content, setContent] = useState<BroadcastContent>(DEFAULT_BROADCAST_CONTENT);
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const draftLoaded = useRef(false);
+  const edit = <K extends keyof BroadcastContent>(key: K, value: BroadcastContent[K]) => setContent((c) => ({ ...c, [key]: value }));
 
   const load = useCallback(async () => {
     setCounting(true);
@@ -88,6 +101,62 @@ export default function AdminBroadcastPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
+
+  // Keep what's being written if the page is closed or refreshed (this
+  // browser only).
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
+      if (saved?.content) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setContent({ ...DEFAULT_BROADCAST_CONTENT, ...saved.content });
+      }
+      if (typeof saved?.subject === "string" && saved.subject) {
+        subjectTouched.current = true;
+        setSubject(saved.subject);
+      }
+    } catch {
+      // no saved draft
+    }
+    draftLoaded.current = true;
+  }, []);
+  useEffect(() => {
+    if (!draftLoaded.current) return;
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ subject: subjectTouched.current ? subject : "", content }));
+    } catch {
+      // storage blocked
+    }
+  }, [subject, content]);
+
+  // Live preview of the email being written (built by the server, exactly
+  // as it will be sent).
+  useEffect(() => {
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch("/api/admin/broadcast", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ action: "preview", content }),
+        });
+        const data = await res.json();
+        if (!cancelled && res.ok && typeof data.html === "string") setPreviewHtml(data.html);
+      } catch {
+        // keep the last preview
+      }
+    }, 350);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [content]);
+
+  function resetEmail() {
+    setContent(DEFAULT_BROADCAST_CONTENT);
+    subjectTouched.current = false;
+    if (info !== "loading" && info !== "unauthorized" && info !== "error") setSubject(info.defaultSubject);
+  }
 
   // Pasted emails: re-count (on the server) shortly after typing stops.
   useEffect(() => {
@@ -147,7 +216,7 @@ export default function AdminBroadcastPage() {
       const res = await fetch("/api/admin/broadcast", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "test", subject }),
+        body: JSON.stringify({ action: "test", subject, content }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.detail || data.error || "Couldn't send the test.");
@@ -175,7 +244,9 @@ export default function AdminBroadcastPage() {
           text:
             data.error === "setup_needed"
               ? "The database setup for bulk emails hasn't been run yet."
-              : data.error === "setup_needed_extra"
+              : data.error === "setup_needed_content"
+                ? "Nothing was sent. Run the small database update for editable emails (migration 018) in Supabase, then try again."
+                : data.error === "setup_needed_extra"
                 ? "Nothing was sent. Run the small database update for extra emails (migration 017) in Supabase, then try again."
                 : data.error === "extra_consent_required"
                   ? "Tick the box confirming the extra emails know MetaShield, then try again."
@@ -321,19 +392,96 @@ export default function AdminBroadcastPage() {
             <p className="mt-2 text-xs text-ink-400">Each address gets it once. Staff and unsubscribed people are left out.</p>
           </section>
 
-          {/* 2. Subject */}
+          {/* 2. The email */}
           <section className="rounded-2xl border border-ink-100 bg-white p-5 shadow-sm sm:p-6">
-            <StepTitle n={2} title="Subject line" />
-            <input
-              value={subject}
-              maxLength={150}
-              onChange={(e) => {
-                subjectTouched.current = true;
-                setSubject(e.target.value);
-              }}
-              className="mt-4 w-full rounded-xl border border-ink-200 px-4 py-3 text-sm text-ink-900 outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
-            />
-            <p className="mt-2 text-xs text-ink-400">The email itself is the packages announcement shown in the preview.</p>
+            <div className="flex items-center justify-between gap-3">
+              <StepTitle n={2} title="Write the email" />
+              <button type="button" onClick={resetEmail} className="shrink-0 text-xs font-semibold text-brand-700 hover:underline">
+                Reset to the original
+              </button>
+            </div>
+            <p className="mt-2 text-xs text-ink-500">
+              Change anything below — the preview updates as you type. Type <Code>{"{name}"}</Code> to use each person&apos;s first name.
+            </p>
+
+            <div className="mt-5 space-y-4">
+              <Field label="Subject line">
+                <input
+                  value={subject}
+                  maxLength={150}
+                  onChange={(e) => {
+                    subjectTouched.current = true;
+                    setSubject(e.target.value);
+                  }}
+                  className={inputCls}
+                />
+              </Field>
+              <Field label="Small label above the headline" hint="Optional. Leave empty to hide it.">
+                <input value={content.label} maxLength={BROADCAST_LIMITS.label} onChange={(e) => edit("label", e.target.value)} className={inputCls} />
+              </Field>
+              <Field label="Headline">
+                <input value={content.headline} maxLength={BROADCAST_LIMITS.headline} onChange={(e) => edit("headline", e.target.value)} className={inputCls} />
+              </Field>
+              <Field label="Text under the headline">
+                <textarea value={content.intro} maxLength={BROADCAST_LIMITS.intro} rows={4} onChange={(e) => edit("intro", e.target.value)} className={inputCls} />
+              </Field>
+              <Field
+                label="More text"
+                hint={
+                  <>
+                    Optional. Leave an empty line to start a new paragraph. Put <Code>**two stars**</Code> around words to make them bold.
+                  </>
+                }
+              >
+                <textarea
+                  value={content.message}
+                  maxLength={BROADCAST_LIMITS.message}
+                  rows={5}
+                  placeholder="Write anything else you want to tell them…"
+                  onChange={(e) => edit("message", e.target.value)}
+                  className={inputCls}
+                />
+              </Field>
+
+              <div>
+                <p className="text-sm font-semibold text-ink-900">Show in the email</p>
+                <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                  <Toggle checked={content.showComparison} onChange={(v) => edit("showComparison", v)} label="₦0 recovery fee boxes" />
+                  <Toggle checked={content.showIncluded} onChange={(v) => edit("showIncluded", v)} label="What's included list" />
+                  <Toggle checked={content.showPackages} onChange={(v) => edit("showPackages", v)} label="Package prices" />
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Button text" hint="Leave empty for no button.">
+                  <input value={content.buttonText} maxLength={BROADCAST_LIMITS.buttonText} onChange={(e) => edit("buttonText", e.target.value)} className={inputCls} />
+                </Field>
+                <Field label="Button goes to">
+                  <select value={content.buttonLink} onChange={(e) => edit("buttonLink", e.target.value as BroadcastLink)} className={inputCls}>
+                    {BROADCAST_LINKS.map((l) => (
+                      <option key={l.value} value={l.value}>
+                        {l.label}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+              {content.buttonLink === "custom" ? (
+                <Field label="Link" hint="A full web address starting with https://">
+                  <input
+                    value={content.customLink}
+                    maxLength={BROADCAST_LIMITS.customLink}
+                    placeholder="https://"
+                    onChange={(e) => edit("customLink", e.target.value)}
+                    className={inputCls}
+                  />
+                </Field>
+              ) : null}
+              <Field label="P.S. line" hint="Optional. Leave empty to hide it.">
+                <textarea value={content.ps} maxLength={BROADCAST_LIMITS.ps} rows={2} onChange={(e) => edit("ps", e.target.value)} className={inputCls} />
+              </Field>
+            </div>
+            <p className="mt-4 text-xs text-ink-400">Every email always ends with an unsubscribe link.</p>
           </section>
 
           {/* 3. Send */}
@@ -399,7 +547,11 @@ export default function AdminBroadcastPage() {
               <p className="truncate text-sm font-semibold text-ink-900">{subject || info.defaultSubject}</p>
               <p className="text-xs text-ink-400">From {info.sender.from || "MetaShield"}</p>
             </div>
-            <iframe title="Email preview" src="/api/admin/broadcast?preview=1" className="h-[640px] w-full bg-[#f5f3ff]" />
+            {previewHtml ? (
+              <iframe title="Email preview" srcDoc={previewHtml} sandbox="" className="h-[640px] w-full bg-[#f5f3ff]" />
+            ) : (
+              <iframe title="Email preview" src="/api/admin/broadcast?preview=1" sandbox="" className="h-[640px] w-full bg-[#f5f3ff]" />
+            )}
           </div>
         </aside>
       </div>
@@ -468,7 +620,7 @@ export default function AdminBroadcastPage() {
                 type="button"
                 onClick={() => {
                   setConfirming(false);
-                  post({ action: "send", subject, clients, leads, extra: extraText, extraConsent, requestId: requestId.current });
+                  post({ action: "send", subject, content, clients, leads, extra: extraText, extraConsent, requestId: requestId.current });
                 }}
                 className="rounded-full bg-brand-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-brand-700"
               >
@@ -480,6 +632,36 @@ export default function AdminBroadcastPage() {
       ) : null}
     </div>
   );
+}
+
+const inputCls =
+  "w-full rounded-xl border border-ink-200 px-4 py-2.5 text-sm text-ink-900 outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100";
+
+function Field({ label, hint, children }: { label: string; hint?: ReactNode; children: ReactNode }) {
+  return (
+    <label className="block">
+      <span className="block text-sm font-semibold text-ink-900">{label}</span>
+      <span className="mt-1.5 block">{children}</span>
+      {hint ? <span className="mt-1 block text-xs text-ink-400">{hint}</span> : null}
+    </label>
+  );
+}
+
+function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <label
+      className={`flex cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-2.5 text-sm transition ${
+        checked ? "border-brand-400 bg-brand-50/60 text-ink-900" : "border-ink-100 text-ink-500 hover:border-ink-200"
+      }`}
+    >
+      <input type="checkbox" className="accent-brand-600" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      {label}
+    </label>
+  );
+}
+
+function Code({ children }: { children: ReactNode }) {
+  return <code className="rounded bg-ink-100 px-1 py-0.5 font-mono text-[11px] text-ink-700">{children}</code>;
 }
 
 function StepTitle({ n, title }: { n: number; title: string }) {

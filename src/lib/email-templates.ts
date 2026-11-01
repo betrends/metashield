@@ -1,3 +1,4 @@
+import { DEFAULT_BROADCAST_CONTENT, broadcastButtonHref, fillName, type BroadcastContent } from "@/lib/broadcast-content";
 // Beautiful HTML email templates for client recovery notifications.
 // Each template uses inline styles for maximum email client compatibility.
 
@@ -895,21 +896,39 @@ export function protectionFollowupEmail(opts: {
   `);
 }
 
-// ── Bulk email: new packages + account recovery at no extra cost ─────────
-// Sent by the admin from Admin → Email users (api/admin/broadcast). Goes to
-// registered clients and to form leads who ticked "email me"; always has
-// an unsubscribe link.
+// ── Bulk email (Admin → Email users) ─────────────────────────────────────
+// Built from what the admin typed (lib/broadcast-content.ts); starts as the
+// packages announcement. Every field is escaped; **bold** is the only
+// formatting allowed. Always ends with an unsubscribe link.
 
 export const PACKAGES_ANNOUNCEMENT_SUBJECT = "New: account recovery at no extra cost with MetaShield";
 
-export function packagesAnnouncementEmail(opts: {
+// Escaped text → HTML: **bold**, blank line = new paragraph, line break = <br>.
+function richText(raw: string, color: string, size = 15): string {
+  return escapeHtml(raw)
+    .split(/\n{2,}/)
+    .map((para) => para.trim())
+    .filter(Boolean)
+    .map(
+      (para) =>
+        `<p style="margin:0 0 14px;color:${color};font-size:${size}px;line-height:1.7;">${para
+          .replace(/\*\*([^*]+)\*\*/g, '<strong style="color:inherit;">$1</strong>')
+          .replace(/\n/g, "<br>")}</p>`
+    )
+    .join("");
+}
+
+export function broadcastEmail(opts: {
   name: string;
   unsubscribeUrl: string;
   reason: "client" | "lead" | "contact";
+  content?: BroadcastContent;
 }) {
-  const { name } = escapeOpts({ name: opts.name });
+  const c = opts.content ?? DEFAULT_BROADCAST_CONTENT;
   const unsubscribeUrl = escapeHtml(opts.unsubscribeUrl);
-  const first = name.trim().split(" ")[0] || "there";
+  const headline = escapeHtml(fillName(c.headline, opts.name));
+  const intro = richText(fillName(c.intro, opts.name), "#ddd6fe").replace(/margin:0 0 14px/g, "margin:0 0 10px");
+  const href = escapeHtml(broadcastButtonHref(c, PORTAL_URL));
   const row = (n: string, price: string, covers: string, tag = "") => `
       <tr>
         <td style="padding:12px 14px;border:1px solid #ede9fe;border-radius:10px;background:#faf8ff;">
@@ -922,15 +941,18 @@ export function packagesAnnouncementEmail(opts: {
         </td>
       </tr>
       <tr><td style="height:8px;"></td></tr>`;
+  const aboutPackages = c.showComparison || c.showIncluded || c.showPackages;
   return wrapper(`
-    ${preheader("If your Instagram or Facebook is ever hacked or disabled, we recover it — no recovery fee. From ₦10,000/month.")}
-    ${urgencyHero(
-      "🛡️ New from MetaShield",
-      "#16a34a",
-      `${first}, account recovery now comes at no extra cost.`,
-      `Get one MetaShield package and if your Instagram or Facebook is ever <strong style="color:#ffffff;">hacked, disabled or restricted</strong>, our team handles the recovery — with no recovery fee on top.`
-    )}
-    <table cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 22px;">
+    ${preheader(escapeHtml(fillName(c.intro, opts.name).replace(/\*\*/g, "").slice(0, 140)))}
+    <div style="background:linear-gradient(135deg,#1e1b4b 0%,#4c1d95 100%);background-color:#1e1b4b;border-radius:14px;padding:28px 26px;margin:0 0 24px;">
+      ${c.label ? `<span style="display:inline-block;background:#16a34a;color:#ffffff;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;border-radius:999px;padding:6px 12px;margin:0 0 16px;">${escapeHtml(c.label)}</span>` : ""}
+      <h1 style="margin:0 0 10px;color:#ffffff;font-size:26px;font-weight:800;line-height:1.25;">${headline}</h1>
+      ${intro}
+    </div>
+    ${c.message ? richText(fillName(c.message, opts.name), TEXT_DARK) : ""}
+    ${
+      c.showComparison
+        ? `<table cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 22px;">
       <tr>
         <td style="padding:14px 16px;border-radius:12px;background:#fef2f2;border:1px solid #fecaca;">
           <div style="color:#991b1b;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;">Without a package</div>
@@ -944,33 +966,45 @@ export function packagesAnnouncementEmail(opts: {
           <div style="color:${TEXT_DARK};font-size:14px;margin-top:4px;">Account hacked or disabled → <strong style="color:${GREEN};font-size:16px;">₦0 recovery fee</strong></div>
         </td>
       </tr>
-    </table>
-    ${iconList(
-      "Every package includes:",
-      [
-        "<strong>Account recovery at no extra cost</strong> for eligible cases covered by your plan.",
-        "Your own recovery agent you can message or call.",
-        "Account security checks to catch problems early.",
-        "Guidance through every available recovery and appeal process.",
-      ],
-      "✓",
-      "#16a34a"
-    )}
-    <p style="margin:0 0 10px;color:${TEXT_DARK};font-size:15px;font-weight:800;">Pick your package:</p>
+    </table>`
+        : ""
+    }
+    ${
+      c.showIncluded
+        ? iconList(
+            "Every package includes:",
+            [
+              "<strong>Account recovery at no extra cost</strong> for eligible cases covered by your plan.",
+              "Your own recovery agent you can message or call.",
+              "Account security checks to catch problems early.",
+              "Guidance through every available recovery and appeal process.",
+            ],
+            "✓",
+            "#16a34a"
+          )
+        : ""
+    }
+    ${
+      c.showPackages
+        ? `<p style="margin:0 0 10px;color:${TEXT_DARK};font-size:15px;font-weight:800;">Pick your package:</p>
     <table cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 14px;">
       ${row("Watch", "₦10,000/mo", "Instagram + Facebook")}
       ${row("Elite", "₦15,000/mo", "Instagram + Facebook + Meta ad account", "Recommended")}
       ${row("Annual Plan", "₦120,000/yr", "2 Instagram + 2 Facebook")}
       ${row("Lifetime Plan", "₦500,000 once", "Instagram + Facebook + Meta ad account", "No renewals")}
-    </table>
-    ${bigButton("See the packages →", `${PORTAL_URL}/pricing#packages`)}
-    <p style="margin:0 0 16px;color:${TEXT_DARK};font-size:14px;line-height:1.7;">
-      <strong>P.S.</strong> Accounts get hacked and disabled without warning. Protection only works if it's in place <em>before</em> something goes wrong.
-    </p>
-    <p style="margin:0;color:${TEXT_LIGHT};font-size:12px;line-height:1.6;">
+    </table>`
+        : ""
+    }
+    ${c.buttonText ? bigButton(escapeHtml(c.buttonText), href) : ""}
+    ${c.ps ? `<p style="margin:0 0 16px;color:${TEXT_DARK};font-size:14px;line-height:1.7;"><strong>P.S.</strong> ${escapeHtml(fillName(c.ps, opts.name))}</p>` : ""}
+    ${
+      aboutPackages
+        ? `<p style="margin:0;color:${TEXT_LIGHT};font-size:12px;line-height:1.6;">
       Account recovery is provided at no additional recovery service fee for eligible cases covered by your plan.
       Recovery, appeal approval and restriction removal are not guaranteed — Meta makes the final decisions.
-    </p>
+    </p>`
+        : ""
+    }
     <p style="margin:12px 0 0;color:${TEXT_LIGHT};font-size:11px;">
       ${
         opts.reason === "client"
@@ -982,4 +1016,26 @@ export function packagesAnnouncementEmail(opts: {
       <a href="${unsubscribeUrl}" style="color:${TEXT_LIGHT};">Unsubscribe</a>
     </p>
   `);
+}
+
+// Plain-text copy sent alongside the designed email (helps it reach the inbox).
+export function broadcastText(opts: { name: string; unsubscribeUrl: string; content?: BroadcastContent }) {
+  const c = opts.content ?? DEFAULT_BROADCAST_CONTENT;
+  const plain = (s: string) => fillName(s, opts.name).replace(/\*\*/g, "");
+  const parts = [plain(c.headline), plain(c.intro)];
+  if (c.message) parts.push(plain(c.message));
+  if (c.showComparison) parts.push("Without a package: you pay a recovery fee.\nWith a MetaShield package: ₦0 recovery fee.");
+  if (c.showPackages)
+    parts.push(
+      "Packages:\n- Watch: ₦10,000/month (Instagram + Facebook)\n- Elite: ₦15,000/month (Instagram + Facebook + Meta ad account)\n- Annual Plan: ₦120,000/year (2 Instagram + 2 Facebook)\n- Lifetime Plan: ₦500,000 once (Instagram + Facebook + Meta ad account)"
+    );
+  if (c.buttonText) parts.push(`${c.buttonText.replace(/\s*→\s*$/, "")}: ${broadcastButtonHref(c, PORTAL_URL)}`);
+  if (c.ps) parts.push(`P.S. ${plain(c.ps)}`);
+  parts.push(`MetaShield — Account Recovery & Protection\nUnsubscribe: ${opts.unsubscribeUrl}`);
+  return parts.filter(Boolean).join("\n\n");
+}
+
+// The original announcement (kept for older callers).
+export function packagesAnnouncementEmail(opts: { name: string; unsubscribeUrl: string; reason: "client" | "lead" | "contact" }) {
+  return broadcastEmail(opts);
 }
