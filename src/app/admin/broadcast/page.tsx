@@ -12,7 +12,7 @@ type ClientAudience = "all" | "no_package" | "none";
 type HistoryRow = {
   id: string;
   subject: string;
-  audience: { clients?: ClientAudience; leads?: boolean } | null;
+  audience: { clients?: ClientAudience; leads?: boolean; extraCount?: number } | null;
   status: "sending" | "done" | "stopped" | "failed";
   recipient_count: number;
   sent_count: number;
@@ -39,6 +39,7 @@ function audienceLabel(a: HistoryRow["audience"]) {
   if (a?.clients === "all") parts.push("All clients");
   if (a?.clients === "no_package") parts.push("Clients without a package");
   if (a?.leads) parts.push("Form leads");
+  if (a?.extraCount) parts.push(`${a.extraCount} extra email${a.extraCount === 1 ? "" : "s"}`);
   return parts.join(" + ") || "—";
 }
 
@@ -60,6 +61,10 @@ export default function AdminBroadcastPage() {
   const [confirming, setConfirming] = useState(false);
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<{ kind: "ok" | "error"; text: string; resumeId?: string } | null>(null);
+  const [extraText, setExtraText] = useState("");
+  const [extraConsent, setExtraConsent] = useState(false);
+  const [extraCheck, setExtraCheck] = useState<{ count: number; extraValid: number; invalid: string[] } | null>(null);
+  const [checkingExtra, setCheckingExtra] = useState(false);
   const requestId = useRef<string>(newRequestId());
   const subjectTouched = useRef(false);
 
@@ -84,6 +89,36 @@ export default function AdminBroadcastPage() {
     load();
   }, [load]);
 
+  // Pasted emails: re-count (on the server) shortly after typing stops.
+  useEffect(() => {
+    if (!extraText.trim()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setExtraCheck(null);
+      return;
+    }
+    setCheckingExtra(true);
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch("/api/admin/broadcast", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ action: "count", clients, leads, extra: extraText }),
+        });
+        const data = await res.json();
+        if (!cancelled && res.ok) setExtraCheck(data);
+      } catch {
+        // keep the last count
+      } finally {
+        if (!cancelled) setCheckingExtra(false);
+      }
+    }, 500);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [extraText, clients, leads]);
+
   if (info === "loading") return <BrandLoader size="page" label="Loading…" />;
   if (info === "unauthorized") return <p className="text-sm text-ink-500">Only the admin can send emails to users.</p>;
   if (info === "error") {
@@ -97,9 +132,14 @@ export default function AdminBroadcastPage() {
     );
   }
 
-  const nothingSelected = clients === "none" && !leads;
+  const hasExtraText = extraText.trim().length > 0;
+  const extraValid = extraCheck?.extraValid ?? 0;
+  const count = hasExtraText && extraCheck ? extraCheck.count : info.count;
+  const busyCounting = counting || (hasExtraText && checkingExtra);
+  const nothingSelected = clients === "none" && !leads && extraValid === 0;
   const blocked = info.setupNeeded || !info.sender.ok;
-  const canSend = !blocked && !nothingSelected && info.count > 0 && !counting && !sending;
+  const needsConsent = extraValid > 0 && !extraConsent;
+  const canSend = !blocked && !nothingSelected && count > 0 && !busyCounting && !sending && !needsConsent;
 
   async function sendTest() {
     setTestState({ kind: "busy" });
@@ -135,12 +175,20 @@ export default function AdminBroadcastPage() {
           text:
             data.error === "setup_needed"
               ? "The database setup for bulk emails hasn't been run yet."
-              : "Something went wrong. Nothing more will be sent — refresh the page to see what went out.",
+              : data.error === "setup_needed_extra"
+                ? "Nothing was sent. Run the small database update for extra emails (migration 017) in Supabase, then try again."
+                : data.error === "extra_consent_required"
+                  ? "Tick the box confirming the extra emails know MetaShield, then try again."
+                  : "Something went wrong. Nothing more will be sent — refresh the page to see what went out.",
         });
       } else {
         const parts = [`Sent to ${data.sent} ${data.sent === 1 ? "person" : "people"}.`];
         if (data.failed) parts.push(`${data.failed} couldn't be sent.`);
         if (data.left) parts.push(`${data.left} still waiting.`);
+        if (body.action === "send") {
+          setExtraText(""); // so the same list isn't sent again by accident
+          setExtraConsent(false);
+        }
         setResult({
           kind: data.failed || data.left ? "error" : "ok",
           text: parts.join(" "),
@@ -161,7 +209,7 @@ export default function AdminBroadcastPage() {
       <div>
         <h1 className="text-2xl font-semibold text-ink-900">Email users</h1>
         <p className="mt-1 text-sm text-ink-500">
-          Send one email to your clients and to people who asked to be emailed. People who unsubscribed are always left out.
+          Send one email to your clients, people who asked to be emailed, and any other emails you add. People who unsubscribed are always left out.
         </p>
       </div>
 
@@ -218,10 +266,56 @@ export default function AdminBroadcastPage() {
               </span>
             </label>
 
+            <div className="mt-3 rounded-xl border border-ink-100 px-4 py-3">
+              <label htmlFor="extra-emails" className="block text-sm font-semibold text-ink-900">
+                Add other emails <span className="font-normal text-ink-400">(optional)</span>
+              </label>
+              <p className="text-xs text-ink-500">For people who aren&apos;t on the platform. Paste them separated by commas, spaces or one per line.</p>
+              <textarea
+                id="extra-emails"
+                value={extraText}
+                onChange={(e) => {
+                  setExtraText(e.target.value);
+                  setExtraConsent(false);
+                }}
+                rows={4}
+                placeholder={"ada@gmail.com, tunde@yahoo.com\nchioma@outlook.com"}
+                className="mt-2 w-full resize-y rounded-xl border border-ink-200 px-3 py-2.5 text-sm text-ink-900 outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+              />
+              {hasExtraText ? (
+                <div className="mt-2 space-y-2 text-xs">
+                  <p className="text-ink-600">
+                    {checkingExtra && !extraCheck ? "Checking…" : `${extraValid.toLocaleString("en-NG")} email${extraValid === 1 ? "" : "s"} added`}
+                    {extraValid >= 2000 ? " (the most you can add at once)" : ""}
+                  </p>
+                  {extraCheck && extraCheck.invalid.length > 0 ? (
+                    <p className="rounded-lg bg-amber-50 px-3 py-2 text-amber-900">
+                      {extraCheck.invalid.length} {extraCheck.invalid.length === 1 ? "doesn't" : "don't"} look like an email and will be skipped:{" "}
+                      <span className="break-all font-medium">{extraCheck.invalid.slice(0, 5).join(", ")}{extraCheck.invalid.length > 5 ? "…" : ""}</span>
+                    </p>
+                  ) : null}
+                  {extraValid > 0 ? (
+                    <label className="flex cursor-pointer items-start gap-2.5 rounded-lg bg-brand-50/70 px-3 py-2.5 text-ink-700">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 accent-brand-600"
+                        checked={extraConsent}
+                        onChange={(e) => setExtraConsent(e.target.checked)}
+                      />
+                      <span>
+                        <strong className="text-ink-900">These people know MetaShield and expect to hear from us.</strong> Emailing strangers can get your
+                        emails sent to spam. Anyone who unsubscribed or already has a package is skipped.
+                      </span>
+                    </label>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+
             <div className="mt-5 flex items-center justify-between gap-3 rounded-xl bg-ink-900 px-4 py-3 text-white">
               <span className="text-sm text-ink-200">This email will go to</span>
               <span className="text-lg font-bold">
-                {nothingSelected ? "nobody" : counting ? "…" : `${info.count.toLocaleString("en-NG")} ${info.count === 1 ? "person" : "people"}`}
+                {nothingSelected ? "nobody" : busyCounting ? "…" : `${count.toLocaleString("en-NG")} ${count === 1 ? "person" : "people"}`}
               </span>
             </div>
             <p className="mt-2 text-xs text-ink-400">Each address gets it once. Staff and unsubscribed people are left out.</p>
@@ -260,10 +354,13 @@ export default function AdminBroadcastPage() {
                 disabled={!canSend}
                 className="flex-1 rounded-full bg-brand-600 px-5 py-3 text-sm font-bold text-white shadow-md shadow-brand-600/25 transition hover:bg-brand-700 disabled:opacity-50"
               >
-                {sending ? "Sending…" : `Send to ${nothingSelected ? 0 : info.count.toLocaleString("en-NG")} people`}
+                {sending ? "Sending…" : `Send to ${nothingSelected ? 0 : count.toLocaleString("en-NG")} people`}
               </button>
             </div>
             <p className="mt-2 text-xs text-ink-400">The test goes only to {info.adminEmail}.</p>
+            {needsConsent ? (
+              <p className="mt-2 text-xs font-semibold text-amber-700">Tick the box under &ldquo;Add other emails&rdquo; to send.</p>
+            ) : null}
             {testState.kind === "ok" || testState.kind === "error" ? (
               <p className={`mt-3 text-sm ${testState.kind === "ok" ? "text-emerald-700" : "text-risk-high"}`}>{testState.text}</p>
             ) : null}
@@ -355,7 +452,7 @@ export default function AdminBroadcastPage() {
             <p className="mt-2 text-sm text-ink-600">
               &ldquo;{subject || info.defaultSubject}&rdquo; will go to{" "}
               <strong>
-                {info.count.toLocaleString("en-NG")} {info.count === 1 ? "person" : "people"}
+                {count.toLocaleString("en-NG")} {count === 1 ? "person" : "people"}
               </strong>
               . This can&apos;t be undone.
             </p>
@@ -371,11 +468,11 @@ export default function AdminBroadcastPage() {
                 type="button"
                 onClick={() => {
                   setConfirming(false);
-                  post({ action: "send", subject, clients, leads, requestId: requestId.current });
+                  post({ action: "send", subject, clients, leads, extra: extraText, extraConsent, requestId: requestId.current });
                 }}
                 className="rounded-full bg-brand-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-brand-700"
               >
-                Yes, send to {info.count.toLocaleString("en-NG")}
+                Yes, send to {count.toLocaleString("en-NG")}
               </button>
             </div>
           </div>

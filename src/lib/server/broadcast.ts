@@ -6,6 +6,8 @@
 //    active package.
 //  - Form leads: people who ticked "email me" on the account health check
 //    or the recovery eligibility check.
+//  - Extra emails: addresses the admin pastes in (people who aren't on the
+//    platform but know MetaShield).
 //
 // Everyone who unsubscribed is left out, and each address appears once.
 
@@ -13,18 +15,37 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { isPlanId } from "@/lib/portal/billing";
 
 export type ClientAudience = "all" | "no_package" | "none";
-export type Audience = { clients: ClientAudience; leads: boolean };
-export type Recipient = { email: string; name: string; kind: "client" | "lead" };
+export type Audience = { clients: ClientAudience; leads: boolean; extra: string[] };
+export type Recipient = { email: string; name: string; kind: "client" | "lead" | "contact" };
 
 const PAGE = 1000;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const MAX_EXTRA = 2000;
 
-export function parseAudience(input: { clients?: unknown; leads?: unknown }): Audience | null {
+// Splits pasted text into addresses. Accepts commas, semicolons, spaces or
+// one per line, and "Name <email>" style. Returns the good ones (lower-case,
+// once each) and the entries that don't look like an email.
+export function parseExtraEmails(input: unknown): { valid: string[]; invalid: string[] } {
+  const text = Array.isArray(input) ? input.join("\n") : typeof input === "string" ? input : "";
+  const valid = new Set<string>();
+  const invalid: string[] = [];
+  for (const raw of text.split(/[\s,;]+/)) {
+    const token = raw.replace(/^[<"'(]+|[>"')]+$/g, "").trim().toLowerCase();
+    if (!token) continue;
+    if (EMAIL_RE.test(token)) valid.add(token);
+    else if (token.includes("@")) invalid.push(raw.trim());
+    // words without "@" (e.g. a name before <email>) are ignored
+  }
+  return { valid: [...valid].slice(0, MAX_EXTRA), invalid: invalid.slice(0, 50) };
+}
+
+export function parseAudience(input: { clients?: unknown; leads?: unknown; extra?: unknown }): Audience | null {
   const clients = input.clients;
   if (clients !== "all" && clients !== "no_package" && clients !== "none") return null;
   const leads = input.leads === true || input.leads === "1" || input.leads === "true";
-  if (clients === "none" && !leads) return null;
-  return { clients, leads };
+  const extra = parseExtraEmails(input.extra).valid;
+  if (clients === "none" && !leads && extra.length === 0) return null;
+  return { clients, leads, extra };
 }
 
 // Reads every row of a query in pages of 1,000 (PostgREST's default cap).
@@ -53,10 +74,10 @@ export async function buildRecipients(admin: SupabaseClient, audience: Audience)
     if (!EMAIL_RE.test(email) || staff.has(email) || unsubscribed.has(email)) return;
     const existing = byEmail.get(email);
     if (!existing) byEmail.set(email, { email, name, kind });
-    else if (kind === "client" && existing.kind === "lead") byEmail.set(email, { email, name: name || existing.name, kind });
+    else if (kind === "client" && existing.kind !== "client") byEmail.set(email, { email, name: name || existing.name, kind });
   };
 
-  const needPackages = audience.clients === "no_package" || audience.leads;
+  const needPackages = audience.clients === "no_package" || audience.leads || audience.extra.length > 0;
   const [profiles, subs] = await Promise.all([
     readAll<{ id: string; full_name: string | null; email: string | null }>((a, b) =>
       admin.from("profiles").select("id, full_name, email").order("created_at", { ascending: true }).range(a, b)
@@ -99,6 +120,13 @@ export async function buildRecipients(admin: SupabaseClient, audience: Audience)
       if (packagedEmails.has(email)) continue;
       add(email, String(l.name ?? "").trim(), "lead");
     }
+  }
+
+  // Extra emails pasted by the admin (clients who already have a package
+  // are still left out).
+  for (const email of audience.extra) {
+    if (packagedEmails.has(email)) continue;
+    add(email, "", "contact");
   }
 
   return [...byEmail.values()];

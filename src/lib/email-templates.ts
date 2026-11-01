@@ -905,7 +905,7 @@ export const PACKAGES_ANNOUNCEMENT_SUBJECT = "New: account recovery at no extra 
 export function packagesAnnouncementEmail(opts: {
   name: string;
   unsubscribeUrl: string;
-  reason: "client" | "lead";
+  reason: "client" | "lead" | "contact";
 }) {
   const { name } = escapeOpts({ name: opts.name });
   const unsubscribeUrl = escapeHtml(opts.unsubscribeUrl);
@@ -972,7 +972,13 @@ export function packagesAnnouncementEmail(opts: {
       Recovery, appeal approval and restriction removal are not guaranteed — Meta makes the final decisions.
     </p>
     <p style="margin:12px 0 0;color:${TEXT_LIGHT};font-size:11px;">
-      ${opts.reason === "client" ? "You received this because you have a MetaShield account." : "You received this because you asked MetaShield to email you."}
+      ${
+        opts.reason === "client"
+          ? "You received this because you have a MetaShield account."
+          : opts.reason === "lead"
+            ? "You received this because you asked MetaShield to email you."
+            : "You received this because you've been in touch with MetaShield."
+      }
       <a href="${unsubscribeUrl}" style="color:${TEXT_LIGHT};">Unsubscribe</a>
     </p>
   `);
