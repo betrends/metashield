@@ -7,9 +7,12 @@
 //          returned to the browser.
 // POST { action: "count", clients, leads, extra }
 //        → the count again, including pasted emails (and which ones look wrong).
-// POST { action: "test", subject }
+// POST { action: "preview", content } → { html } of the email being edited.
+// POST { action: "test", subject, content }
 //        → sends the email only to the admin's own address.
-// POST { action: "send", subject, clients, leads, extra, extraConsent, requestId }
+// POST { action: "send", subject, content, clients, leads, extra, extraConsent, requestId }
+//        content: what the admin wrote (lib/broadcast-content.ts); saved with
+//        the send so "try the rest again" sends exactly the same email.
 //        → sends to everyone in the audience, 100 per batch through Resend.
 //          Every recipient is logged (email_broadcast_recipients) so the same
 //          send can never email anyone twice; requestId stops a double click
@@ -23,7 +26,8 @@ import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/server";
 import { getAdminRole } from "@/lib/admin/auth";
 import { buildRecipients, parseAudience, parseExtraEmails, senderReady, type Recipient } from "@/lib/server/broadcast";
-import { packagesAnnouncementEmail, PACKAGES_ANNOUNCEMENT_SUBJECT } from "@/lib/email-templates";
+import { broadcastEmail, broadcastText, PACKAGES_ANNOUNCEMENT_SUBJECT } from "@/lib/email-templates";
+import { DEFAULT_BROADCAST_CONTENT, parseBroadcastContent, type BroadcastContent } from "@/lib/broadcast-content";
 import { unsubscribeUrl } from "@/lib/server/unsubscribe";
 
 export const dynamic = "force-dynamic";
@@ -37,13 +41,14 @@ function cleanSubject(v: unknown): string {
   return s || PACKAGES_ANNOUNCEMENT_SUBJECT;
 }
 
-function emailFor(r: Pick<Recipient, "email" | "name" | "kind">, subject: string) {
+function emailFor(r: Pick<Recipient, "email" | "name" | "kind">, subject: string, content: BroadcastContent) {
   const unsub = unsubscribeUrl(r.email);
   return {
     from: process.env.RESEND_FROM_EMAIL || "MetaShield <onboarding@resend.dev>",
     to: [r.email],
     subject,
-    html: packagesAnnouncementEmail({ name: r.name, unsubscribeUrl: unsub, reason: r.kind }),
+    html: broadcastEmail({ name: r.name, unsubscribeUrl: unsub, reason: r.kind, content }),
+    text: broadcastText({ name: r.name, unsubscribeUrl: unsub, content }),
     headers: { "List-Unsubscribe": `<${unsub}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
   };
 }
@@ -54,7 +59,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   if (url.searchParams.get("preview") === "1") {
     // What the email looks like (sample name), for the page's preview.
-    const html = packagesAnnouncementEmail({ name: "Sample Client", unsubscribeUrl: "#", reason: "client" });
+    const html = broadcastEmail({ name: "Sample Client", unsubscribeUrl: "#", reason: "client" });
     return new Response(html, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
   }
   const audience = parseAudience({ clients: url.searchParams.get("clients") ?? "all", leads: url.searchParams.get("leads") ?? "1" });
@@ -79,6 +84,7 @@ export async function GET(request: Request) {
     sender: { ok: sender.ok, from: sender.from },
     adminEmail: role.email,
     defaultSubject: PACKAGES_ANNOUNCEMENT_SUBJECT,
+    defaultContent: DEFAULT_BROADCAST_CONTENT,
   });
 }
 
@@ -90,6 +96,17 @@ export async function POST(request: Request) {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
+  }
+
+  // ── Preview: the email as it will look, from the fields being edited ──
+  if (body.action === "preview") {
+    const html = broadcastEmail({
+      name: typeof body.sampleName === "string" ? body.sampleName.slice(0, 60) : "Sample Client",
+      unsubscribeUrl: "#",
+      reason: "client",
+      content: parseBroadcastContent(body.content),
+    });
+    return NextResponse.json({ html });
   }
 
   // ── Count: how many people the email would reach (incl. pasted emails) ──
@@ -114,7 +131,7 @@ export async function POST(request: Request) {
   if (body.action === "test") {
     const subject = cleanSubject(body.subject);
     const { error } = await resend.emails.send({
-      ...emailFor({ email: role.email, name: "", kind: "client" }, `[TEST] ${subject}`),
+      ...emailFor({ email: role.email, name: "", kind: "client" }, `[TEST] ${subject}`, parseBroadcastContent(body.content)),
       to: role.email,
     });
     if (error) {
@@ -126,6 +143,7 @@ export async function POST(request: Request) {
 
   let broadcastId: string;
   let subject: string;
+  let content: BroadcastContent;
 
   if (body.action === "send") {
     const audience = parseAudience({ clients: body.clients, leads: body.leads, extra: body.extra });
@@ -135,6 +153,7 @@ export async function POST(request: Request) {
     const requestId = typeof body.requestId === "string" ? body.requestId.slice(0, 80) : "";
     if (!requestId) return NextResponse.json({ error: "missing_request_id" }, { status: 400 });
     subject = cleanSubject(body.subject);
+    content = parseBroadcastContent(body.content);
 
     // Only one send at a time.
     const { data: running } = await admin
@@ -150,7 +169,8 @@ export async function POST(request: Request) {
       .insert({
         request_id: requestId,
         subject,
-        template: "packages_announcement",
+        template: "custom",
+        content,
         audience: { clients: audience.clients, leads: audience.leads, extraCount: audience.extra.length },
         created_by: role.email,
         status: "sending",
@@ -159,7 +179,10 @@ export async function POST(request: Request) {
       .select("id")
       .single();
     if (createError || !created) {
-      if ((createError as { code?: string } | null)?.code === "23505") return NextResponse.json({ error: "already_started" }, { status: 409 });
+      const code = (createError as { code?: string } | null)?.code;
+      if (code === "23505") return NextResponse.json({ error: "already_started" }, { status: 409 });
+      // The "content" column (migration 018) isn't there yet.
+      if (code === "PGRST204" || code === "42703") return NextResponse.json({ error: "setup_needed_content" }, { status: 500 });
       console.error("[broadcast] create failed:", createError);
       return NextResponse.json({ error: "setup_needed" }, { status: 500 });
     }
@@ -188,7 +211,7 @@ export async function POST(request: Request) {
     await admin.from("email_broadcasts").update({ recipient_count: recipients.length }).eq("id", broadcastId);
   } else if (body.action === "resume") {
     broadcastId = typeof body.broadcastId === "string" ? body.broadcastId : "";
-    const { data: b } = await admin.from("email_broadcasts").select("id, subject, status, started_at").eq("id", broadcastId).maybeSingle();
+    const { data: b } = await admin.from("email_broadcasts").select("id, subject, status, started_at, content").eq("id", broadcastId).maybeSingle();
     if (!b) return NextResponse.json({ error: "not_found" }, { status: 404 });
     if (b.status === "sending" && new Date(b.started_at as string).getTime() > Date.now() - STALE_MS)
       return NextResponse.json({ error: "already_sending" }, { status: 409 });
@@ -202,6 +225,7 @@ export async function POST(request: Request) {
       .maybeSingle();
     if (!claimed) return NextResponse.json({ error: "already_sending" }, { status: 409 });
     subject = b.subject as string;
+    content = parseBroadcastContent(b.content); // the same email as the first try
     // Retry the ones that failed (e.g. a daily limit was hit). People whose
     // batch was cut off mid-send ("sending") are left alone — they may
     // already have the email.
@@ -231,7 +255,7 @@ export async function POST(request: Request) {
     // even if this request is cut off mid-way.
     const ids = rows.map((r) => r.id);
     await admin.from("email_broadcast_recipients").update({ status: "sending" }).in("id", ids);
-    const { error } = await resend.batch.send(rows.map((r) => emailFor({ email: r.email, name: r.name ?? "", kind: r.kind }, subject)));
+    const { error } = await resend.batch.send(rows.map((r) => emailFor({ email: r.email, name: r.name ?? "", kind: r.kind }, subject, content)));
     if (error) {
       console.error("[broadcast] batch failed:", error);
       const message = (typeof error === "object" ? JSON.stringify(error) : String(error)).slice(0, 500);
