@@ -1,4 +1,5 @@
 import { DEFAULT_BROADCAST_CONTENT, broadcastButtonHref, fillName, type BroadcastContent } from "@/lib/broadcast-content";
+import { instagramStepLink } from "@/lib/instagram-links";
 // Beautiful HTML email templates for client recovery notifications.
 // Each template uses inline styles for maximum email client compatibility.
 
@@ -1108,32 +1109,30 @@ export function packagesAnnouncementEmail(opts: { name: string; unsubscribeUrl: 
 
 export const PROTECTION_CHECKLIST_SUBJECT = "Compulsory: do these 6 things to keep your account protected";
 
-// link: opens that page of Instagram's Accounts Center (in the app when it's
-// installed, otherwise the website, after logging in).
+// link: our /go/instagram page, which opens the Instagram APP and shows
+// what to tap for that step (lib/instagram-links.ts).
 type ChecklistStep = { title: string; how: string; path?: string; link?: string };
 
-const IG_ACCOUNTS_CENTER = "https://accountscenter.instagram.com/";
-const IG_SECURITY = "https://accountscenter.instagram.com/password_and_security/";
-const IG_PERSONAL = "https://accountscenter.instagram.com/personal_info/";
+const IG_ACCOUNTS_CENTER = instagramStepLink(PORTAL_URL, "center");
 
 const CHECKLIST_DO: ChecklistStep[] = [
   {
     title: "Add your verification selfie",
     how: "This helps Meta confirm the account is yours if it is ever flagged.",
     path: "Settings → Accounts Center → Password and security → add your verification selfie",
-    link: IG_SECURITY,
+    link: instagramStepLink(PORTAL_URL, "selfie"),
   },
   {
     title: "Make sure your date of birth is correct",
     how: "Check it matches your real date of birth.",
     path: "Settings → Accounts Center → Personal details → Birthday",
-    link: IG_PERSONAL,
+    link: instagramStepLink(PORTAL_URL, "birthday"),
   },
   {
     title: "Remove devices you don't recognise",
     how: "Check every phone and computer logged in to your account and log out any you don't know.",
     path: "Settings → Accounts Center → Password and security → Where you're logged in",
-    link: IG_SECURITY,
+    link: instagramStepLink(PORTAL_URL, "devices"),
   },
   {
     title: "Use a different email and phone number for each account",
@@ -1143,7 +1142,7 @@ const CHECKLIST_DO: ChecklistStep[] = [
     title: "Turn on two-factor authentication",
     how: "Use an authenticator app or text message, so nobody can log in with just your password.",
     path: "Settings → Accounts Center → Password and security → Two-factor authentication",
-    link: IG_SECURITY,
+    link: instagramStepLink(PORTAL_URL, "two_factor"),
   },
   {
     title: "Only post content that follows Instagram's guidelines",
@@ -1209,9 +1208,9 @@ export function protectionChecklistEmail(opts: { clientName: string; planName: s
     </div>
 
     <p style="margin:0 0 10px;color:${TEXT_DARK};font-size:15px;line-height:1.7;">
-      Do all the steps in one place — Instagram's Accounts Center:
+      Do all the steps in the Instagram app — Accounts Center:
     </p>
-    ${bigButton("Open Instagram Accounts Center →", IG_ACCOUNTS_CENTER)}
+    ${bigButton("Open the Instagram app →", IG_ACCOUNTS_CENTER)}
     <p style="margin:0 0 6px;color:${TEXT_DARK};font-size:15px;line-height:1.7;">
       Stuck on a step? Message your MetaShield agent and we'll walk you through it.
     </p>
@@ -1221,7 +1220,7 @@ export function protectionChecklistEmail(opts: { clientName: string; planName: s
       </td></tr>
     </table>
     <p style="margin:0;color:${TEXT_LIGHT};font-size:12px;line-height:1.6;">
-      The links open Instagram's Accounts Center — log in if asked. Menu names can look slightly different depending on your app
+      The buttons open the Instagram app. Menu names can look slightly different depending on your app
       version. If you can't find an option, message us.
     </p>
   `);
@@ -1241,7 +1240,7 @@ export function protectionChecklistText(opts: { clientName: string; planName: st
     ),
     "DO NOT DO THESE:",
     ...CHECKLIST_DONT.map((d) => `- ${strip(d)}`),
-    `Instagram Accounts Center: ${IG_ACCOUNTS_CENTER}`,
+    `Open the Instagram app: ${IG_ACCOUNTS_CENTER}`,
     `Stuck on a step? Message your MetaShield agent: ${PORTAL_URL}/portal/messages`,
   ].join("\n\n");
 }
