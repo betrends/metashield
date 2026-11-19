@@ -749,6 +749,16 @@ function urgencyHero(chip: string, chipColor: string, headline: string, sub: str
     </div>`;
 }
 
+// A light lavender version of urgencyHero (the protection checklist).
+function lightHero(chip: string, chipColor: string, headline: string, sub: string) {
+  return `
+    <div style="background:linear-gradient(135deg,#faf8ff 0%,#ede9fe 100%);background-color:#f5f3ff;border:1px solid #ddd6fe;border-radius:14px;padding:28px 26px;margin:0 0 24px;">
+      <span style="display:inline-block;background:${chipColor};color:#ffffff;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;border-radius:999px;padding:6px 12px;">${chip}</span>
+      <h1 style="margin:16px 0 10px;color:#3b0764;font-size:26px;font-weight:800;line-height:1.25;">${headline}</h1>
+      <p style="margin:0;color:${TEXT_MID};font-size:15px;line-height:1.6;">${sub}</p>
+    </div>`;
+}
+
 function iconList(title: string, items: string[], icon: string, color: string) {
   return `
     <p style="margin:0 0 10px;color:${TEXT_DARK};font-size:15px;font-weight:800;">${title}</p>
@@ -1184,11 +1194,11 @@ export function protectionChecklistEmail(opts: { clientName: string; planName: s
   ).join("");
   return wrapper(`
     ${preheader(`Your ${planName} is active. These steps are compulsory to keep your account protected — they take about 10 minutes.`)}
-    ${urgencyHero(
+    ${lightHero(
       "Compulsory",
       "#dc2626",
       `${first}, do these today to keep your account protected.`,
-      `Your <strong style="color:#ffffff;">${planName}</strong> is ${opts.existing ? "" : "now "}active. To keep your account protected, these steps are <strong style="color:#ffffff;">compulsory</strong>. They take about 10 minutes.`
+      `Your <strong style="color:${BRAND_PURPLE};">${planName}</strong> is ${opts.existing ? "" : "now "}active. To keep your account protected, these steps are <strong style="color:#dc2626;">compulsory</strong>. They take about 10 minutes.`
     )}
     <p style="margin:0 0 12px;color:${GREEN};font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;">✅ Do these now</p>
     <table cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 14px;">${steps}</table>
