@@ -1,7 +1,7 @@
 // Admin → Email users. Admin only.
 //
 // GET  ?preview=1 → the email as a web page (sample name), for the preview.
-// GET  ?clients=all|no_package|none&leads=1
+// GET  ?clients=all|no_package|with_package|none&leads=1
 //        → how many people the email would reach, the last few sends, and
 //          whether a real sending address is set up. No addresses are
 //          returned to the browser.
@@ -17,6 +17,9 @@
 //          Every recipient is logged (email_broadcast_recipients) so the same
 //          send can never email anyone twice; requestId stops a double click
 //          or a retried request from starting a second send.
+// POST { action: "test_checklist" } → the protection checklist, to the admin only.
+// POST { action: "send_checklist", requestId }
+//        → the protection checklist to every client with an active package.
 // POST { action: "resume", broadcastId }
 //        → sends to anyone a stopped send hadn't reached yet, and retries
 //          the ones that failed.
@@ -25,8 +28,22 @@ import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/server";
 import { getAdminRole } from "@/lib/admin/auth";
-import { buildRecipients, parseAudience, parseExtraEmails, senderReady, type Recipient } from "@/lib/server/broadcast";
-import { broadcastEmail, broadcastText, PACKAGES_ANNOUNCEMENT_SUBJECT } from "@/lib/email-templates";
+import {
+  buildActivePackageRecipients,
+  buildRecipients,
+  parseAudience,
+  parseExtraEmails,
+  senderReady,
+  type Recipient,
+} from "@/lib/server/broadcast";
+import {
+  broadcastEmail,
+  broadcastText,
+  PACKAGES_ANNOUNCEMENT_SUBJECT,
+  PROTECTION_CHECKLIST_SUBJECT,
+  protectionChecklistEmail,
+  protectionChecklistText,
+} from "@/lib/email-templates";
 import { DEFAULT_BROADCAST_CONTENT, parseBroadcastContent, type BroadcastContent } from "@/lib/broadcast-content";
 import { unsubscribeUrl } from "@/lib/server/unsubscribe";
 
@@ -41,7 +58,21 @@ function cleanSubject(v: unknown): string {
   return s || PACKAGES_ANNOUNCEMENT_SUBJECT;
 }
 
-function emailFor(r: Pick<Recipient, "email" | "name" | "kind">, subject: string, content: BroadcastContent) {
+// "custom": the email written on the page. "checklist": the compulsory
+// protection checklist, for clients with an active package (a service
+// email about their package, so no unsubscribe link).
+type Template = "custom" | "checklist";
+
+function emailFor(r: Pick<Recipient, "email" | "name" | "kind">, subject: string, content: BroadcastContent, template: Template = "custom") {
+  if (template === "checklist") {
+    return {
+      from: process.env.RESEND_FROM_EMAIL || "MetaShield <onboarding@resend.dev>",
+      to: [r.email],
+      subject,
+      html: protectionChecklistEmail({ clientName: r.name, planName: "", existing: true }),
+      text: protectionChecklistText({ clientName: r.name, planName: "", existing: true }),
+    };
+  }
   const unsub = unsubscribeUrl(r.email);
   return {
     from: process.env.RESEND_FROM_EMAIL || "MetaShield <onboarding@resend.dev>",
@@ -71,6 +102,12 @@ export async function GET(request: Request) {
     console.error("[broadcast] count failed:", err);
     return NextResponse.json({ error: "query_failed" }, { status: 500 });
   }
+  let activePackageCount = 0;
+  try {
+    activePackageCount = (await buildActivePackageRecipients(admin)).length;
+  } catch (err) {
+    console.error("[broadcast] active package count failed:", err);
+  }
   const { data: history, error: historyError } = await admin
     .from("email_broadcasts")
     .select("id, subject, audience, status, recipient_count, sent_count, failed_count, created_at, finished_at")
@@ -79,6 +116,7 @@ export async function GET(request: Request) {
   const sender = senderReady();
   return NextResponse.json({
     count,
+    activePackageCount,
     history: history ?? [],
     setupNeeded: !!historyError, // the email_broadcasts table (migration 016) isn't there yet
     sender: { ok: sender.ok, from: sender.from },
@@ -141,11 +179,77 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, sentTo: role.email });
   }
 
+  // ── Checklist test: only to the admin ──
+  if (body.action === "test_checklist") {
+    const { error } = await resend.emails.send({
+      ...emailFor({ email: role.email, name: "", kind: "client" }, `[TEST] ${PROTECTION_CHECKLIST_SUBJECT}`, DEFAULT_BROADCAST_CONTENT, "checklist"),
+      to: role.email,
+    });
+    if (error) {
+      console.error("[broadcast] checklist test failed:", error);
+      return NextResponse.json({ error: "send_failed", detail: typeof error === "object" ? JSON.stringify(error) : String(error) }, { status: 502 });
+    }
+    return NextResponse.json({ ok: true, sentTo: role.email });
+  }
+
   let broadcastId: string;
   let subject: string;
   let content: BroadcastContent;
+  let template: Template = "custom";
 
-  if (body.action === "send") {
+  if (body.action === "send_checklist") {
+    // The protection checklist to every client with an active package.
+    const requestId = typeof body.requestId === "string" ? body.requestId.slice(0, 80) : "";
+    if (!requestId) return NextResponse.json({ error: "missing_request_id" }, { status: 400 });
+    subject = PROTECTION_CHECKLIST_SUBJECT;
+    content = DEFAULT_BROADCAST_CONTENT;
+    template = "checklist";
+    const { data: running } = await admin
+      .from("email_broadcasts")
+      .select("id")
+      .eq("status", "sending")
+      .gt("started_at", new Date(Date.now() - STALE_MS).toISOString())
+      .limit(1);
+    if ((running ?? []).length > 0) return NextResponse.json({ error: "already_sending" }, { status: 409 });
+    const { data: created, error: createError } = await admin
+      .from("email_broadcasts")
+      .insert({
+        request_id: requestId,
+        subject,
+        template: "checklist",
+        audience: { activePackages: true },
+        created_by: role.email,
+        status: "sending",
+        started_at: new Date().toISOString(),
+      })
+      .select("id")
+      .single();
+    if (createError || !created) {
+      if ((createError as { code?: string } | null)?.code === "23505") return NextResponse.json({ error: "already_started" }, { status: 409 });
+      console.error("[broadcast] checklist create failed:", createError);
+      return NextResponse.json({ error: "setup_needed" }, { status: 500 });
+    }
+    broadcastId = created.id as string;
+    let recipients: Recipient[];
+    try {
+      recipients = await buildActivePackageRecipients(admin);
+    } catch (err) {
+      await admin.from("email_broadcasts").update({ status: "failed", error: String(err).slice(0, 500), finished_at: new Date().toISOString() }).eq("id", broadcastId);
+      return NextResponse.json({ error: "query_failed" }, { status: 500 });
+    }
+    for (let i = 0; i < recipients.length; i += 500) {
+      const { error } = await admin.from("email_broadcast_recipients").upsert(
+        recipients.slice(i, i + 500).map((r) => ({ broadcast_id: broadcastId, email: r.email, name: r.name, kind: r.kind, status: "pending" })),
+        { onConflict: "broadcast_id,email", ignoreDuplicates: true }
+      );
+      if (error) {
+        await admin.from("email_broadcasts").update({ status: "failed", error: "could not save recipients", finished_at: new Date().toISOString() }).eq("id", broadcastId);
+        console.error("[broadcast] checklist recipients insert failed:", error);
+        return NextResponse.json({ error: "db_error" }, { status: 500 });
+      }
+    }
+    await admin.from("email_broadcasts").update({ recipient_count: recipients.length }).eq("id", broadcastId);
+  } else if (body.action === "send") {
     const audience = parseAudience({ clients: body.clients, leads: body.leads, extra: body.extra });
     if (!audience) return NextResponse.json({ error: "invalid_audience" }, { status: 400 });
     // Pasted emails: the admin confirms these people know MetaShield.
@@ -211,7 +315,7 @@ export async function POST(request: Request) {
     await admin.from("email_broadcasts").update({ recipient_count: recipients.length }).eq("id", broadcastId);
   } else if (body.action === "resume") {
     broadcastId = typeof body.broadcastId === "string" ? body.broadcastId : "";
-    const { data: b } = await admin.from("email_broadcasts").select("id, subject, status, started_at, content").eq("id", broadcastId).maybeSingle();
+    const { data: b } = await admin.from("email_broadcasts").select("id, subject, status, started_at, content, template").eq("id", broadcastId).maybeSingle();
     if (!b) return NextResponse.json({ error: "not_found" }, { status: 404 });
     if (b.status === "sending" && new Date(b.started_at as string).getTime() > Date.now() - STALE_MS)
       return NextResponse.json({ error: "already_sending" }, { status: 409 });
@@ -226,6 +330,7 @@ export async function POST(request: Request) {
     if (!claimed) return NextResponse.json({ error: "already_sending" }, { status: 409 });
     subject = b.subject as string;
     content = parseBroadcastContent(b.content); // the same email as the first try
+    template = b.template === "checklist" ? "checklist" : "custom";
     // Retry the ones that failed (e.g. a daily limit was hit). People whose
     // batch was cut off mid-send ("sending") are left alone — they may
     // already have the email.
@@ -255,7 +360,7 @@ export async function POST(request: Request) {
     // even if this request is cut off mid-way.
     const ids = rows.map((r) => r.id);
     await admin.from("email_broadcast_recipients").update({ status: "sending" }).in("id", ids);
-    const { error } = await resend.batch.send(rows.map((r) => emailFor({ email: r.email, name: r.name ?? "", kind: r.kind }, subject, content)));
+    const { error } = await resend.batch.send(rows.map((r) => emailFor({ email: r.email, name: r.name ?? "", kind: r.kind }, subject, content, template)));
     if (error) {
       console.error("[broadcast] batch failed:", error);
       const message = (typeof error === "object" ? JSON.stringify(error) : String(error)).slice(0, 500);

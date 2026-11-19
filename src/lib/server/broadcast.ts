@@ -3,7 +3,8 @@
 //
 //  - Registered clients: everyone with a MetaShield account (profiles),
 //    except staff (the admin and agents). Optionally only those without an
-//    active package.
+//    active package (recovery clients), or only those with one (protection
+//    clients).
 //  - Form leads: people who ticked "email me" on the account health check
 //    or the recovery eligibility check.
 //  - Extra emails: addresses the admin pastes in (people who aren't on the
@@ -14,7 +15,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isPlanId } from "@/lib/portal/billing";
 
-export type ClientAudience = "all" | "no_package" | "none";
+export type ClientAudience = "all" | "no_package" | "with_package" | "none";
 export type Audience = { clients: ClientAudience; leads: boolean; extra: string[] };
 export type Recipient = { email: string; name: string; kind: "client" | "lead" | "contact" };
 
@@ -41,7 +42,7 @@ export function parseExtraEmails(input: unknown): { valid: string[]; invalid: st
 
 export function parseAudience(input: { clients?: unknown; leads?: unknown; extra?: unknown }): Audience | null {
   const clients = input.clients;
-  if (clients !== "all" && clients !== "no_package" && clients !== "none") return null;
+  if (clients !== "all" && clients !== "no_package" && clients !== "with_package" && clients !== "none") return null;
   const leads = input.leads === true || input.leads === "1" || input.leads === "true";
   const extra = parseExtraEmails(input.extra).valid;
   if (clients === "none" && !leads && extra.length === 0) return null;
@@ -77,7 +78,7 @@ export async function buildRecipients(admin: SupabaseClient, audience: Audience)
     else if (kind === "client" && existing.kind !== "client") byEmail.set(email, { email, name: name || existing.name, kind });
   };
 
-  const needPackages = audience.clients === "no_package" || audience.leads || audience.extra.length > 0;
+  const needPackages = audience.clients !== "all" || audience.leads || audience.extra.length > 0;
   const [profiles, subs] = await Promise.all([
     readAll<{ id: string; full_name: string | null; email: string | null }>((a, b) =>
       admin.from("profiles").select("id, full_name, email").order("created_at", { ascending: true }).range(a, b)
@@ -101,6 +102,7 @@ export async function buildRecipients(admin: SupabaseClient, audience: Audience)
   if (audience.clients !== "none") {
     for (const p of profiles) {
       if (audience.clients === "no_package" && withPackage.has(p.id)) continue;
+      if (audience.clients === "with_package" && !withPackage.has(p.id)) continue;
       add(norm(p.email), String(p.full_name ?? "").trim(), "client");
     }
   }
@@ -137,4 +139,33 @@ export async function buildRecipients(admin: SupabaseClient, audience: Audience)
 export function senderReady(): { ok: boolean; from: string } {
   const from = process.env.RESEND_FROM_EMAIL || "";
   return { ok: !!process.env.RESEND_API_KEY && !!from && !/resend\.dev/i.test(from), from };
+}
+
+// Clients whose package is active right now (not ended, current packages
+// only) — for the protection checklist. Staff are left out. This is a
+// service email about their package, so it isn't held back by the
+// marketing unsubscribe list.
+export async function buildActivePackageRecipients(admin: SupabaseClient): Promise<Recipient[]> {
+  const norm = (e: unknown) => String(e ?? "").trim().toLowerCase();
+  const [agents, profiles, subs] = await Promise.all([
+    readAll<{ email: string | null }>((a, b) => admin.from("agents").select("email").range(a, b)),
+    readAll<{ id: string; full_name: string | null; email: string | null }>((a, b) =>
+      admin.from("profiles").select("id, full_name, email").order("created_at", { ascending: true }).range(a, b)
+    ),
+    readAll<{ user_id: string; plan_id: string; renews_on: string | null }>((a, b) =>
+      admin.from("subscriptions").select("user_id, plan_id, renews_on").eq("status", "active").range(a, b)
+    ),
+  ]);
+  const staff = new Set([norm(process.env.ADMIN_EMAIL), ...agents.map((x) => norm(x.email))].filter(Boolean));
+  const graceStart = Date.now() - 24 * 60 * 60 * 1000; // same rule as activePackageFor
+  const active = new Set(
+    subs.filter((s) => isPlanId(s.plan_id) && (!s.renews_on || new Date(s.renews_on).getTime() >= graceStart)).map((s) => s.user_id)
+  );
+  const byEmail = new Map<string, Recipient>();
+  for (const p of profiles) {
+    const email = norm(p.email);
+    if (!active.has(p.id) || !EMAIL_RE.test(email) || staff.has(email) || byEmail.has(email)) continue;
+    byEmail.set(email, { email, name: String(p.full_name ?? "").trim(), kind: "client" });
+  }
+  return [...byEmail.values()];
 }
