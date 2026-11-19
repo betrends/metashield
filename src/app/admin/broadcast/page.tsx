@@ -17,7 +17,7 @@ import {
 
 const DRAFT_KEY = "ms-broadcast-draft-v1";
 
-type ClientAudience = "all" | "no_package" | "none";
+type ClientAudience = "all" | "no_package" | "with_package" | "none";
 type HistoryRow = {
   id: string;
   subject: string;
@@ -40,7 +40,8 @@ type Info = {
 
 const clientOptions: { value: ClientAudience; label: string; hint: string }[] = [
   { value: "all", label: "All registered clients", hint: "Everyone with a MetaShield account" },
-  { value: "no_package", label: "Only clients without a package", hint: "Leaves out clients who already have a package" },
+  { value: "with_package", label: "Only protection clients", hint: "Clients with an active MetaShield package" },
+  { value: "no_package", label: "Only recovery clients (no package)", hint: "Leaves out clients who already have a package" },
   { value: "none", label: "No registered clients", hint: "" },
 ];
 
@@ -48,7 +49,8 @@ function audienceLabel(a: HistoryRow["audience"]) {
   const parts: string[] = [];
   if (a?.activePackages) return "Protection checklist · clients with an active package";
   if (a?.clients === "all") parts.push("All clients");
-  if (a?.clients === "no_package") parts.push("Clients without a package");
+  if (a?.clients === "no_package") parts.push("Recovery clients (no package)");
+  if (a?.clients === "with_package") parts.push("Protection clients");
   if (a?.leads) parts.push("Form leads");
   if (a?.extraCount) parts.push(`${a.extraCount} extra email${a.extraCount === 1 ? "" : "s"}`);
   return parts.join(" + ") || "—";
@@ -418,7 +420,10 @@ export default function AdminBroadcastPage() {
                     name="clients"
                     className="mt-1 accent-brand-600"
                     checked={clients === o.value}
-                    onChange={() => setClients(o.value)}
+                    onChange={() => {
+                      setClients(o.value);
+                      if (o.value === "with_package") setLeads(false); // form leads aren't protection clients
+                    }}
                   />
                   <span>
                     <span className="block text-sm font-semibold text-ink-900">{o.label}</span>

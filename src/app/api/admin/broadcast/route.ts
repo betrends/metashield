@@ -1,7 +1,7 @@
 // Admin → Email users. Admin only.
 //
 // GET  ?preview=1 → the email as a web page (sample name), for the preview.
-// GET  ?clients=all|no_package|none&leads=1
+// GET  ?clients=all|no_package|with_package|none&leads=1
 //        → how many people the email would reach, the last few sends, and
 //          whether a real sending address is set up. No addresses are
 //          returned to the browser.
