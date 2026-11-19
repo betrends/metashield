@@ -1088,9 +1088,11 @@ const CHECKLIST_DONT: string[] = [
   "<strong>Don't log in on phones or computers you don't own.</strong>",
 ];
 
-export function protectionChecklistEmail(opts: { clientName: string; planName: string }) {
+// existing: sent to clients whose package was already running (from Admin
+// → Email users) — "is active" instead of "is now active".
+export function protectionChecklistEmail(opts: { clientName: string; planName: string; existing?: boolean }) {
   const first = escapeHtml((opts.clientName || "").trim().split(/\s+/)[0] || "there");
-  const planName = escapeHtml(opts.planName);
+  const planName = escapeHtml(opts.planName || "MetaShield package");
   const steps = CHECKLIST_DO.map(
     (s, i) => `
       <tr>
@@ -1120,7 +1122,7 @@ export function protectionChecklistEmail(opts: { clientName: string; planName: s
       "Compulsory",
       "#dc2626",
       `${first}, do these today to keep your account protected.`,
-      `Your <strong style="color:#ffffff;">${planName}</strong> is now active. To keep your account protected, these steps are <strong style="color:#ffffff;">compulsory</strong>. They take about 10 minutes.`
+      `Your <strong style="color:#ffffff;">${planName}</strong> is ${opts.existing ? "" : "now "}active. To keep your account protected, these steps are <strong style="color:#ffffff;">compulsory</strong>. They take about 10 minutes.`
     )}
     <p style="margin:0 0 12px;color:${GREEN};font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;">✅ Do these now</p>
     <table cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 14px;">${steps}</table>
@@ -1141,12 +1143,13 @@ export function protectionChecklistEmail(opts: { clientName: string; planName: s
 }
 
 // Plain-text copy of the checklist (sent alongside the designed email).
-export function protectionChecklistText(opts: { clientName: string; planName: string }) {
+export function protectionChecklistText(opts: { clientName: string; planName: string; existing?: boolean }) {
   const first = (opts.clientName || "").trim().split(/\s+/)[0] || "there";
+  const planName = opts.planName || "MetaShield package";
   const strip = (s: string) => s.replace(/<[^>]+>/g, "");
   return [
     `${first}, do these today to keep your account protected.`,
-    `Your ${opts.planName} is now active. These steps are compulsory and take about 10 minutes.`,
+    `Your ${planName} is ${opts.existing ? "" : "now "}active. These steps are compulsory and take about 10 minutes.`,
     "DO THESE NOW:",
     ...CHECKLIST_DO.map((s, i) => `${i + 1}. ${s.title}\n   ${s.how}${s.path ? `\n   ${s.path.replace(/→/g, ">")}` : ""}`),
     "DO NOT DO THESE:",

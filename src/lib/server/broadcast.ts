@@ -138,3 +138,32 @@ export function senderReady(): { ok: boolean; from: string } {
   const from = process.env.RESEND_FROM_EMAIL || "";
   return { ok: !!process.env.RESEND_API_KEY && !!from && !/resend\.dev/i.test(from), from };
 }
+
+// Clients whose package is active right now (not ended, current packages
+// only) — for the protection checklist. Staff are left out. This is a
+// service email about their package, so it isn't held back by the
+// marketing unsubscribe list.
+export async function buildActivePackageRecipients(admin: SupabaseClient): Promise<Recipient[]> {
+  const norm = (e: unknown) => String(e ?? "").trim().toLowerCase();
+  const [agents, profiles, subs] = await Promise.all([
+    readAll<{ email: string | null }>((a, b) => admin.from("agents").select("email").range(a, b)),
+    readAll<{ id: string; full_name: string | null; email: string | null }>((a, b) =>
+      admin.from("profiles").select("id, full_name, email").order("created_at", { ascending: true }).range(a, b)
+    ),
+    readAll<{ user_id: string; plan_id: string; renews_on: string | null }>((a, b) =>
+      admin.from("subscriptions").select("user_id, plan_id, renews_on").eq("status", "active").range(a, b)
+    ),
+  ]);
+  const staff = new Set([norm(process.env.ADMIN_EMAIL), ...agents.map((x) => norm(x.email))].filter(Boolean));
+  const graceStart = Date.now() - 24 * 60 * 60 * 1000; // same rule as activePackageFor
+  const active = new Set(
+    subs.filter((s) => isPlanId(s.plan_id) && (!s.renews_on || new Date(s.renews_on).getTime() >= graceStart)).map((s) => s.user_id)
+  );
+  const byEmail = new Map<string, Recipient>();
+  for (const p of profiles) {
+    const email = norm(p.email);
+    if (!active.has(p.id) || !EMAIL_RE.test(email) || staff.has(email) || byEmail.has(email)) continue;
+    byEmail.set(email, { email, name: String(p.full_name ?? "").trim(), kind: "client" });
+  }
+  return [...byEmail.values()];
+}

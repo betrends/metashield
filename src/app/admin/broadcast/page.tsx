@@ -21,7 +21,7 @@ type ClientAudience = "all" | "no_package" | "none";
 type HistoryRow = {
   id: string;
   subject: string;
-  audience: { clients?: ClientAudience; leads?: boolean; extraCount?: number } | null;
+  audience: { clients?: ClientAudience; leads?: boolean; extraCount?: number; activePackages?: boolean } | null;
   status: "sending" | "done" | "stopped" | "failed";
   recipient_count: number;
   sent_count: number;
@@ -30,6 +30,7 @@ type HistoryRow = {
 };
 type Info = {
   count: number;
+  activePackageCount: number;
   history: HistoryRow[];
   setupNeeded: boolean;
   sender: { ok: boolean; from: string };
@@ -45,6 +46,7 @@ const clientOptions: { value: ClientAudience; label: string; hint: string }[] = 
 
 function audienceLabel(a: HistoryRow["audience"]) {
   const parts: string[] = [];
+  if (a?.activePackages) return "Protection checklist · clients with an active package";
   if (a?.clients === "all") parts.push("All clients");
   if (a?.clients === "no_package") parts.push("Clients without a package");
   if (a?.leads) parts.push("Form leads");
@@ -75,6 +77,9 @@ export default function AdminBroadcastPage() {
   const [extraCheck, setExtraCheck] = useState<{ count: number; extraValid: number; invalid: string[] } | null>(null);
   const [checkingExtra, setCheckingExtra] = useState(false);
   const requestId = useRef<string>(newRequestId());
+  const checklistRequestId = useRef<string>(newRequestId());
+  const [checklist, setChecklist] = useState<{ kind: "idle" | "busy" | "ok" | "error"; action?: string; text?: string }>({ kind: "idle" });
+  const [confirmChecklist, setConfirmChecklist] = useState(false);
   const subjectTouched = useRef(false);
   const [content, setContent] = useState<BroadcastContent>(DEFAULT_BROADCAST_CONTENT);
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
@@ -210,6 +215,32 @@ export default function AdminBroadcastPage() {
   const needsConsent = extraValid > 0 && !extraConsent;
   const canSend = !blocked && !nothingSelected && count > 0 && !busyCounting && !sending && !needsConsent;
 
+  async function checklistAction(action: "test_checklist" | "send_checklist") {
+    setChecklist({ kind: "busy", action });
+    try {
+      const res = await fetch("/api/admin/broadcast", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(action === "send_checklist" ? { action, requestId: checklistRequestId.current } : { action }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 409) throw new Error("A send is already running. Wait for it to finish, then refresh this page.");
+      if (!res.ok) throw new Error(data.detail || "Something went wrong. Refresh the page to see what went out.");
+      if (action === "test_checklist") {
+        setChecklist({ kind: "ok", text: `Test sent to ${data.sentTo}. Check your inbox (and spam folder).` });
+      } else {
+        const parts = [`Checklist sent to ${data.sent} ${data.sent === 1 ? "client" : "clients"}.`];
+        if (data.failed) parts.push(`${data.failed} couldn't be sent — use "Try the rest again" below.`);
+        if (data.left) parts.push(`${data.left} still waiting — use "Try the rest again" below.`);
+        setChecklist({ kind: data.failed || data.left ? "error" : "ok", text: parts.join(" ") });
+        checklistRequestId.current = newRequestId();
+        load();
+      }
+    } catch (err) {
+      setChecklist({ kind: "error", text: err instanceof Error ? err.message : "Something went wrong." });
+    }
+  }
+
   async function sendTest() {
     setTestState({ kind: "busy" });
     try {
@@ -294,6 +325,79 @@ export default function AdminBroadcastPage() {
           Emails are sent from <strong>{info.sender.from || "Resend's test address"}</strong>, which only reaches your own inbox.
           Verify your domain in Resend and set RESEND_FROM_EMAIL (for example: MetaShield &lt;hello@yourdomain.com&gt;) in Vercel.
         </Notice>
+      ) : null}
+
+      {/* Protection checklist to clients who already have a package */}
+      <section className="mt-6 rounded-2xl border border-brand-200 bg-gradient-to-br from-brand-50 to-white p-5 shadow-sm sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-wider text-red-600">Compulsory</p>
+            <h2 className="mt-1 text-base font-semibold text-ink-900">Send the protection checklist to clients with an active package</h2>
+            <p className="mt-1 text-sm text-ink-500">
+              The &ldquo;do these / don&apos;t do these&rdquo; email. New clients get it automatically when their package starts — use this
+              once for clients who joined before.{" "}
+              <strong className="text-ink-800">
+                {info.activePackageCount.toLocaleString("en-NG")} {info.activePackageCount === 1 ? "client" : "clients"}
+              </strong>{" "}
+              have an active package.
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-col gap-2 sm:w-56">
+            <button
+              type="button"
+              onClick={() => setConfirmChecklist(true)}
+              disabled={blocked || info.activePackageCount === 0 || checklist.kind === "busy" || sending}
+              className="rounded-full bg-brand-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-brand-600/25 transition hover:bg-brand-700 disabled:opacity-50"
+            >
+              {checklist.kind === "busy" && checklist.action === "send_checklist" ? "Sending…" : `Send to ${info.activePackageCount.toLocaleString("en-NG")}`}
+            </button>
+            <button
+              type="button"
+              onClick={() => checklistAction("test_checklist")}
+              disabled={checklist.kind === "busy" || info.setupNeeded}
+              className="rounded-full border border-ink-200 bg-white px-5 py-2.5 text-sm font-semibold text-ink-800 transition hover:border-brand-400 disabled:opacity-50"
+            >
+              {checklist.kind === "busy" && checklist.action === "test_checklist" ? "Sending test…" : "Send a test to me"}
+            </button>
+          </div>
+        </div>
+        {checklist.kind === "ok" || checklist.kind === "error" ? (
+          <p className={`mt-3 text-sm ${checklist.kind === "ok" ? "text-emerald-700" : "text-amber-800"}`}>{checklist.text}</p>
+        ) : null}
+      </section>
+
+      {confirmChecklist ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink-900/50 p-4 sm:items-center" role="dialog" aria-modal="true">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <p className="text-lg font-bold text-ink-900">Send the checklist now?</p>
+            <p className="mt-2 text-sm text-ink-600">
+              The compulsory protection checklist will go to{" "}
+              <strong>
+                {info.activePackageCount.toLocaleString("en-NG")} {info.activePackageCount === 1 ? "client" : "clients"}
+              </strong>{" "}
+              with an active package. This can&apos;t be undone.
+            </p>
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setConfirmChecklist(false)}
+                className="rounded-full border border-ink-200 px-5 py-2.5 text-sm font-semibold text-ink-700 hover:bg-ink-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmChecklist(false);
+                  checklistAction("send_checklist");
+                }}
+                className="rounded-full bg-brand-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-brand-700"
+              >
+                Yes, send to {info.activePackageCount.toLocaleString("en-NG")}
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_24rem]">
