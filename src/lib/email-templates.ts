@@ -47,6 +47,34 @@ function wrapper(content: string) {
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <!-- Keep our colours in dark mode where the mail app allows it (Apple Mail). -->
+  <meta name="color-scheme" content="light only"/>
+  <meta name="supported-color-schemes" content="light"/>
+  <style>
+    :root{color-scheme:light only;supported-color-schemes:light;}
+    /* Outlook app dark mode recolours backgrounds and text separately:
+       keep the 'Compulsory' box a dark box with light text there. */
+    [data-ogsb] .ms-hero{background-color:#2e1065 !important;border-color:#4c1d95 !important;}
+    [data-ogsc] .ms-hero-title{color:#ffffff !important;}
+    [data-ogsc] .ms-hero-text{color:#ede9fe !important;}
+    [data-ogsb] .ms-card{background-color:#1c1830 !important;border-color:#3b3355 !important;}
+    [data-ogsc] .ms-card-title{color:#ffffff !important;}
+    [data-ogsc] .ms-card-text{color:#d4d4d8 !important;}
+    /* Phones in dark mode (Apple Mail and others that read this): the
+       'Compulsory' box and the step cards turn into dark cards with light
+       text, so they stay readable whatever the mail app does. */
+    @media (prefers-color-scheme: dark) {
+      .ms-hero{background-color:#2e1065 !important;border-color:#4c1d95 !important;}
+      .ms-hero-title{color:#ffffff !important;}
+      .ms-hero-text{color:#ede9fe !important;}
+      .ms-hl{color:#c4b5fd !important;}
+      .ms-hl-red{color:#fca5a5 !important;}
+      .ms-card{background-color:#1c1830 !important;border-color:#3b3355 !important;}
+      .ms-card-label{color:#c4b5fd !important;}
+      .ms-card-title{color:#ffffff !important;}
+      .ms-card-text{color:#d4d4d8 !important;}
+    }
+  </style>
   <title>MetaShield</title>
 </head>
 <body style="margin:0;padding:0;background:${BG};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
@@ -743,7 +771,7 @@ function preheader(text: string) {
 
 function urgencyHero(chip: string, chipColor: string, headline: string, sub: string) {
   return `
-    <div style="background:linear-gradient(135deg,#1e1b4b 0%,#4c1d95 100%);background-color:#1e1b4b;border-radius:14px;padding:28px 26px;margin:0 0 24px;">
+    <div style="background-color:#2e1065;border-radius:14px;padding:28px 26px;margin:0 0 24px;">
       <span style="display:inline-block;background:${chipColor};color:#ffffff;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;border-radius:999px;padding:6px 12px;">${chip}</span>
       <h1 style="margin:16px 0 10px;color:#ffffff;font-size:26px;font-weight:800;line-height:1.25;">${headline}</h1>
       <p style="margin:0;color:#ddd6fe;font-size:15px;line-height:1.6;">${sub}</p>
@@ -753,10 +781,10 @@ function urgencyHero(chip: string, chipColor: string, headline: string, sub: str
 // A light lavender version of urgencyHero (the protection checklist).
 function lightHero(chip: string, chipColor: string, headline: string, sub: string) {
   return `
-    <div style="background:linear-gradient(135deg,#faf8ff 0%,#ede9fe 100%);background-color:#f5f3ff;border:1px solid #ddd6fe;border-radius:14px;padding:28px 26px;margin:0 0 24px;">
+    <div class="ms-hero" style="background-color:#f5f3ff;border:1px solid #ddd6fe;border-radius:14px;padding:28px 26px;margin:0 0 24px;">
       <span style="display:inline-block;background:${chipColor};color:#ffffff;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;border-radius:999px;padding:6px 12px;">${chip}</span>
-      <h1 style="margin:16px 0 10px;color:#3b0764;font-size:26px;font-weight:800;line-height:1.25;">${headline}</h1>
-      <p style="margin:0;color:${TEXT_MID};font-size:15px;line-height:1.6;">${sub}</p>
+      <h1 class="ms-hero-title" style="margin:16px 0 10px;color:#2e1065;font-size:26px;font-weight:800;line-height:1.25;">${headline}</h1>
+      <p class="ms-hero-text" style="margin:0;color:${TEXT_DARK};font-size:15px;line-height:1.6;">${sub}</p>
     </div>`;
 }
 
@@ -1006,7 +1034,7 @@ export function broadcastEmail(opts: {
   const aboutPackages = c.showComparison || c.showIncluded || c.showPackages;
   return wrapper(`
     ${preheader(escapeHtml(fillName(c.intro, opts.name).replace(/\*\*/g, "").slice(0, 140)))}
-    <div style="background:linear-gradient(135deg,#1e1b4b 0%,#4c1d95 100%);background-color:#1e1b4b;border-radius:14px;padding:28px 26px;margin:0 0 24px;">
+    <div style="background-color:#2e1065;border-radius:14px;padding:28px 26px;margin:0 0 24px;">
       ${c.label ? `<span style="display:inline-block;background:#16a34a;color:#ffffff;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;border-radius:999px;padding:6px 12px;margin:0 0 16px;">${escapeHtml(c.label)}</span>` : ""}
       <h1 style="margin:0 0 10px;color:#ffffff;font-size:26px;font-weight:800;line-height:1.25;">${headline}</h1>
       ${intro}
@@ -1176,15 +1204,15 @@ export function protectionChecklistEmail(opts: { clientName: string; planName: s
     (s, i) => `
       <tr>
         <td style="padding:0 0 14px;">
-          <table cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #ede9fe;border-radius:20px;background:#ffffff;box-shadow:0 8px 24px -12px rgba(76,29,149,0.18);">
+          <table class="ms-card" cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #ede9fe;border-radius:20px;background-color:#ffffff;box-shadow:0 8px 24px -12px rgba(76,29,149,0.18);">
             <tr>
               <td align="center" style="padding:24px 22px 22px;">
                 <div style="width:56px;height:56px;line-height:56px;border-radius:16px;background:linear-gradient(135deg,#f58529 0%,#dd2a7b 50%,#8134af 100%);background-color:#dd2a7b;font-size:28px;text-align:center;margin:0 auto;">${s.icon}</div>
-                <div style="margin-top:14px;color:${BRAND_PURPLE};font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;">Step ${i + 1} of ${CHECKLIST_DO.length}</div>
-                <div style="margin-top:6px;color:${TEXT_DARK};font-size:20px;font-weight:800;line-height:1.3;">${s.title}</div>
-                <div style="margin-top:8px;color:${TEXT_MID};font-size:14px;line-height:1.6;">${s.how}</div>
+                <div class="ms-card-label" style="margin-top:14px;color:${BRAND_PURPLE};font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;">Step ${i + 1} of ${CHECKLIST_DO.length}</div>
+                <div class="ms-card-title" style="margin-top:6px;color:${TEXT_DARK};font-size:20px;font-weight:800;line-height:1.3;">${s.title}</div>
+                <div class="ms-card-text" style="margin-top:8px;color:${TEXT_MID};font-size:14px;line-height:1.6;">${s.how}</div>
                 <table cellpadding="0" cellspacing="0" width="100%" style="margin-top:16px;">
-                  <tr><td align="center" style="background:linear-gradient(90deg,#dd2a7b,#8134af);background-color:#c13584;border-radius:999px;">
+                  <tr><td align="center" bgcolor="#c13584" style="background-color:#c13584;border-radius:999px;">
                     <a href="${instagramStepLink(PORTAL_URL, s.ig)}" style="display:block;padding:13px 10px;color:#ffffff;font-size:14px;font-weight:800;text-decoration:none;white-space:nowrap;">Open Instagram app →</a>
                   </td></tr>
                 </table>
@@ -1200,7 +1228,7 @@ export function protectionChecklistEmail(opts: { clientName: string; planName: s
       "Compulsory",
       "#dc2626",
       `${first}, do these today to keep your account protected.`,
-      `Your <strong style="color:${BRAND_PURPLE};">${planName}</strong> is ${opts.existing ? "" : "now "}active. To keep your account protected, these steps are <strong style="color:#dc2626;">compulsory</strong>. They take about 10 minutes.`
+      `Your <strong class="ms-hl" style="color:${BRAND_PURPLE};">${planName}</strong> is ${opts.existing ? "" : "now "}active. To keep your account protected, these steps are <strong class="ms-hl-red" style="color:#dc2626;">compulsory</strong>. They take about 10 minutes.`
     )}
     <p style="margin:0 0 12px;color:${GREEN};font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;">✅ Do these now</p>
     <table cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 14px;">${steps}</table>
