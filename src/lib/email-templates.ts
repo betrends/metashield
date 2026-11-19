@@ -47,6 +47,10 @@ function wrapper(content: string) {
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <!-- Keep our colours in dark mode where the mail app allows it (Apple Mail). -->
+  <meta name="color-scheme" content="light only"/>
+  <meta name="supported-color-schemes" content="light"/>
+  <style>:root{color-scheme:light only;supported-color-schemes:light;}</style>
   <title>MetaShield</title>
 </head>
 <body style="margin:0;padding:0;background:${BG};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
@@ -743,7 +747,7 @@ function preheader(text: string) {
 
 function urgencyHero(chip: string, chipColor: string, headline: string, sub: string) {
   return `
-    <div style="background:linear-gradient(135deg,#1e1b4b 0%,#4c1d95 100%);background-color:#1e1b4b;border-radius:14px;padding:28px 26px;margin:0 0 24px;">
+    <div style="background-color:#2e1065;border-radius:14px;padding:28px 26px;margin:0 0 24px;">
       <span style="display:inline-block;background:${chipColor};color:#ffffff;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;border-radius:999px;padding:6px 12px;">${chip}</span>
       <h1 style="margin:16px 0 10px;color:#ffffff;font-size:26px;font-weight:800;line-height:1.25;">${headline}</h1>
       <p style="margin:0;color:#ddd6fe;font-size:15px;line-height:1.6;">${sub}</p>
@@ -753,10 +757,10 @@ function urgencyHero(chip: string, chipColor: string, headline: string, sub: str
 // A light lavender version of urgencyHero (the protection checklist).
 function lightHero(chip: string, chipColor: string, headline: string, sub: string) {
   return `
-    <div style="background:linear-gradient(135deg,#faf8ff 0%,#ede9fe 100%);background-color:#f5f3ff;border:1px solid #ddd6fe;border-radius:14px;padding:28px 26px;margin:0 0 24px;">
+    <div style="background-color:#f5f3ff;border:1px solid #ddd6fe;border-radius:14px;padding:28px 26px;margin:0 0 24px;">
       <span style="display:inline-block;background:${chipColor};color:#ffffff;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;border-radius:999px;padding:6px 12px;">${chip}</span>
-      <h1 style="margin:16px 0 10px;color:#3b0764;font-size:26px;font-weight:800;line-height:1.25;">${headline}</h1>
-      <p style="margin:0;color:${TEXT_MID};font-size:15px;line-height:1.6;">${sub}</p>
+      <h1 style="margin:16px 0 10px;color:#2e1065;font-size:26px;font-weight:800;line-height:1.25;">${headline}</h1>
+      <p style="margin:0;color:${TEXT_DARK};font-size:15px;line-height:1.6;">${sub}</p>
     </div>`;
 }
 
@@ -1006,7 +1010,7 @@ export function broadcastEmail(opts: {
   const aboutPackages = c.showComparison || c.showIncluded || c.showPackages;
   return wrapper(`
     ${preheader(escapeHtml(fillName(c.intro, opts.name).replace(/\*\*/g, "").slice(0, 140)))}
-    <div style="background:linear-gradient(135deg,#1e1b4b 0%,#4c1d95 100%);background-color:#1e1b4b;border-radius:14px;padding:28px 26px;margin:0 0 24px;">
+    <div style="background-color:#2e1065;border-radius:14px;padding:28px 26px;margin:0 0 24px;">
       ${c.label ? `<span style="display:inline-block;background:#16a34a;color:#ffffff;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;border-radius:999px;padding:6px 12px;margin:0 0 16px;">${escapeHtml(c.label)}</span>` : ""}
       <h1 style="margin:0 0 10px;color:#ffffff;font-size:26px;font-weight:800;line-height:1.25;">${headline}</h1>
       ${intro}
@@ -1184,7 +1188,7 @@ export function protectionChecklistEmail(opts: { clientName: string; planName: s
                 <div style="margin-top:6px;color:${TEXT_DARK};font-size:20px;font-weight:800;line-height:1.3;">${s.title}</div>
                 <div style="margin-top:8px;color:${TEXT_MID};font-size:14px;line-height:1.6;">${s.how}</div>
                 <table cellpadding="0" cellspacing="0" width="100%" style="margin-top:16px;">
-                  <tr><td align="center" style="background:linear-gradient(90deg,#dd2a7b,#8134af);background-color:#c13584;border-radius:999px;">
+                  <tr><td align="center" bgcolor="#c13584" style="background-color:#c13584;border-radius:999px;">
                     <a href="${instagramStepLink(PORTAL_URL, s.ig)}" style="display:block;padding:13px 10px;color:#ffffff;font-size:14px;font-weight:800;text-decoration:none;white-space:nowrap;">Open Instagram app →</a>
                   </td></tr>
                 </table>
