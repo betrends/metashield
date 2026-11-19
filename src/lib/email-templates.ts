@@ -1039,3 +1039,118 @@ export function broadcastText(opts: { name: string; unsubscribeUrl: string; cont
 export function packagesAnnouncementEmail(opts: { name: string; unsubscribeUrl: string; reason: "client" | "lead" | "contact" }) {
   return broadcastEmail(opts);
 }
+
+// ── Protection checklist ────────────────────────────────────────────────
+// Sent once a package starts (card payment confirmed, or the admin
+// switches it on): the compulsory do's and don'ts that keep the account
+// protected. Not sent again when an active package is renewed.
+
+export const PROTECTION_CHECKLIST_SUBJECT = "Compulsory: do these 6 things to keep your account protected";
+
+type ChecklistStep = { title: string; how: string; path?: string };
+
+const CHECKLIST_DO: ChecklistStep[] = [
+  {
+    title: "Add your verification selfie",
+    how: "This helps Meta confirm the account is yours if it is ever flagged.",
+    path: "Settings → Accounts Center → Password and security → add your verification selfie",
+  },
+  {
+    title: "Make sure your date of birth is correct",
+    how: "Check it matches your real date of birth.",
+    path: "Settings → Accounts Center → Personal details → Birthday",
+  },
+  {
+    title: "Remove devices you don't recognise",
+    how: "Check every phone and computer logged in to your account and log out any you don't know.",
+    path: "Settings → Accounts Center → Password and security → Where you're logged in",
+  },
+  {
+    title: "Use a different email and phone number for each account",
+    how: "If you have 4 accounts, use 4 different email addresses and 4 different phone numbers — never share one between accounts.",
+  },
+  {
+    title: "Turn on two-factor authentication",
+    how: "Use an authenticator app or text message, so nobody can log in with just your password.",
+    path: "Settings → Accounts Center → Password and security → Two-factor authentication",
+  },
+  {
+    title: "Only post content that follows Instagram's guidelines",
+    how: "Keep every post, reel and story within Instagram's Community Guidelines.",
+  },
+];
+
+const CHECKLIST_DONT: string[] = [
+  "<strong>Don't edit your bio or profile details.</strong> Don't change anything — just keep doing your normal posts.",
+  "<strong>Don't share your password or login codes</strong> with anyone. MetaShield will never ask for your password.",
+  "<strong>Don't click links in DMs or emails</strong> saying your account will be disabled or has a copyright problem. Message us first.",
+  "<strong>Don't buy followers or likes</strong>, or use apps that auto-follow, auto-like or track your followers.",
+  "<strong>Don't log in on phones or computers you don't own.</strong>",
+];
+
+export function protectionChecklistEmail(opts: { clientName: string; planName: string }) {
+  const first = escapeHtml((opts.clientName || "").trim().split(/\s+/)[0] || "there");
+  const planName = escapeHtml(opts.planName);
+  const steps = CHECKLIST_DO.map(
+    (s, i) => `
+      <tr>
+        <td style="padding:0 0 10px;">
+          <table cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #e9e5ff;border-radius:12px;background:#faf8ff;">
+            <tr>
+              <td style="width:44px;vertical-align:top;padding:14px 0 14px 14px;">
+                <div style="width:30px;height:30px;line-height:30px;border-radius:999px;background:${BRAND_PURPLE};color:#ffffff;font-size:14px;font-weight:800;text-align:center;">${i + 1}</div>
+              </td>
+              <td style="vertical-align:top;padding:14px 14px 14px 10px;">
+                <div style="color:${TEXT_DARK};font-size:15px;font-weight:800;line-height:1.4;">${s.title}</div>
+                <div style="color:${TEXT_MID};font-size:13px;line-height:1.6;margin-top:3px;">${s.how}</div>
+                ${
+                  s.path
+                    ? `<div style="margin-top:8px;display:inline-block;background:#ffffff;border:1px solid #ddd6fe;border-radius:8px;padding:6px 10px;color:${BRAND_PURPLE};font-size:12px;font-weight:700;line-height:1.5;">📱 ${s.path}</div>`
+                    : ""
+                }
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>`
+  ).join("");
+  return wrapper(`
+    ${preheader(`Your ${planName} is active. These steps are compulsory to keep your account protected — they take about 10 minutes.`)}
+    ${urgencyHero(
+      "Compulsory",
+      "#dc2626",
+      `${first}, do these today to keep your account protected.`,
+      `Your <strong style="color:#ffffff;">${planName}</strong> is now active. To keep your account protected, these steps are <strong style="color:#ffffff;">compulsory</strong>. They take about 10 minutes.`
+    )}
+    <p style="margin:0 0 12px;color:${GREEN};font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;">✅ Do these now</p>
+    <table cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 14px;">${steps}</table>
+
+    <div style="border:1px solid #fecaca;background:#fef2f2;border-radius:12px;padding:16px 16px 4px;margin:0 0 22px;">
+      <p style="margin:0 0 6px;color:#b91c1c;font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;">🚫 Do NOT do these</p>
+      ${iconList("", CHECKLIST_DONT, "✕", "#dc2626").replace(/<p style="margin:0 0 10px;[^"]*"><\/p>/, "")}
+    </div>
+
+    <p style="margin:0 0 6px;color:${TEXT_DARK};font-size:15px;line-height:1.7;">
+      Stuck on a step? Message your MetaShield agent and we'll walk you through it.
+    </p>
+    ${bigButton("Message my agent →", `${PORTAL_URL}/portal/messages`)}
+    <p style="margin:0;color:${TEXT_LIGHT};font-size:12px;line-height:1.6;">
+      Menu names can look slightly different depending on your app version. If you can't find an option, message us.
+    </p>
+  `);
+}
+
+// Plain-text copy of the checklist (sent alongside the designed email).
+export function protectionChecklistText(opts: { clientName: string; planName: string }) {
+  const first = (opts.clientName || "").trim().split(/\s+/)[0] || "there";
+  const strip = (s: string) => s.replace(/<[^>]+>/g, "");
+  return [
+    `${first}, do these today to keep your account protected.`,
+    `Your ${opts.planName} is now active. These steps are compulsory and take about 10 minutes.`,
+    "DO THESE NOW:",
+    ...CHECKLIST_DO.map((s, i) => `${i + 1}. ${s.title}\n   ${s.how}${s.path ? `\n   ${s.path.replace(/→/g, ">")}` : ""}`),
+    "DO NOT DO THESE:",
+    ...CHECKLIST_DONT.map((d) => `- ${strip(d)}`),
+    `Stuck on a step? Message your MetaShield agent: ${PORTAL_URL}/portal/messages`,
+  ].join("\n\n");
+}

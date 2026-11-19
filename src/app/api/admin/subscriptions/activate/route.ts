@@ -14,6 +14,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { getAdminRole } from "@/lib/admin/auth";
 import { getPlan, isPlanId, planEndsOn } from "@/lib/portal/billing";
 import { subscriptionWelcomeEmail } from "@/lib/email-templates";
+import { sendProtectionChecklist, startsNewProtection } from "@/lib/server/protection-checklist";
 
 export async function POST(request: Request) {
   const role = await getAdminRole();
@@ -58,6 +59,8 @@ export async function POST(request: Request) {
 
   // Renewing the same package early adds the new period on top of what's left.
   const now = new Date();
+  // Decided before the package is switched on: a new start gets the checklist.
+  const isNewProtection = startsNewProtection(existing, now);
   const currentEnd = existing?.renews_on ? new Date(existing.renews_on) : null;
   const extendFrom =
     existing?.status === "active" && existing.plan_id === plan.id && currentEnd && currentEnd > now ? currentEnd : now;
@@ -121,5 +124,11 @@ export async function POST(request: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, planId: plan.id, planName: plan.name, renewsOn, paymentRecorded: !invoiceError });
+  // The compulsory "keep your account protected" checklist, once per new start.
+  let checklistSent = false;
+  if (isNewProtection && client.email) {
+    checklistSent = await sendProtectionChecklist({ to: client.email, clientName: (client.user_metadata?.full_name as string | undefined) || "", planName: plan.name });
+  }
+
+  return NextResponse.json({ ok: true, checklistSent, planId: plan.id, planName: plan.name, renewsOn, paymentRecorded: !invoiceError });
 }
