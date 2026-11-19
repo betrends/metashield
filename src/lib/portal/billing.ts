@@ -146,6 +146,28 @@ export function planEndsOn(plan: Plan, from: Date = new Date()): string | null {
   return d.toISOString();
 }
 
+// ── First month free ────────────────────────────────────────────────────
+// New clients (never had a package) can start Watch or Elite with a free
+// first month — no card. Account recovery at no extra cost starts with
+// their first payment. On Annual, a new client's first payment gets a
+// bonus 13th month instead. Lifetime is unchanged.
+export const FREE_MONTH_PLAN_IDS: string[] = ["watch", "elite"];
+export const BONUS_MONTH_PLAN_IDS: string[] = ["annual"];
+
+export function hasFreeFirstMonth(id: unknown): boolean {
+  return typeof id === "string" && FREE_MONTH_PLAN_IDS.includes(id);
+}
+
+export function hasBonusMonth(id: unknown): boolean {
+  return typeof id === "string" && BONUS_MONTH_PLAN_IDS.includes(id);
+}
+
+export function addOneMonth(iso: string): string {
+  const d = new Date(iso);
+  d.setMonth(d.getMonth() + 1);
+  return d.toISOString();
+}
+
 // Monthly value of a package, for revenue figures (Lifetime counts as 0
 // recurring revenue — it's a one-off payment).
 export function monthlyValueKobo(plan: Plan): number {

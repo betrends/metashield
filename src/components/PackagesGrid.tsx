@@ -11,10 +11,14 @@
 // who ask their device for reduced motion (globals.css, "Package cards").
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { PACKAGES_DISCLAIMER, plans, type Plan } from "@/lib/portal/billing";
-import { packageWhatsAppUrl, startPackageCheckout } from "@/lib/portal/start-package";
+import { PACKAGES_DISCLAIMER, hasBonusMonth, hasFreeFirstMonth, plans, type Plan } from "@/lib/portal/billing";
+import { packageWhatsAppUrl, startPackage, startPackageCheckout } from "@/lib/portal/start-package";
 
-type Props = { mode: "public" } | { mode: "portal"; currentPlanId: string | null };
+// currentStatus "trial": the client is in their free first month.
+// freeMonthUsed: the client has already had a package, so no free month.
+type Props =
+  | { mode: "public" }
+  | { mode: "portal"; currentPlanId: string | null; currentStatus?: "active" | "cancelled" | "trial"; freeMonthUsed?: boolean };
 
 const FEATURED = "elite";
 
@@ -56,6 +60,7 @@ const looks: Record<string, Look> = {
 export function PackagesGrid(props: Props) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [errorFor, setErrorFor] = useState<{ id: string; message: string } | null>(null);
+  const [freeMonthUsed, setFreeMonthUsed] = useState(props.mode === "portal" && !!props.freeMonthUsed);
   const rowRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
   // "static" until the browser says animation is OK, so the cards are always
@@ -94,10 +99,16 @@ export function PackagesGrid(props: Props) {
     const step = first.offsetWidth + 16; // card width + gap
     setActive(Math.max(0, Math.min(plans.length - 1, Math.round(row.scrollLeft / step))));
   }
-  async function getPackage(plan: Plan) {
+  async function getPackage(plan: Plan, pay: boolean) {
     setErrorFor(null);
     setBusyId(String(plan.id));
-    const message = await startPackageCheckout(plan);
+    const message = pay ? await startPackageCheckout(plan) : await startPackage(plan);
+    if (message === "free_month_used") {
+      setFreeMonthUsed(true);
+      setErrorFor({ id: String(plan.id), message: "You've already had your free month, so this package starts with payment. Tap the button to pay." });
+      setBusyId(null);
+      return;
+    }
     if (message) {
       setErrorFor({ id: String(plan.id), message });
       setBusyId(null);
@@ -121,6 +132,9 @@ export function PackagesGrid(props: Props) {
       >
         {plans.map((plan, i) => {
           const isCurrent = props.mode === "portal" && props.currentPlanId === plan.id;
+          const inFreeMonth = isCurrent && props.mode === "portal" && props.currentStatus === "trial";
+          const offerFree = hasFreeFirstMonth(plan.id) && !freeMonthUsed && !isCurrent;
+          const offerBonus = hasBonusMonth(plan.id) && !freeMonthUsed && !isCurrent;
           const featured = plan.id === FEATURED && !isCurrent;
           const dark = plan.id === FEATURED;
           const look = looks[String(plan.id)] ?? looks.watch;
@@ -142,7 +156,7 @@ export function PackagesGrid(props: Props) {
               ) : null}
               {isCurrent ? (
                 <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-brand-600 px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-lg">
-                  Your package
+                  {inFreeMonth ? "Your free month" : "Your package"}
                 </span>
               ) : null}
 
@@ -166,10 +180,22 @@ export function PackagesGrid(props: Props) {
               <h3 className={`mt-4 text-lg font-bold ${dark ? "text-white" : "text-ink-900"}`}>{plan.name.replace("MetaShield ", "")}</h3>
               <p className={`mt-0.5 min-h-[2.5rem] text-sm leading-5 ${dark ? "text-brand-100/80" : "text-ink-500"}`}>{plan.tagline}</p>
 
-              {/* Price */}
-              <div className="mt-4 flex items-baseline gap-1.5">
+              {/* Price (same height on every card, with or without the free-month tag) */}
+              <div className="mt-4 sm:min-h-[8.5rem]">
+              {offerFree || offerBonus ? (
+                <span className="pkg-free inline-flex w-fit items-center gap-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-white shadow-md shadow-emerald-600/30">
+                  🎁 {offerFree ? "1st month free" : "+1 month free"}
+                </span>
+              ) : null}
+              <div className={`${offerFree || offerBonus ? "mt-2" : ""} flex items-baseline gap-1.5`}>
                 <span className={`text-4xl font-extrabold tracking-tight xl:text-[2.1rem] ${dark ? "text-white" : "text-ink-900"}`}>{plan.price}</span>
                 <span className={`whitespace-nowrap text-sm font-medium ${dark ? "text-brand-200" : "text-ink-500"}`}>{periodLabel[plan.period]}</span>
+              </div>
+              {offerFree ? (
+                <p className={`mt-1 text-xs font-semibold ${dark ? "text-emerald-200" : "text-emerald-700"}`}>₦0 today · no card needed · then {plan.price}/month</p>
+              ) : offerBonus ? (
+                <p className={`mt-1 text-xs font-semibold ${dark ? "text-emerald-200" : "text-emerald-700"}`}>13 months for the price of 12 on your first package</p>
+              ) : null}
               </div>
 
               {/* What it covers */}
@@ -193,6 +219,11 @@ export function PackagesGrid(props: Props) {
                 </span>
                 <p className={`text-[13px] font-semibold leading-tight ${dark ? "text-emerald-100" : "text-emerald-800"}`}>
                   Account recovery at no extra cost
+                  {offerFree || inFreeMonth ? (
+                    <span className={`mt-0.5 block text-[11px] font-medium ${dark ? "text-emerald-200/80" : "text-emerald-700/80"}`}>
+                      Starts after your first payment
+                    </span>
+                  ) : null}
                 </p>
               </div>
 
@@ -224,10 +255,12 @@ export function PackagesGrid(props: Props) {
                 <PackageButton
                   plan={plan}
                   dark={dark}
-                  isCurrent={isCurrent}
+                  isCurrent={isCurrent && !inFreeMonth}
+                  label={inFreeMonth ? `Pay ${plan.price} to keep it` : offerFree ? "Start my free month" : "Get this package"}
+                  busyLabel={offerFree ? "Starting…" : "Opening payment…"}
                   busy={busyId === plan.id}
                   disabled={busyId !== null}
-                  onClick={() => getPackage(plan)}
+                  onClick={() => getPackage(plan, !offerFree)}
                 />
                 {errorFor?.id === plan.id ? (
                   <p className={`mt-2 text-xs ${dark ? "text-red-300" : "text-risk-high"}`}>
@@ -284,6 +317,8 @@ function PackageButton({
   plan,
   dark,
   isCurrent,
+  label,
+  busyLabel,
   busy,
   disabled,
   onClick,
@@ -291,6 +326,8 @@ function PackageButton({
   plan: Plan;
   dark: boolean;
   isCurrent: boolean;
+  label: string;
+  busyLabel: string;
   busy: boolean;
   disabled: boolean;
   onClick: () => void;
@@ -308,14 +345,14 @@ function PackageButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      aria-label={`Get the ${plan.name} package`}
+      aria-label={`${label} — ${plan.name}`}
       className={`pkg-shine group/btn ${base} ${
         dark
           ? "pkg-shine-auto bg-white text-brand-800 shadow-lg shadow-black/20 hover:bg-brand-50"
           : "bg-gradient-to-r from-brand-600 to-brand-700 text-white shadow-md shadow-brand-600/25 hover:shadow-lg hover:shadow-brand-600/35"
       } disabled:opacity-60`}
     >
-      {busy ? "Opening payment…" : "Get this package"}
+      {busy ? busyLabel : label}
       {busy ? null : (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="transition-transform group-hover/btn:translate-x-1">
           <path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />

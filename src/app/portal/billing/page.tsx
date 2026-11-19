@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { getPlan, isPlanId, type PlanId } from "@/lib/portal/billing";
-import { startPackageCheckout } from "@/lib/portal/start-package";
+import { getPlan, hasFreeFirstMonth, isPlanId, type PlanId } from "@/lib/portal/billing";
+import { startPackage, startPackageCheckout } from "@/lib/portal/start-package";
 import { PackagesGrid } from "@/components/PackagesGrid";
 import {
   fetchSubscription,
@@ -26,6 +26,7 @@ export default function BillingPage() {
   const [confirmation, setConfirmation] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [freeMonthUsed, setFreeMonthUsed] = useState(false);
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -39,6 +40,17 @@ export default function BillingPage() {
     load();
   }, []);
 
+  // Just started the free month (?free=watch): say so once.
+  useEffect(() => {
+    const freePlan = searchParams.get("free");
+    if (!isPlanId(freePlan)) return;
+    setConfirmation(
+      `Your free month of ${getPlan(freePlan).name} has started. Check your email for the steps that keep your account protected.`
+    );
+    router.replace("/portal/billing");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // A package picked on the Pricing page (?plan=…): offer to pay for it here,
   // and with &pay=1 (just signed in to buy it) go straight on to Korapay.
   const pickedPlanId = searchParams.get("plan");
@@ -48,7 +60,7 @@ export default function BillingPage() {
     if (!picked || searchParams.get("pay") !== "1" || autoPayStarted.current) return;
     if (searchParams.get("kpref") || searchParams.get("reference")) return;
     autoPayStarted.current = true;
-    void handleChoosePlan(picked.id as PlanId);
+    void handleChoosePlan(picked.id as PlanId, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -83,10 +95,18 @@ export default function BillingPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function handleChoosePlan(planId: PlanId) {
+  // pay: straight to card payment. Otherwise Watch/Elite start the free
+  // month when the client can still have it.
+  async function handleChoosePlan(planId: PlanId, pay = true) {
     setError(null);
     setBusy(true);
-    const message = await startPackageCheckout(getPlan(planId));
+    const message = pay ? await startPackageCheckout(getPlan(planId)) : await startPackage(getPlan(planId));
+    if (message === "free_month_used") {
+      setFreeMonthUsed(true);
+      setError("You've already had your free month, so this package starts with payment.");
+      setBusy(false);
+      return;
+    }
     if (message) {
       setError(message);
       setBusy(false);
@@ -113,6 +133,8 @@ export default function BillingPage() {
   }
 
   const activePlan = subscription ? getPlan(subscription.planId) : null;
+  const inFreeMonth = subscription?.status === "trial";
+  const canStartFree = !!picked && hasFreeFirstMonth(picked.id) && !subscription && !freeMonthUsed;
   const covered = activePlan
     ? [activePlan.covers.instagram && "Instagram", activePlan.covers.facebook && "Facebook", activePlan.covers.ads && "Meta advertising"].filter(Boolean)
     : [];
@@ -149,12 +171,13 @@ export default function BillingPage() {
           <div>
             <p className="text-sm font-semibold text-ink-900">You picked {picked.name}</p>
             <p className="mt-0.5 text-sm text-ink-600">
-              {picked.price} {picked.period === "lifetime" ? "one-time payment" : picked.priceSuffix} · paid securely by card
-              through Korapay
+              {canStartFree
+                ? `First month free — no card needed. Then ${picked.price}${picked.priceSuffix ?? ""}.`
+                : `${picked.price} ${picked.period === "lifetime" ? "one-time payment" : (picked.priceSuffix ?? "")} · paid securely by card through Korapay`}
             </p>
           </div>
-          <Button onClick={() => handleChoosePlan(picked.id as PlanId)} disabled={busy} className="shrink-0">
-            {busy ? "Opening payment…" : `Pay ${picked.price}`}
+          <Button onClick={() => handleChoosePlan(picked.id as PlanId, !canStartFree)} disabled={busy} className="shrink-0">
+            {busy ? (canStartFree ? "Starting…" : "Opening payment…") : canStartFree ? "Start my free month" : `Pay ${picked.price}`}
           </Button>
         </div>
       ) : null}
@@ -170,15 +193,39 @@ export default function BillingPage() {
                   {activePlan.price} {activePlan.priceSuffix}
                 </span>
               </div>
-              <span className="rounded-full bg-risk-low-bg px-2.5 py-1 text-xs font-semibold text-risk-low">Active</span>
+              {inFreeMonth ? (
+                <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                  🎁 Free month
+                </span>
+              ) : (
+                <span className="rounded-full bg-risk-low-bg px-2.5 py-1 text-xs font-semibold text-risk-low">Active</span>
+              )}
             </div>
-            {covered.length ? (
+            {inFreeMonth ? (
+              <div className="mt-4 rounded-xl bg-brand-50 p-4 ring-1 ring-brand-100">
+                <p className="text-sm font-semibold text-ink-900">
+                  Free until{" "}
+                  {subscription.renewsOn
+                    ? new Date(subscription.renewsOn).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
+                    : "the end of your free month"}
+                </p>
+                <p className="mt-1 text-sm text-ink-600">
+                  Pay {activePlan.price} before then to keep your protection. Account recovery at no extra cost starts with your first
+                  payment. Your paid month starts when the free one ends — you don&apos;t lose any days.
+                </p>
+                <Button onClick={() => handleChoosePlan(activePlan.id as PlanId, true)} disabled={busy} size="sm" className="mt-3">
+                  {busy ? "Opening payment…" : `Pay ${activePlan.price} now`}
+                </Button>
+              </div>
+            ) : covered.length ? (
               <p className="mt-2 text-sm text-ink-600">
                 Recovery included for: <strong className="text-ink-900">{covered.join(" · ")}</strong>
               </p>
             ) : null}
             <p className="mt-1 text-sm text-ink-500">
-              {subscription.renewsOn
+              {inFreeMonth
+                ? null
+                : subscription.renewsOn
                 ? `Active until ${new Date(subscription.renewsOn).toLocaleDateString("en-GB", {
                     day: "numeric",
                     month: "long",
@@ -191,7 +238,7 @@ export default function BillingPage() {
             {activePlan.period !== "lifetime" ? (
               <div className="mt-5 flex flex-wrap gap-3">
                 <Button variant="outline" size="sm" onClick={handleCancel} disabled={busy}>
-                  {busy ? "Please wait…" : "Cancel package"}
+                  {busy ? "Please wait…" : inFreeMonth ? "Stop free month" : "Cancel package"}
                 </Button>
               </div>
             ) : null}
@@ -209,7 +256,12 @@ export default function BillingPage() {
       <div className="mt-10">
         <h2 className="text-lg font-semibold text-ink-900">{activePlan ? "Change package" : "Choose a package"}</h2>
         <div className="mt-4">
-          <PackagesGrid mode="portal" currentPlanId={subscription?.planId ?? null} />
+          <PackagesGrid
+            mode="portal"
+            currentPlanId={subscription?.planId ?? null}
+            currentStatus={subscription?.status}
+            freeMonthUsed={!!subscription || freeMonthUsed}
+          />
         </div>
       </div>
 

@@ -202,6 +202,7 @@ function PackageManager({
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const current = subscription ? getPlan(subscription.planId) : null;
   const expired = !!subscription?.renewsOn && new Date(subscription.renewsOn).getTime() < Date.now() - 864e5;
+  const freeMonth = subscription?.status === "trial";
   const chosen = plans.find((p) => p.id === planId) ?? null;
 
   async function send(body: Record<string, unknown>, success: string) {
@@ -235,22 +236,23 @@ function PackageManager({
             <p className="text-lg font-semibold text-ink-900">{current.name}</p>
             <p className="mt-0.5 text-xs text-ink-500">
               {subscription.renewsOn
-                ? `${expired ? "Ended" : "Active until"} ${new Date(subscription.renewsOn).toLocaleDateString("en-GB", {
+                ? `${expired ? "Ended" : freeMonth ? "Free month until" : "Active until"} ${new Date(subscription.renewsOn).toLocaleDateString("en-GB", {
                     day: "numeric",
                     month: "short",
                     year: "numeric",
                   })}`
                 : "Lifetime — never ends"}
               {isPlanId(subscription.planId) ? "" : " · old plan (no free recovery)"}
+              {freeMonth ? " · not paid yet (no free recovery until they pay)" : ""}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <span
               className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                expired ? "bg-ink-100 text-ink-500" : "bg-risk-low-bg text-risk-low"
+                expired ? "bg-ink-100 text-ink-500" : freeMonth ? "bg-emerald-50 text-emerald-700" : "bg-risk-low-bg text-risk-low"
               }`}
             >
-              {expired ? "Ended" : "Active"}
+              {expired ? "Ended" : freeMonth ? "Free month" : "Active"}
             </span>
             <button
               type="button"
