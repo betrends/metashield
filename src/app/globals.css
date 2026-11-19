@@ -386,6 +386,24 @@ html {
   }
 }
 
+/* "1st month free" tag on the package cards: a gentle bob */
+@keyframes pkg-bob {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+.pkg-free {
+  animation: pkg-bob 2.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pkg-free {
+    animation: none;
+  }
+}
+
 /* ── "Recovery at no extra cost" band (components/NoExtraCostBanner.tsx) */
 @keyframes nec-glow {
   0%, 100% {

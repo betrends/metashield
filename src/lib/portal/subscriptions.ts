@@ -10,7 +10,7 @@ import type { AnyPlanId as PlanId } from "@/lib/portal/billing";
 
 export type ClientSubscription = {
   planId: PlanId;
-  status: "active" | "cancelled";
+  status: "active" | "cancelled" | "trial"; // trial = free first month, not paid yet
   renewsOn: string | null;
 };
 
@@ -24,7 +24,7 @@ export type ClientInvoice = {
 
 type SubscriptionRow = {
   plan_id: PlanId;
-  status: "active" | "cancelled";
+  status: "active" | "cancelled" | "trial";
   renews_on: string | null;
 };
 
@@ -33,7 +33,7 @@ export async function fetchSubscription(): Promise<ClientSubscription | null> {
   const { data, error } = await supabase
     .from("subscriptions")
     .select("plan_id, status, renews_on")
-    .eq("status", "active")
+    .in("status", ["active", "trial"])
     .maybeSingle();
   if (error) throw error;
   if (!data) return null;

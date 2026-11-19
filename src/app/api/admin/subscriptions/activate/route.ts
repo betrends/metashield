@@ -12,7 +12,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { getAdminRole } from "@/lib/admin/auth";
-import { getPlan, isPlanId, planEndsOn } from "@/lib/portal/billing";
+import { addOneMonth, getPlan, hasBonusMonth, isPlanId, planEndsOn } from "@/lib/portal/billing";
 import { subscriptionWelcomeEmail } from "@/lib/email-templates";
 import { sendProtectionChecklist, startsNewProtection } from "@/lib/server/protection-checklist";
 
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (body.action === "end") {
-    if (!existing || existing.status !== "active") return NextResponse.json({ ok: true, alreadyEnded: true });
+    if (!existing || (existing.status !== "active" && existing.status !== "trial")) return NextResponse.json({ ok: true, alreadyEnded: true });
     const { error } = await admin
       .from("subscriptions")
       .update({ status: "cancelled", updated_at: new Date().toISOString() })
@@ -63,8 +63,14 @@ export async function POST(request: Request) {
   const isNewProtection = startsNewProtection(existing, now);
   const currentEnd = existing?.renews_on ? new Date(existing.renews_on) : null;
   const extendFrom =
-    existing?.status === "active" && existing.plan_id === plan.id && currentEnd && currentEnd > now ? currentEnd : now;
-  const renewsOn = planEndsOn(plan, extendFrom);
+    (existing?.status === "active" && existing.plan_id === plan.id && currentEnd && currentEnd > now) ||
+    // Paying during the free month: the paid period starts when it ends.
+    (existing?.status === "trial" && currentEnd && currentEnd > now)
+      ? currentEnd
+      : now;
+  let renewsOn = planEndsOn(plan, extendFrom);
+  // First month free on Annual: a new client's first payment gets 13 months.
+  if (!existing && hasBonusMonth(plan.id) && renewsOn) renewsOn = addOneMonth(renewsOn);
 
   let subscriptionId: string;
   if (existing) {

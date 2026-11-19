@@ -7,7 +7,7 @@ import { BrandLoader } from "@/components/BrandLoader";
 type Subscription = {
   id: string;
   planId: PlanId;
-  status: "active" | "cancelled";
+  status: "active" | "cancelled" | "trial";
   renewsOn: string | null;
   startedAt: string;
   lifetimePaidKobo: number;
@@ -42,6 +42,7 @@ export default function AdminSubscriptionsPage() {
 
   const all = subs === "loading" ? [] : subs;
   const active = all.filter((s) => s.status === "active");
+  const trials = all.filter((s) => s.status === "trial" && (!s.renewsOn || new Date(s.renewsOn).getTime() >= Date.now()));
   // Monthly value: Annual counts 1/12 per month; Lifetime is a one-off payment.
   const mrrKobo = active.reduce((sum, s) => sum + monthlyValueKobo(getPlan(s.planId)), 0);
   const planCounts = plans.map((p) => ({
@@ -63,6 +64,7 @@ export default function AdminSubscriptionsPage() {
         <div className="rounded-2xl border border-ink-100 bg-white p-5 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">Active Packages</p>
           <p className="mt-2 text-2xl font-semibold text-ink-900">{active.length}</p>
+          {trials.length ? <p className="mt-1 text-xs text-emerald-700">+ {trials.length} on a free month (not paid yet)</p> : null}
         </div>
         <div className="rounded-2xl border border-ink-100 bg-white p-5 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">Monthly Recurring Revenue</p>
@@ -134,10 +136,14 @@ export default function AdminSubscriptionsPage() {
                     <td className="px-5 py-3.5">
                       <span
                         className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                          s.status === "active" ? "bg-risk-low-bg text-risk-low" : "bg-ink-100 text-ink-500"
+                          s.status === "active"
+                            ? "bg-risk-low-bg text-risk-low"
+                            : s.status === "trial"
+                              ? "bg-emerald-50 text-emerald-700"
+                              : "bg-ink-100 text-ink-500"
                         }`}
                       >
-                        {s.status === "active" ? "Active" : "Cancelled"}
+                        {s.status === "active" ? "Active" : s.status === "trial" ? "Free month" : "Cancelled"}
                       </span>
                     </td>
                     <td className="px-5 py-3.5 text-ink-600">

@@ -225,8 +225,8 @@ export async function GET(request: Request) {
   const now = Date.now();
   const { data: packages, error: pkgError } = await admin
     .from("subscriptions")
-    .select("id, user_id, plan_id, renews_on")
-    .eq("status", "active")
+    .select("id, user_id, plan_id, renews_on, status")
+    .in("status", ["active", "trial"]) // trial = free first month
     .not("renews_on", "is", null)
     .lt("renews_on", new Date(now + 4 * DAY).toISOString())
     .gt("renews_on", new Date(now - 3 * DAY).toISOString())
@@ -272,11 +272,18 @@ export async function GET(request: Request) {
       continue;
     }
     const plan = getPlan(p.plan_id);
+    const freeMonth = p.status === "trial";
     try {
       const { error } = await new Resend(resendKey).emails.send({
         from: process.env.RESEND_FROM_EMAIL || "MetaShield <onboarding@resend.dev>",
         to: user.email,
-        subject: kind === "ended" ? `Your ${plan.name} package has ended — renew now` : `Your ${plan.name} package ends soon`,
+        subject: freeMonth
+          ? kind === "ended"
+            ? `Your free month of ${plan.name} has ended — keep your protection`
+            : `Your free month of ${plan.name} ends in 3 days`
+          : kind === "ended"
+            ? `Your ${plan.name} package has ended — renew now`
+            : `Your ${plan.name} package ends soon`,
         html: packageRenewalEmail({
           name: (user.user_metadata?.full_name as string | undefined) || "there",
           planName: plan.name,
@@ -284,6 +291,7 @@ export async function GET(request: Request) {
           priceSuffix: plan.priceSuffix ?? "",
           endsOn: p.renews_on as string,
           kind,
+          freeMonth,
           renewUrl: `${portalUrl}/portal/billing?plan=${plan.id}&pay=1`,
         }),
       });

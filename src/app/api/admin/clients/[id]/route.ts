@@ -36,7 +36,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         .from("subscriptions")
         .select("plan_id, status, renews_on")
         .eq("user_id", id)
-        .eq("status", "active")
+        .in("status", ["active", "trial"]) // trial = free first month
         .maybeSingle(),
     ]);
 

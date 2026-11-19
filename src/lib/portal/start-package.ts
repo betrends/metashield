@@ -1,5 +1,7 @@
 "use client";
 
+// "Start free month" (Watch, Elite — new clients): starts the free first
+// month, no card (startPackage → /api/subscribe/trial).
 // "Get this package": takes the client to Korapay's payment page.
 //   - signed in            → straight to Korapay
 //   - not signed in        → sign in (or create an account), then straight on
@@ -7,7 +9,7 @@
 //   - card payment not set up → WhatsApp, so nobody hits a dead end
 
 import { contact } from "@/lib/site-config";
-import { packageWhatsAppText, type Plan } from "@/lib/portal/billing";
+import { hasFreeFirstMonth, packageWhatsAppText, type Plan } from "@/lib/portal/billing";
 
 const PENDING_KEY = "ms-pending-package";
 
@@ -79,4 +81,35 @@ export async function startPackageCheckout(plan: Plan): Promise<string | null> {
     return null;
   }
   return "We couldn't open the payment page. Please try again in a moment, or get this package on WhatsApp.";
+}
+
+// The main package button. Watch and Elite start the free first month for
+// new clients; everything else (and anyone who already used their free
+// month) goes to payment. Returns an error message to show,
+// "free_month_used" (the page then offers to pay instead), or null when
+// the page is moving on.
+export async function startPackage(plan: Plan): Promise<string | "free_month_used" | null> {
+  if (!hasFreeFirstMonth(plan.id)) return startPackageCheckout(plan);
+  let res: Response;
+  try {
+    res = await fetch("/api/subscribe/trial", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ planId: plan.id }),
+    });
+  } catch {
+    return "We couldn't start your free month. Check your internet connection and try again.";
+  }
+  if (res.ok) {
+    forgetPendingPackage();
+    window.location.href = `/portal/billing?free=${encodeURIComponent(String(plan.id))}`;
+    return null;
+  }
+  if (res.status === 401) {
+    rememberPendingPackage(String(plan.id));
+    window.location.href = `/portal/login?next=${encodeURIComponent(payAfterSignInPath(String(plan.id)))}`;
+    return null;
+  }
+  if (res.status === 409) return "free_month_used";
+  return "We couldn't start your free month. Please try again in a moment, or message us on WhatsApp.";
 }

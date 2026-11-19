@@ -569,7 +569,7 @@ export function HealthCheckWizard() {
                   className="mt-4 w-full"
                 >{t("Get Account Protection Now")}</ButtonLink>
               )}
-              <p className="mt-2 text-xs text-ink-400">{t("From ₦10,000/month · takes 2 minutes to set up")}</p>
+              <p className="mt-2 text-xs text-ink-400">{t("First month free · then from ₦10,000/month")}</p>
             </div>
           ) : (
             <div className="mx-auto mt-6 max-w-sm overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 p-6 text-center shadow-lg">

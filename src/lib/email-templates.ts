@@ -651,7 +651,9 @@ export function packageRenewalEmail(opts: {
   endsOn: string;
   kind: "ending_soon" | "ended";
   renewUrl: string;
+  freeMonth?: boolean; // the free first month is ending (nothing paid yet)
 }) {
+  if (opts.freeMonth) return freeMonthEndingEmail(opts);
   const { name, planName, price, priceSuffix } = escapeOpts({
     name: opts.name,
     planName: opts.planName,
@@ -677,6 +679,55 @@ export function packageRenewalEmail(opts: {
     ${ctaButton("Renew now", renewUrl)}
     <p style="margin:16px 0 0;color:${TEXT_LIGHT};font-size:12px;line-height:1.6;">
       You'll pay securely by card through Korapay. Questions? Reply to this email or contact us at ${PORTAL_URL}/contact.
+    </p>
+  `);
+}
+
+// The free first month is ending (or has ended): pay to keep protection,
+// and to unlock account recovery at no extra cost.
+function freeMonthEndingEmail(opts: {
+  name: string;
+  planName: string;
+  price: string;
+  priceSuffix: string;
+  endsOn: string;
+  kind: "ending_soon" | "ended";
+  renewUrl: string;
+}) {
+  const { name, planName, price, priceSuffix } = escapeOpts({
+    name: opts.name,
+    planName: opts.planName,
+    price: opts.price,
+    priceSuffix: opts.priceSuffix,
+  });
+  const renewUrl = escapeHtml(opts.renewUrl);
+  const date = new Date(opts.endsOn).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+  const ended = opts.kind === "ended";
+  const first = name.split(" ")[0] || "there";
+  return wrapper(`
+    ${preheader(ended ? `Your free month has ended. Pay ${price} to keep your account protected.` : `Your free month ends on ${date}. Pay ${price} to keep your account protected.`)}
+    ${urgencyHero(
+      ended ? "Free month ended" : "Free month ending",
+      ended ? "#dc2626" : "#7c3aed",
+      ended ? `${first}, your free month has ended.` : `${first}, your free month ends on ${date}.`,
+      ended
+        ? `Your account is no longer protected by ${planName}. Pay to switch your protection back on.`
+        : `Pay before <strong style="color:#ffffff;">${date}</strong> to keep your account protected. Your paid month starts when the free one ends — you don't lose any days.`
+    )}
+    ${iconList(
+      "When you pay, you get:",
+      [
+        "<strong>Account recovery at no extra cost</strong> — if your account is ever hacked or disabled (for eligible cases covered by your plan).",
+        "Your account kept protected, with your own MetaShield agent.",
+        "No recovery fee and no deposit on covered cases.",
+      ],
+      "✓",
+      "#16a34a"
+    )}
+    <p style="margin:0 0 6px;color:${TEXT_DARK};font-size:15px;"><strong>${planName}</strong> · ${price}${priceSuffix ? ` ${priceSuffix}` : ""}</p>
+    ${bigButton(`Pay ${price} and keep my protection →`, renewUrl)}
+    <p style="margin:0;color:${TEXT_LIGHT};font-size:12px;line-height:1.6;">
+      You'll pay securely by card through Korapay. Recovery is not guaranteed — Meta makes the final decisions.
     </p>
   `);
 }
@@ -1047,23 +1098,32 @@ export function packagesAnnouncementEmail(opts: { name: string; unsubscribeUrl: 
 
 export const PROTECTION_CHECKLIST_SUBJECT = "Compulsory: do these 6 things to keep your account protected";
 
-type ChecklistStep = { title: string; how: string; path?: string };
+// link: opens that page of Instagram's Accounts Center (in the app when it's
+// installed, otherwise the website, after logging in).
+type ChecklistStep = { title: string; how: string; path?: string; link?: string };
+
+const IG_ACCOUNTS_CENTER = "https://accountscenter.instagram.com/";
+const IG_SECURITY = "https://accountscenter.instagram.com/password_and_security/";
+const IG_PERSONAL = "https://accountscenter.instagram.com/personal_info/";
 
 const CHECKLIST_DO: ChecklistStep[] = [
   {
     title: "Add your verification selfie",
     how: "This helps Meta confirm the account is yours if it is ever flagged.",
     path: "Settings → Accounts Center → Password and security → add your verification selfie",
+    link: IG_SECURITY,
   },
   {
     title: "Make sure your date of birth is correct",
     how: "Check it matches your real date of birth.",
     path: "Settings → Accounts Center → Personal details → Birthday",
+    link: IG_PERSONAL,
   },
   {
     title: "Remove devices you don't recognise",
     how: "Check every phone and computer logged in to your account and log out any you don't know.",
     path: "Settings → Accounts Center → Password and security → Where you're logged in",
+    link: IG_SECURITY,
   },
   {
     title: "Use a different email and phone number for each account",
@@ -1073,6 +1133,7 @@ const CHECKLIST_DO: ChecklistStep[] = [
     title: "Turn on two-factor authentication",
     how: "Use an authenticator app or text message, so nobody can log in with just your password.",
     path: "Settings → Accounts Center → Password and security → Two-factor authentication",
+    link: IG_SECURITY,
   },
   {
     title: "Only post content that follows Instagram's guidelines",
@@ -1110,6 +1171,11 @@ export function protectionChecklistEmail(opts: { clientName: string; planName: s
                     ? `<div style="margin-top:8px;display:inline-block;background:#ffffff;border:1px solid #ddd6fe;border-radius:8px;padding:6px 10px;color:${BRAND_PURPLE};font-size:12px;font-weight:700;line-height:1.5;">📱 ${s.path}</div>`
                     : ""
                 }
+                ${
+                  s.link
+                    ? `<div style="margin-top:10px;"><a href="${s.link}" style="display:inline-block;background:${BRAND_PURPLE};color:#ffffff;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:800;text-decoration:none;">Open in Instagram →</a></div>`
+                    : ""
+                }
               </td>
             </tr>
           </table>
@@ -1132,12 +1198,21 @@ export function protectionChecklistEmail(opts: { clientName: string; planName: s
       ${iconList("", CHECKLIST_DONT, "✕", "#dc2626").replace(/<p style="margin:0 0 10px;[^"]*"><\/p>/, "")}
     </div>
 
+    <p style="margin:0 0 10px;color:${TEXT_DARK};font-size:15px;line-height:1.7;">
+      Do all the steps in one place — Instagram's Accounts Center:
+    </p>
+    ${bigButton("Open Instagram Accounts Center →", IG_ACCOUNTS_CENTER)}
     <p style="margin:0 0 6px;color:${TEXT_DARK};font-size:15px;line-height:1.7;">
       Stuck on a step? Message your MetaShield agent and we'll walk you through it.
     </p>
-    ${bigButton("Message my agent →", `${PORTAL_URL}/portal/messages`)}
+    <table cellpadding="0" cellspacing="0" width="100%" style="margin:6px 0 22px;">
+      <tr><td align="center" style="border:2px solid ${BRAND_PURPLE};border-radius:12px;">
+        <a href="${PORTAL_URL}/portal/messages" style="display:block;padding:14px 24px;color:${BRAND_PURPLE};font-size:16px;font-weight:800;text-decoration:none;">Message my agent →</a>
+      </td></tr>
+    </table>
     <p style="margin:0;color:${TEXT_LIGHT};font-size:12px;line-height:1.6;">
-      Menu names can look slightly different depending on your app version. If you can't find an option, message us.
+      The links open Instagram's Accounts Center — log in if asked. Menu names can look slightly different depending on your app
+      version. If you can't find an option, message us.
     </p>
   `);
 }
@@ -1151,9 +1226,12 @@ export function protectionChecklistText(opts: { clientName: string; planName: st
     `${first}, do these today to keep your account protected.`,
     `Your ${planName} is ${opts.existing ? "" : "now "}active. These steps are compulsory and take about 10 minutes.`,
     "DO THESE NOW:",
-    ...CHECKLIST_DO.map((s, i) => `${i + 1}. ${s.title}\n   ${s.how}${s.path ? `\n   ${s.path.replace(/→/g, ">")}` : ""}`),
+    ...CHECKLIST_DO.map(
+      (s, i) => `${i + 1}. ${s.title}\n   ${s.how}${s.path ? `\n   ${s.path.replace(/→/g, ">")}` : ""}${s.link ? `\n   Open: ${s.link}` : ""}`
+    ),
     "DO NOT DO THESE:",
     ...CHECKLIST_DONT.map((d) => `- ${strip(d)}`),
+    `Instagram Accounts Center: ${IG_ACCOUNTS_CENTER}`,
     `Stuck on a step? Message your MetaShield agent: ${PORTAL_URL}/portal/messages`,
   ].join("\n\n");
 }
