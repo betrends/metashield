@@ -66,10 +66,11 @@ function OpenInstagram() {
               </li>
             ))}
           </ol>
+          {step.tip ? <p className="mt-3 border-t border-brand-100 pt-3 text-sm text-ink-600">{step.tip}</p> : null}
         </div>
 
         <a href={step.web} className="mt-5 inline-block text-xs font-semibold text-ink-500 underline hover:text-brand-700">
-          No Instagram app? Open it in the browser instead
+          {step.webLabel ?? "No Instagram app? Open it in the browser instead"}
         </a>
       </div>
     </main>
