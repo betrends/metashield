@@ -1112,7 +1112,7 @@ export const PROTECTION_CHECKLIST_SUBJECT = "Compulsory: do these 6 things to ke
 // ig: which step of our /go/instagram page the button opens — that page
 // opens the Instagram APP and shows what to tap (lib/instagram-links.ts).
 // The email shows the same taps, in the same numbered style.
-type ChecklistStep = { title: string; how: string; ig: InstagramStep };
+type ChecklistStep = { title: string; how: string; ig: InstagramStep; icon: string };
 
 const IG_ACCOUNTS_CENTER = instagramStepLink(PORTAL_URL, "center");
 
@@ -1121,52 +1121,40 @@ const CHECKLIST_DO: ChecklistStep[] = [
     title: "Add your verification selfie",
     how: "This helps Meta confirm the account is yours if it is ever flagged.",
     ig: "selfie",
+    icon: "🤳",
   },
   {
     title: "Make sure your date of birth is correct",
     how: "Check it matches your real date of birth.",
     ig: "birthday",
+    icon: "🎂",
   },
   {
     title: "Remove devices you don't recognise",
     how: "Check every phone and computer logged in to your account and log out any you don't know.",
     ig: "devices",
+    icon: "📱",
   },
   {
     title: "Use a different email and phone number for each account",
     how: "If you have 4 accounts, use 4 different email addresses and 4 different phone numbers — never share one between accounts.",
     ig: "contacts",
+    icon: "✉️",
   },
   {
     title: "Turn on two-factor authentication",
     how: "Use an authenticator app or text message, so nobody can log in with just your password.",
     ig: "two_factor",
+    icon: "🔐",
   },
   {
     title: "Only post content that follows Instagram's guidelines",
     how: "Keep every post, reel and story within Instagram's Community Guidelines. Account Status shows if anything you posted goes against them.",
     ig: "guidelines",
+    icon: "📋",
   },
 ];
 
-// The "IN THE APP, TAP:" box, as email-safe tables.
-function tapList(path: string[]) {
-  return `
-    <table cellpadding="0" cellspacing="0" width="100%" style="margin-top:10px;background:#f5f3ff;border:1px solid #e9e5ff;border-radius:10px;">
-      <tr><td style="padding:10px 12px 4px;color:${BRAND_PURPLE};font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;">In the app, tap:</td></tr>
-      ${path
-        .map(
-          (p, i) => `
-      <tr><td style="padding:3px 12px ${i === path.length - 1 ? "10px" : "3px"};">
-        <table cellpadding="0" cellspacing="0"><tr>
-          <td style="width:22px;vertical-align:middle;"><div style="width:18px;height:18px;line-height:18px;border-radius:999px;background:${BRAND_PURPLE};color:#ffffff;font-size:10px;font-weight:800;text-align:center;">${i + 1}</div></td>
-          <td style="vertical-align:middle;padding-left:6px;color:${TEXT_DARK};font-size:13px;">${escapeHtml(p)}</td>
-        </tr></table>
-      </td></tr>`
-        )
-        .join("")}
-    </table>`;
-}
 
 const CHECKLIST_DONT: string[] = [
   "<strong>Don't edit your bio or profile details.</strong> Don't change anything — just keep doing your normal posts.",
@@ -1181,20 +1169,25 @@ const CHECKLIST_DONT: string[] = [
 export function protectionChecklistEmail(opts: { clientName: string; planName: string; existing?: boolean }) {
   const first = escapeHtml((opts.clientName || "").trim().split(/\s+/)[0] || "there");
   const planName = escapeHtml(opts.planName || "MetaShield package");
+  // Each step is a card in the same look as the /go/instagram page: icon
+  // tile, small purple label, big centred title, its own text, and a
+  // full-width Instagram-coloured button. What to tap is on that page.
   const steps = CHECKLIST_DO.map(
     (s, i) => `
       <tr>
-        <td style="padding:0 0 10px;">
-          <table cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #e9e5ff;border-radius:12px;background:#faf8ff;">
+        <td style="padding:0 0 14px;">
+          <table cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #ede9fe;border-radius:20px;background:#ffffff;box-shadow:0 8px 24px -12px rgba(76,29,149,0.18);">
             <tr>
-              <td style="width:44px;vertical-align:top;padding:14px 0 14px 14px;">
-                <div style="width:30px;height:30px;line-height:30px;border-radius:999px;background:${BRAND_PURPLE};color:#ffffff;font-size:14px;font-weight:800;text-align:center;">${i + 1}</div>
-              </td>
-              <td style="vertical-align:top;padding:14px 14px 14px 10px;">
-                <div style="color:${TEXT_DARK};font-size:15px;font-weight:800;line-height:1.4;">${s.title}</div>
-                <div style="color:${TEXT_MID};font-size:13px;line-height:1.6;margin-top:3px;">${s.how}</div>
-                ${tapList(INSTAGRAM_STEPS[s.ig].path)}
-                <div style="margin-top:10px;"><a href="${instagramStepLink(PORTAL_URL, s.ig)}" style="display:inline-block;background:linear-gradient(90deg,#dd2a7b,#8134af);background-color:#c13584;color:#ffffff;border-radius:999px;padding:9px 16px;font-size:13px;font-weight:800;text-decoration:none;">Open the Instagram app →</a></div>
+              <td align="center" style="padding:24px 22px 22px;">
+                <div style="width:56px;height:56px;line-height:56px;border-radius:16px;background:linear-gradient(135deg,#f58529 0%,#dd2a7b 50%,#8134af 100%);background-color:#dd2a7b;font-size:28px;text-align:center;margin:0 auto;">${s.icon}</div>
+                <div style="margin-top:14px;color:${BRAND_PURPLE};font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;">Step ${i + 1} of ${CHECKLIST_DO.length}</div>
+                <div style="margin-top:6px;color:${TEXT_DARK};font-size:20px;font-weight:800;line-height:1.3;">${s.title}</div>
+                <div style="margin-top:8px;color:${TEXT_MID};font-size:14px;line-height:1.6;">${s.how}</div>
+                <table cellpadding="0" cellspacing="0" width="100%" style="margin-top:16px;">
+                  <tr><td align="center" style="background:linear-gradient(90deg,#dd2a7b,#8134af);background-color:#c13584;border-radius:999px;">
+                    <a href="${instagramStepLink(PORTAL_URL, s.ig)}" style="display:block;padding:13px 10px;color:#ffffff;font-size:14px;font-weight:800;text-decoration:none;white-space:nowrap;">Open Instagram app →</a>
+                  </td></tr>
+                </table>
               </td>
             </tr>
           </table>
