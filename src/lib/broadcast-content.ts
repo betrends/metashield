@@ -13,6 +13,8 @@ export type BroadcastContent = {
   showComparison: boolean; // "Without a package / With a package ₦0" boxes
   showIncluded: boolean; // "Every package includes" list
   showPackages: boolean; // the packages and prices
+  freeMonthTags: boolean; // "1st month free" tags on the monthly packages
+  lightLook: boolean; // light card + Instagram colours (like the app-opener page)
   buttonText: string;
   buttonLink: BroadcastLink;
   customLink: string; // used when buttonLink is "custom"
@@ -38,10 +40,33 @@ export const DEFAULT_BROADCAST_CONTENT: BroadcastContent = {
   showComparison: true,
   showIncluded: true,
   showPackages: true,
+  freeMonthTags: false,
+  lightLook: false,
   buttonText: "See the packages →",
   buttonLink: "packages",
   customLink: "",
   ps: "Accounts get hacked and disabled without warning. Protection only works if it's in place before something goes wrong.",
+};
+
+// Ready-made email: the free first month (Watch, Elite, Business).
+export const FREE_MONTH_SUBJECT = "Is your Instagram protected? Your first month is free";
+
+export const FREE_MONTH_BROADCAST_CONTENT: BroadcastContent = {
+  label: "MetaShield · Account protection",
+  headline: "{name}, if your Instagram got suspended tonight, could you get it back?",
+  intro:
+    "Every day, accounts are **suspended, disabled or restricted** without warning — years of posts, followers and customers gone overnight. Most people only look for help after it happens, when it's harder and costs more.",
+  message:
+    "**MetaShield protects your accounts before something goes wrong.** We check your account security, help you fix weak spots, and if your account is ever suspended, disabled or restricted, our team handles the recovery.\n\n**Without a MetaShield package, you will pay for account recovery — and we all know how expensive it is.** With a package, eligible recoveries cost **₦0 extra**.\n\n**🎁 And right now, your first month is free.**\nStart a **Watch, Elite or Business** package and pay **₦0 for the first month**. No card needed.\n\n**How it works**\n1. Open the packages page and pick a monthly package.\n2. Tap **Start my free month** — your package starts straight away.\n3. Near the end of the month we'll email you a reminder. Nothing is charged automatically.\n\nAccount recovery at no extra cost starts once you make your first payment. Prefer a yearly plan? The **Annual Plan** gives you **13 months for the price of 12** on your first package.",
+  showComparison: false,
+  showIncluded: true,
+  showPackages: true,
+  freeMonthTags: true,
+  lightLook: true,
+  buttonText: "Protect my account free →",
+  buttonLink: "packages",
+  customLink: "",
+  ps: "Protection only works if it's in place before something goes wrong. The free month is for clients starting their first MetaShield package.",
 };
 
 export const BROADCAST_LINKS: { value: BroadcastLink; label: string; path: string }[] = [
@@ -85,6 +110,8 @@ export function parseBroadcastContent(input: unknown): BroadcastContent {
     showComparison: typeof o.showComparison === "boolean" ? o.showComparison : d.showComparison,
     showIncluded: typeof o.showIncluded === "boolean" ? o.showIncluded : d.showIncluded,
     showPackages: typeof o.showPackages === "boolean" ? o.showPackages : d.showPackages,
+    freeMonthTags: typeof o.freeMonthTags === "boolean" ? o.freeMonthTags : d.freeMonthTags,
+    lightLook: typeof o.lightLook === "boolean" ? o.lightLook : d.lightLook,
     buttonText: text(o.buttonText, BROADCAST_LIMITS.buttonText, d.buttonText).trim(),
     // A custom link that isn't a proper web address falls back to the packages page.
     buttonLink: link === "custom" && !customLink ? "packages" : link,

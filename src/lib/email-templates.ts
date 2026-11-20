@@ -804,6 +804,51 @@ function iconList(title: string, items: string[], icon: string, color: string) {
     </table>`;
 }
 
+// Light look (broadcast emails): like richText, but a paragraph of numbered
+// lines ("1. …"), optionally under a heading line, becomes a lavender box
+// with purple numbered circles — the same as the Instagram app-opener page.
+function richTextLight(raw: string): string {
+  const bold = (t: string) => t.replace(/\*\*([^*]+)\*\*/g, '<strong style="color:inherit;">$1</strong>');
+  return escapeHtml(raw)
+    .split(/\n{2,}/)
+    .map((para) => para.trim())
+    .filter(Boolean)
+    .map((para) => {
+      const lines = para.split("\n").map((l) => l.trim());
+      const numbered = lines.filter((l) => /^\d+[.)]\s+/.test(l));
+      const heading = lines.length > numbered.length + 1 ? null : lines.find((l) => !/^\d+[.)]\s+/.test(l)) ?? null;
+      if (numbered.length >= 2 && numbered.length + (heading ? 1 : 0) === lines.length) {
+        const rows = numbered
+          .map((l) => {
+            const [, n, rest] = l.match(/^(\d+)[.)]\s+(.*)$/) as RegExpMatchArray;
+            return `<tr>
+            <td style="width:34px;vertical-align:top;padding:5px 0;"><div style="width:24px;height:24px;line-height:24px;border-radius:999px;background-color:${BRAND_PURPLE};color:#ffffff;font-size:12px;font-weight:800;text-align:center;">${n}</div></td>
+            <td class="ms-card-title" style="vertical-align:top;padding:7px 0 5px;color:${TEXT_DARK};font-size:15px;line-height:1.5;">${bold(rest)}</td>
+          </tr>`;
+          })
+          .join("");
+        return `<table class="ms-card" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 18px;background-color:#f5f3ff;border:1px solid #ede9fe;border-radius:18px;">
+        <tr><td style="padding:18px 20px 14px;">
+          ${heading ? `<div class="ms-card-label" style="margin:0 0 8px;color:${BRAND_PURPLE};font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;">${heading.replace(/\*\*/g, "")}</div>` : ""}
+          <table cellpadding="0" cellspacing="0" width="100%">${rows}</table>
+        </td></tr>
+      </table>`;
+      }
+      return `<p style="margin:0 0 14px;color:${TEXT_DARK};font-size:15px;line-height:1.7;">${bold(lines.join("<br>"))}</p>`;
+    })
+    .join("");
+}
+
+// Pill button in the Instagram pink → purple (solid pink where gradients don't show).
+function instagramButton(text: string, href: string) {
+  return `
+    <table cellpadding="0" cellspacing="0" width="100%" style="margin:6px 0 22px;">
+      <tr><td align="center" bgcolor="#c13584" style="background-color:#c13584;background-image:linear-gradient(90deg,#d6336c 0%,#a33ea1 55%,#7b3fb8 100%);border-radius:999px;box-shadow:0 8px 20px -8px rgba(193,53,132,0.55);">
+        <a href="${href}" style="display:block;padding:17px 24px;color:#ffffff;font-size:17px;font-weight:800;text-decoration:none;">${text}</a>
+      </td></tr>
+    </table>`;
+}
+
 function bigButton(text: string, href: string) {
   return `
     <table cellpadding="0" cellspacing="0" width="100%" style="margin:6px 0 22px;">
@@ -964,7 +1009,7 @@ export function protectionFollowupEmail(opts: {
     <table cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 14px;">
       ${pkg("Watch", "₦10,000/mo", "Instagram + Facebook")}
       ${pkg("Elite", "₦15,000/mo", "2 Instagram + Facebook + Meta ad account")}
-      ${pkg("Business", "₦50,000/mo", "Up to 3 Instagram + 3 Facebook + 3 Meta ad accounts")}
+      ${pkg("Business", "₦25,000/mo", "Up to 3 Instagram + 3 Facebook + 3 Meta ad accounts")}
       ${pkg("Annual Plan", "₦120,000/yr", "2 Instagram + 2 Facebook")}
       ${pkg("Lifetime Plan", "₦500,000 once", "Instagram + Facebook + Meta ad account", "No renewals")}
     </table>
@@ -1025,7 +1070,7 @@ export function broadcastEmail(opts: {
         <td style="padding:12px 14px;border:1px solid #ede9fe;border-radius:10px;background:#faf8ff;">
           <table cellpadding="0" cellspacing="0" width="100%"><tr>
             <td style="color:${TEXT_DARK};font-size:15px;font-weight:800;">${n}${
-              tag ? ` <span style="font-size:10px;font-weight:800;color:${BRAND_PURPLE};background:#ede9fe;border-radius:999px;padding:3px 8px;margin-left:4px;">${tag}</span>` : ""
+              tag ? ` <span style="display:inline-block;white-space:nowrap;font-size:10px;font-weight:800;color:${c.lightLook ? "#be185d" : BRAND_PURPLE};background:${c.lightLook ? "#fce7f3" : "#ede9fe"};border-radius:999px;padding:3px 8px;margin:2px 0 0 4px;">${tag}</span>` : ""
             }<div style="color:${TEXT_MID};font-size:12px;font-weight:400;margin-top:3px;">${covers}</div></td>
             <td align="right" style="color:${BRAND_PURPLE};font-size:15px;font-weight:800;white-space:nowrap;">${price}</td>
           </tr></table>
@@ -1033,14 +1078,27 @@ export function broadcastEmail(opts: {
       </tr>
       <tr><td style="height:8px;"></td></tr>`;
   const aboutPackages = c.showComparison || c.showIncluded || c.showPackages;
-  return wrapper(`
-    ${preheader(escapeHtml(fillName(c.intro, opts.name).replace(/\*\*/g, "").slice(0, 140)))}
-    <div style="background-color:#2e1065;border-radius:14px;padding:28px 26px;margin:0 0 24px;">
+  const lightIntro = richText(fillName(c.intro, opts.name), TEXT_MID)
+    .replace(/margin:0 0 14px/g, "margin:0 0 10px")
+    .replace(/<p style=/g, '<p class="ms-card-text" style=');
+  const hero = c.lightLook
+    ? `<table class="ms-card" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 24px;border:1px solid #ede9fe;border-radius:22px;background-color:#ffffff;box-shadow:0 10px 30px -14px rgba(76,29,149,0.25);">
+      <tr><td align="center" style="padding:28px 24px 18px;">
+        <div style="width:64px;height:64px;line-height:64px;border-radius:18px;background-color:#dd2a7b;background-image:linear-gradient(135deg,#f58529 0%,#dd2a7b 50%,#8134af 100%);font-size:30px;text-align:center;margin:0 auto;">🛡️</div>
+        ${c.label ? `<div class="ms-card-label" style="margin-top:16px;color:${BRAND_PURPLE};font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;">${escapeHtml(c.label.replace(/^\p{Extended_Pictographic}\uFE0F?\s*/u, ""))}</div>` : ""}
+        <h1 class="ms-card-title" style="margin:8px 0 12px;color:${TEXT_DARK};font-size:26px;font-weight:800;line-height:1.25;">${headline}</h1>
+        ${lightIntro}
+      </td></tr>
+    </table>`
+    : `<div style="background-color:#2e1065;border-radius:14px;padding:28px 26px;margin:0 0 24px;">
       ${c.label ? `<span style="display:inline-block;background:#16a34a;color:#ffffff;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;border-radius:999px;padding:6px 12px;margin:0 0 16px;">${escapeHtml(c.label)}</span>` : ""}
       <h1 style="margin:0 0 10px;color:#ffffff;font-size:26px;font-weight:800;line-height:1.25;">${headline}</h1>
       ${intro}
-    </div>
-    ${c.message ? richText(fillName(c.message, opts.name), TEXT_DARK) : ""}
+    </div>`;
+  return wrapper(`
+    ${preheader(escapeHtml(fillName(c.intro, opts.name).replace(/\*\*/g, "").slice(0, 140)))}
+    ${hero}
+    ${c.message ? (c.lightLook ? richTextLight(fillName(c.message, opts.name)) : richText(fillName(c.message, opts.name), TEXT_DARK)) : ""}
     ${
       c.showComparison
         ? `<table cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 22px;">
@@ -1079,15 +1137,15 @@ export function broadcastEmail(opts: {
       c.showPackages
         ? `<p style="margin:0 0 10px;color:${TEXT_DARK};font-size:15px;font-weight:800;">Pick your package:</p>
     <table cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 14px;">
-      ${row("Watch", "₦10,000/mo", "Instagram + Facebook")}
-      ${row("Elite", "₦15,000/mo", "2 Instagram + Facebook + Meta ad account", "Recommended")}
-      ${row("Business", "₦50,000/mo", "Up to 3 Instagram + 3 Facebook + 3 Meta ad accounts")}
-      ${row("Annual Plan", "₦120,000/yr", "2 Instagram + 2 Facebook")}
+      ${row("Watch", "₦10,000/mo", "Instagram + Facebook", c.freeMonthTags ? "1st month free" : "")}
+      ${row("Elite", "₦15,000/mo", "2 Instagram + Facebook + Meta ad account", c.freeMonthTags ? "1st month free" : "Recommended")}
+      ${row("Business", "₦25,000/mo", "Up to 3 Instagram + 3 Facebook + 3 Meta ad accounts", c.freeMonthTags ? "1st month free" : "")}
+      ${row("Annual Plan", "₦120,000/yr", "2 Instagram + 2 Facebook", c.freeMonthTags ? "+1 month free" : "")}
       ${row("Lifetime Plan", "₦500,000 once", "Instagram + Facebook + Meta ad account", "No renewals")}
     </table>`
         : ""
     }
-    ${c.buttonText ? bigButton(escapeHtml(c.buttonText), href) : ""}
+    ${c.buttonText ? (c.lightLook ? instagramButton(escapeHtml(c.buttonText), href) : bigButton(escapeHtml(c.buttonText), href)) : ""}
     ${c.ps ? `<p style="margin:0 0 16px;color:${TEXT_DARK};font-size:14px;line-height:1.7;"><strong>P.S.</strong> ${escapeHtml(fillName(c.ps, opts.name))}</p>` : ""}
     ${
       aboutPackages
@@ -1117,10 +1175,12 @@ export function broadcastText(opts: { name: string; unsubscribeUrl: string; cont
   const parts = [plain(c.headline), plain(c.intro)];
   if (c.message) parts.push(plain(c.message));
   if (c.showComparison) parts.push("Without a package: you pay a recovery fee.\nWith a MetaShield package: ₦0 recovery fee.");
-  if (c.showPackages)
+  if (c.showPackages) {
+    const free = c.freeMonthTags ? " — 1st month free" : "";
     parts.push(
-      "Packages:\n- Watch: ₦10,000/month (Instagram + Facebook)\n- Elite: ₦15,000/month (2 Instagram + Facebook + Meta ad account)\n- Business: ₦50,000/month (up to 3 Instagram + 3 Facebook + 3 Meta ad accounts)\n- Annual Plan: ₦120,000/year (2 Instagram + 2 Facebook)\n- Lifetime Plan: ₦500,000 once (Instagram + Facebook + Meta ad account)"
+      `Packages:\n- Watch: ₦10,000/month (Instagram + Facebook)${free}\n- Elite: ₦15,000/month (2 Instagram + Facebook + Meta ad account)${free}\n- Business: ₦25,000/month (up to 3 Instagram + 3 Facebook + 3 Meta ad accounts)${free}\n- Annual Plan: ₦120,000/year (2 Instagram + 2 Facebook)${c.freeMonthTags ? " — +1 month free" : ""}\n- Lifetime Plan: ₦500,000 once (Instagram + Facebook + Meta ad account)`
     );
+  }
   if (c.buttonText) parts.push(`${c.buttonText.replace(/\s*→\s*$/, "")}: ${broadcastButtonHref(c, PORTAL_URL)}`);
   if (c.ps) parts.push(`P.S. ${plain(c.ps)}`);
   parts.push(`MetaShield — Account Recovery & Protection\nUnsubscribe: ${opts.unsubscribeUrl}`);
