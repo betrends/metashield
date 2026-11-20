@@ -13,6 +13,7 @@ export type BroadcastContent = {
   showComparison: boolean; // "Without a package / With a package ₦0" boxes
   showIncluded: boolean; // "Every package includes" list
   showPackages: boolean; // the packages and prices
+  freeMonthTags: boolean; // "1st month free" tags on the monthly packages
   buttonText: string;
   buttonLink: BroadcastLink;
   customLink: string; // used when buttonLink is "custom"
@@ -38,10 +39,31 @@ export const DEFAULT_BROADCAST_CONTENT: BroadcastContent = {
   showComparison: true,
   showIncluded: true,
   showPackages: true,
+  freeMonthTags: false,
   buttonText: "See the packages →",
   buttonLink: "packages",
   customLink: "",
   ps: "Accounts get hacked and disabled without warning. Protection only works if it's in place before something goes wrong.",
+};
+
+// Ready-made email: the free first month (Watch, Elite, Business).
+export const FREE_MONTH_SUBJECT = "Your first month of MetaShield is free";
+
+export const FREE_MONTH_BROADCAST_CONTENT: BroadcastContent = {
+  label: "🎁 First month free",
+  headline: "{name}, your first month of MetaShield is on us.",
+  intro:
+    "Start a **Watch, Elite or Business** package today and pay **₦0 for the first month**. No card needed.",
+  message:
+    "**How it works**\n1. Open the packages page and pick a monthly package.\n2. Tap **Start my free month** — your package starts straight away.\n3. Near the end of the month we'll email you a reminder. Nothing is charged automatically.\n\nOnce you make your first payment, **account recovery at no extra cost** starts for your covered accounts.\n\nPrefer a yearly plan? The **Annual Plan** gives you **13 months for the price of 12** on your first package.",
+  showComparison: false,
+  showIncluded: true,
+  showPackages: true,
+  freeMonthTags: true,
+  buttonText: "Start my free month →",
+  buttonLink: "packages",
+  customLink: "",
+  ps: "The free month is for clients starting their first MetaShield package.",
 };
 
 export const BROADCAST_LINKS: { value: BroadcastLink; label: string; path: string }[] = [
@@ -85,6 +107,7 @@ export function parseBroadcastContent(input: unknown): BroadcastContent {
     showComparison: typeof o.showComparison === "boolean" ? o.showComparison : d.showComparison,
     showIncluded: typeof o.showIncluded === "boolean" ? o.showIncluded : d.showIncluded,
     showPackages: typeof o.showPackages === "boolean" ? o.showPackages : d.showPackages,
+    freeMonthTags: typeof o.freeMonthTags === "boolean" ? o.freeMonthTags : d.freeMonthTags,
     buttonText: text(o.buttonText, BROADCAST_LIMITS.buttonText, d.buttonText).trim(),
     // A custom link that isn't a proper web address falls back to the packages page.
     buttonLink: link === "custom" && !customLink ? "packages" : link,

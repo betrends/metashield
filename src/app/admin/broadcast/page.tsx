@@ -11,6 +11,8 @@ import {
   BROADCAST_LIMITS,
   BROADCAST_LINKS,
   DEFAULT_BROADCAST_CONTENT,
+  FREE_MONTH_BROADCAST_CONTENT,
+  FREE_MONTH_SUBJECT,
   type BroadcastContent,
   type BroadcastLink,
 } from "@/lib/broadcast-content";
@@ -159,6 +161,12 @@ export default function AdminBroadcastPage() {
       clearTimeout(timer);
     };
   }, [content]);
+
+  function loadFreeMonthEmail() {
+    setContent(FREE_MONTH_BROADCAST_CONTENT);
+    subjectTouched.current = true;
+    setSubject(FREE_MONTH_SUBJECT);
+  }
 
   function resetEmail() {
     setContent(DEFAULT_BROADCAST_CONTENT);
@@ -532,6 +540,16 @@ export default function AdminBroadcastPage() {
                 Reset to the original
               </button>
             </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl bg-emerald-50 px-3.5 py-2.5 ring-1 ring-emerald-200">
+              <span className="text-xs font-semibold text-emerald-800">Ready-made:</span>
+              <button
+                type="button"
+                onClick={loadFreeMonthEmail}
+                className="rounded-full bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700"
+              >
+                🎁 Use the free month email
+              </button>
+            </div>
             <p className="mt-2 text-xs text-ink-500">
               Change anything below — the preview updates as you type. Type <Code>{"{name}"}</Code> to use each person&apos;s first name.
             </p>
@@ -577,10 +595,11 @@ export default function AdminBroadcastPage() {
 
               <div>
                 <p className="text-sm font-semibold text-ink-900">Show in the email</p>
-                <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
                   <Toggle checked={content.showComparison} onChange={(v) => edit("showComparison", v)} label="₦0 recovery fee boxes" />
                   <Toggle checked={content.showIncluded} onChange={(v) => edit("showIncluded", v)} label="What's included list" />
                   <Toggle checked={content.showPackages} onChange={(v) => edit("showPackages", v)} label="Package prices" />
+                  <Toggle checked={content.freeMonthTags} onChange={(v) => edit("freeMonthTags", v)} label="“1st month free” tags" />
                 </div>
               </div>
 
