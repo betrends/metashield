@@ -56,16 +56,16 @@ export const FREE_MONTH_BROADCAST_CONTENT: BroadcastContent = {
   headline: "{name}, if your Instagram got suspended tonight, could you get it back?",
   intro: "",
   message:
-    "**MetaShield protects your accounts before something goes wrong.**\n\n{compare}\n\n**🎁 And right now, your first month is free.**\nStart a **Watch, Elite or Business** package and pay **₦0 for the first month**. No card needed.\n\n**How it works**\n1. Open the packages page and pick a monthly package.\n2. Tap **Start my free month** — your package starts straight away.\n3. Near the end of the month we'll email you a reminder. Nothing is charged automatically.\n\nAccount recovery at no extra cost starts once you make your first payment. Prefer a yearly plan? The **Annual Plan** gives you **13 months for the price of 12** on your first package.",
+    "**MetaShield protects your accounts before something goes wrong.**\n\n{compare}\n\n**🎁 And right now, your first month is free.**\nStart a **Watch, Elite or Business** package and pay **₦0 for the first month**. No card needed. After your free month, packages start from **₦10,000 a month**.",
   showComparison: true,
-  showIncluded: true,
-  showPackages: true,
+  showIncluded: false,
+  showPackages: false,
   freeMonthTags: true,
   lightLook: true,
   buttonText: "Protect my account free →",
   buttonLink: "packages",
   customLink: "",
-  ps: "Protection only works if it's in place before something goes wrong. The free month is for clients starting their first MetaShield package.",
+  ps: "Protection only works if it's in place before something goes wrong. The free month is for clients starting their first package; free recovery starts once you make your first payment.",
 };
 
 export const BROADCAST_LINKS: { value: BroadcastLink; label: string; path: string }[] = [
