@@ -1,5 +1,9 @@
 import { DEFAULT_BROADCAST_CONTENT, broadcastButtonHref, fillName, type BroadcastContent } from "@/lib/broadcast-content";
 import { INSTAGRAM_STEPS, instagramStepLink, type InstagramStep } from "@/lib/instagram-links";
+import { contact } from "@/lib/site-config";
+
+// One line for plain-text emails.
+export const INQUIRIES_WHATSAPP_TEXT = `Questions? WhatsApp us: ${contact.inquiriesWhatsappDisplay} (${contact.inquiriesWhatsapp})`;
 // Beautiful HTML email templates for client recovery notifications.
 // Each template uses inline styles for maximum email client compatibility.
 
@@ -109,6 +113,10 @@ function wrapper(content: string) {
         <!-- Footer -->
         <tr>
           <td style="background:#f8fafc;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 16px 16px;padding:24px 40px;text-align:center;">
+            <p style="margin:0 0 14px;color:${TEXT_DARK};font-size:13px;line-height:1.6;">
+              Questions? Chat with us on WhatsApp<br/>
+              <a href="${contact.inquiriesWhatsapp}" style="display:inline-block;margin-top:8px;background-color:#16a34a;color:#ffffff;font-size:14px;font-weight:800;text-decoration:none;border-radius:999px;padding:9px 18px;">💬 WhatsApp ${contact.inquiriesWhatsappDisplay}</a>
+            </p>
             <p style="margin:0;color:${TEXT_LIGHT};font-size:12px;line-height:1.6;">
               This email was sent by MetaShield on behalf of your recovery team.<br/>
               We will <strong>never</strong> ask for your social media password.
@@ -1191,6 +1199,7 @@ export function broadcastText(opts: { name: string; unsubscribeUrl: string; cont
   }
   if (c.buttonText) parts.push(`${c.buttonText.replace(/\s*→\s*$/, "")}: ${broadcastButtonHref(c, PORTAL_URL)}`);
   if (c.ps) parts.push(`P.S. ${plain(c.ps)}`);
+  parts.push(INQUIRIES_WHATSAPP_TEXT);
   parts.push(`MetaShield — Account Recovery & Protection\nUnsubscribe: ${opts.unsubscribeUrl}`);
   return parts.filter(Boolean).join("\n\n");
 }
@@ -1344,5 +1353,6 @@ export function protectionChecklistText(opts: { clientName: string; planName: st
     ...CHECKLIST_DONT.map((d) => `- ${strip(d)}`),
     `Open the Instagram app: ${IG_ACCOUNTS_CENTER}`,
     `Stuck on a step? Message your MetaShield agent: ${PORTAL_URL}/portal/messages`,
+    INQUIRIES_WHATSAPP_TEXT,
   ].join("\n\n");
 }
