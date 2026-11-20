@@ -14,6 +14,7 @@ export type BroadcastContent = {
   showIncluded: boolean; // "Every package includes" list
   showPackages: boolean; // the packages and prices
   freeMonthTags: boolean; // "1st month free" tags on the monthly packages
+  lightLook: boolean; // light card + Instagram colours (like the app-opener page)
   buttonText: string;
   buttonLink: BroadcastLink;
   customLink: string; // used when buttonLink is "custom"
@@ -40,6 +41,7 @@ export const DEFAULT_BROADCAST_CONTENT: BroadcastContent = {
   showIncluded: true,
   showPackages: true,
   freeMonthTags: false,
+  lightLook: false,
   buttonText: "See the packages →",
   buttonLink: "packages",
   customLink: "",
@@ -50,7 +52,7 @@ export const DEFAULT_BROADCAST_CONTENT: BroadcastContent = {
 export const FREE_MONTH_SUBJECT = "Is your Instagram protected? Your first month is free";
 
 export const FREE_MONTH_BROADCAST_CONTENT: BroadcastContent = {
-  label: "🛡️ Protect your accounts",
+  label: "MetaShield · Account protection",
   headline: "{name}, if your Instagram got suspended tonight, could you get it back?",
   intro:
     "Every day, accounts are **suspended, disabled or restricted** without warning — years of posts, followers and customers gone overnight. Most people only look for help after it happens, when it's harder and costs more.",
@@ -60,6 +62,7 @@ export const FREE_MONTH_BROADCAST_CONTENT: BroadcastContent = {
   showIncluded: true,
   showPackages: true,
   freeMonthTags: true,
+  lightLook: true,
   buttonText: "Protect my account free →",
   buttonLink: "packages",
   customLink: "",
@@ -108,6 +111,7 @@ export function parseBroadcastContent(input: unknown): BroadcastContent {
     showIncluded: typeof o.showIncluded === "boolean" ? o.showIncluded : d.showIncluded,
     showPackages: typeof o.showPackages === "boolean" ? o.showPackages : d.showPackages,
     freeMonthTags: typeof o.freeMonthTags === "boolean" ? o.freeMonthTags : d.freeMonthTags,
+    lightLook: typeof o.lightLook === "boolean" ? o.lightLook : d.lightLook,
     buttonText: text(o.buttonText, BROADCAST_LIMITS.buttonText, d.buttonText).trim(),
     // A custom link that isn't a proper web address falls back to the packages page.
     buttonLink: link === "custom" && !customLink ? "packages" : link,

@@ -600,6 +600,7 @@ export default function AdminBroadcastPage() {
                   <Toggle checked={content.showIncluded} onChange={(v) => edit("showIncluded", v)} label="What's included list" />
                   <Toggle checked={content.showPackages} onChange={(v) => edit("showPackages", v)} label="Package prices" />
                   <Toggle checked={content.freeMonthTags} onChange={(v) => edit("freeMonthTags", v)} label="“1st month free” tags" />
+                  <Toggle checked={content.lightLook} onChange={(v) => edit("lightLook", v)} label="Light design (Instagram colours)" />
                 </div>
               </div>
 
