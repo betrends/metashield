@@ -40,6 +40,12 @@ export function pickPriorityAccount(accounts: PortalAccount[]): PortalAccount | 
 export function respondTo(message: string, accounts: PortalAccount[]): string {
   const q = message.toLowerCase();
 
+  // Recovery is handled on WhatsApp — answer this first, even before any
+  // account has been added.
+  if (/(case|recover|appeal|disabled|restrict)/.test(q)) {
+    return "For anything already restricted or disabled, message our team on WhatsApp (0816 191 4010) — recovery is handled there, and it's included in MetaShield packages. I can't file appeals myself.";
+  }
+
   if (accounts.length === 0) {
     return "I don't have any accounts to check yet — run an Account Health Check first and I'll start monitoring it.";
   }
@@ -64,10 +70,6 @@ export function respondTo(message: string, accounts: PortalAccount[]): string {
 
   if (/(protect|secure|security|safe)/.test(q)) {
     return `Here's what I'd check first:\n${securityTips.map((t) => `• ${t}`).join("\n")}\n\nWant me to walk you to the Protection plans?`;
-  }
-
-  if (/(case|recover|appeal|disabled|restrict)/.test(q)) {
-    return "For anything already restricted or disabled, message our team on WhatsApp (0816 191 4010) — recovery is handled there, and it's included in MetaShield packages. I can't file appeals myself.";
   }
 
   if (/(ad|advertis|campaign)/.test(q)) {

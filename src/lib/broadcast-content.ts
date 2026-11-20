@@ -1,3 +1,4 @@
+import { recoveryWhatsappUrl } from "@/lib/site-config";
 // What the admin can change in a bulk email (Admin → Email users), with
 // the original packages announcement as the starting point. Used by the
 // page (form + defaults) and the server (checks every field before it goes
@@ -71,7 +72,8 @@ export const FREE_MONTH_BROADCAST_CONTENT: BroadcastContent = {
 export const BROADCAST_LINKS: { value: BroadcastLink; label: string; path: string }[] = [
   { value: "packages", label: "Packages page", path: "/pricing#packages" },
   { value: "health_check", label: "Free account health check", path: "/check-my-account" },
-  { value: "eligibility", label: "Recovery eligibility check", path: "/recovery-eligibility" },
+  // Kept as "eligibility" so older saved emails still work; recovery is on WhatsApp now.
+  { value: "eligibility", label: "Recovery on WhatsApp", path: "/recovery-eligibility" },
   { value: "sign_up", label: "Sign up page", path: "/portal/login?mode=sign-up" },
   { value: "custom", label: "Another link…", path: "" },
 ];
@@ -121,6 +123,7 @@ export function parseBroadcastContent(input: unknown): BroadcastContent {
 
 export function broadcastButtonHref(c: BroadcastContent, siteUrl: string): string {
   if (c.buttonLink === "custom" && c.customLink) return c.customLink;
+  if (c.buttonLink === "eligibility") return recoveryWhatsappUrl();
   const path = BROADCAST_LINKS.find((l) => l.value === c.buttonLink)?.path || "/pricing#packages";
   return `${siteUrl.replace(/\/$/, "")}${path}`;
 }

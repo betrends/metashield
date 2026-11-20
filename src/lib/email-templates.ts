@@ -1,6 +1,6 @@
 import { DEFAULT_BROADCAST_CONTENT, broadcastButtonHref, fillName, firstNameOf, type BroadcastContent } from "@/lib/broadcast-content";
 import { INSTAGRAM_STEPS, instagramStepLink, type InstagramStep } from "@/lib/instagram-links";
-import { contact } from "@/lib/site-config";
+import { contact, recoveryWhatsappUrl } from "@/lib/site-config";
 
 // "Ada, your free month has ended." — or "Your free month has ended." when
 // there's no usable first name.
@@ -895,7 +895,7 @@ export function eligibilityFollowupEmail(opts: {
     ${preheader(
       opts.final
         ? "This is our last email about your eligibility check. Meta's appeal window doesn't stay open forever."
-        : "Meta only gives a limited time to appeal. It takes about 2 minutes to start your case."
+        : "Meta only gives a limited time to appeal. Message us on WhatsApp and we'll start right away."
     )}
     ${
       opts.final
@@ -903,13 +903,13 @@ export function eligibilityFollowupEmail(opts: {
             "Last reminder",
             "#dc2626",
             withName(first, `still locked out of your ${acct}?`),
-            `This is the last time we'll email you about your eligibility check${issue ? ` (<strong style="color:#ffffff;">${issue}</strong>)` : ""}. If you still want your account back, don't leave it any longer — starting your case takes about 2 minutes.`
+            `This is the last time we'll email you about your eligibility check${issue ? ` (<strong style="color:#ffffff;">${issue}</strong>)` : ""}. If you still want your account back, don't leave it any longer — message us on WhatsApp and we'll start right away.`
           )
         : urgencyHero(
             "⏳ Time matters",
             "#dc2626",
             withName(first, `your ${acct} isn't gone yet. But the clock is running.`),
-            `You checked your recovery eligibility with MetaShield${issue ? ` (<strong style="color:#ffffff;">${issue}</strong>)` : ""}, and your situation looked like a case we can work on. The sooner it's submitted, the better.`
+            `You checked your recovery eligibility with MetaShield${issue ? ` (<strong style="color:#ffffff;">${issue}</strong>)` : ""}, and your situation looked like a case we can work on. The sooner we start, the better.`
           )
     }
     ${iconList(
@@ -925,24 +925,24 @@ export function eligibilityFollowupEmail(opts: {
     ${iconList(
       "What MetaShield does for you:",
       [
-        "We prepare and submit your case through the available Meta support channels.",
-        "Your own agent keeps you updated at every step — message or call them any time.",
-        "You pay a 50% deposit to start. The other 50% is only due after a successful recovery.",
+        "We handle your recovery through the available Meta support channels.",
+        "Everything happens on WhatsApp — we keep you updated at every step.",
+        "We tell you the fee before we start. With a MetaShield package, there's no recovery fee.",
       ],
       "✓",
       "#16a34a"
     )}
-    ${bigButton("Start my recovery now →", `${PORTAL_URL}/recovery-eligibility`)}
+    ${bigButton("Start my recovery on WhatsApp →", recoveryWhatsappUrl(platform ? `my ${platform} account` : "my account"))}
     <p style="margin:0 0 16px;color:${TEXT_DARK};font-size:14px;line-height:1.7;">
       <strong>P.S.</strong> ${
         opts.final
           ? "We won't email you about this again — if you need us later, we're one message away."
-          : "Waiting rarely brings a disabled account back on its own. It takes about 2 minutes to start your case."
+          : "Waiting rarely brings a disabled account back on its own. One WhatsApp message is all it takes to start."
       }
     </p>
     <p style="margin:0;color:${TEXT_LIGHT};font-size:12px;line-height:1.6;">
       An eligibility check does not guarantee recovery — the final decision remains with Meta.
-      Questions? Reply to this email or contact us at ${PORTAL_URL}/contact.
+      Questions? WhatsApp us on ${contact.inquiriesWhatsappDisplay}.
     </p>
     <p style="margin:12px 0 0;color:${TEXT_LIGHT};font-size:11px;">
       You received this because you asked us to email you about your eligibility result.
@@ -1328,11 +1328,11 @@ export function protectionChecklistEmail(opts: { clientName: string; planName: s
     </p>
     ${bigButton("Open the Instagram app →", IG_ACCOUNTS_CENTER)}
     <p style="margin:0 0 6px;color:${TEXT_DARK};font-size:15px;line-height:1.7;">
-      Stuck on a step? Message your MetaShield agent and we'll walk you through it.
+      Stuck on a step? Message us on WhatsApp and we'll walk you through it.
     </p>
     <table cellpadding="0" cellspacing="0" width="100%" style="margin:6px 0 22px;">
       <tr><td align="center" style="border:2px solid ${BRAND_PURPLE};border-radius:12px;">
-        <a href="${PORTAL_URL}/portal/messages" style="display:block;padding:14px 24px;color:${BRAND_PURPLE};font-size:16px;font-weight:800;text-decoration:none;">Message my agent →</a>
+        <a href="${contact.inquiriesWhatsapp}" style="display:block;padding:14px 24px;color:${BRAND_PURPLE};font-size:16px;font-weight:800;text-decoration:none;">WhatsApp us →</a>
       </td></tr>
     </table>
     <p style="margin:0;color:${TEXT_LIGHT};font-size:12px;line-height:1.6;">
@@ -1358,7 +1358,7 @@ export function protectionChecklistText(opts: { clientName: string; planName: st
     "DO NOT DO THESE:",
     ...CHECKLIST_DONT.map((d) => `- ${strip(d)}`),
     `Open the Instagram app: ${IG_ACCOUNTS_CENTER}`,
-    `Stuck on a step? Message your MetaShield agent: ${PORTAL_URL}/portal/messages`,
+    `Stuck on a step? WhatsApp us: ${contact.inquiriesWhatsappDisplay} (${contact.inquiriesWhatsapp})`,
     INQUIRIES_WHATSAPP_TEXT,
   ].join("\n\n");
 }
