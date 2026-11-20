@@ -1039,6 +1039,10 @@ export function protectionFollowupEmail(opts: {
 
 export const PACKAGES_ANNOUNCEMENT_SUBJECT = "New: account recovery at no extra cost with MetaShield";
 
+// A line that is just {compare} in a bulk email's message: the
+// "Without a package / With a package" boxes go there.
+const COMPARE_SPOT = /^\s*\{compare\}\s*$/im;
+
 // Escaped text → HTML: **bold**, blank line = new paragraph, line break = <br>.
 function richText(raw: string, color: string, size = 15): string {
   return escapeHtml(raw)
@@ -1078,6 +1082,26 @@ export function broadcastEmail(opts: {
       </tr>
       <tr><td style="height:8px;"></td></tr>`;
   const aboutPackages = c.showComparison || c.showIncluded || c.showPackages;
+  // "Without a package / With a MetaShield package" boxes. A line that is
+  // just {compare} in the message puts them there; otherwise they follow it.
+  const compare = `<table cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 22px;">
+      <tr>
+        <td style="padding:14px 16px;border-radius:12px;background:#fef2f2;border:1px solid #fecaca;">
+          <div style="color:#991b1b;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;">Without a package</div>
+          <div style="color:${TEXT_DARK};font-size:14px;margin-top:4px;">Account disabled or ad account issues → <strong style="color:#dc2626;">you pay a recovery fee</strong></div>
+        </td>
+      </tr>
+      <tr><td style="height:8px;"></td></tr>
+      <tr>
+        <td style="padding:14px 16px;border-radius:12px;background:${GREEN_BG};border:2px solid #86efac;">
+          <div style="color:#166534;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;">With a MetaShield package</div>
+          <div style="color:${TEXT_DARK};font-size:14px;margin-top:4px;">Account hacked or disabled → <strong style="color:${GREEN};font-size:16px;">₦0 recovery fee</strong></div>
+        </td>
+      </tr>
+    </table>`;
+  const hasCompareSpot = COMPARE_SPOT.test(c.message);
+  const messageHtml = (html: string) =>
+    html.replace(/<p[^>]*>\{compare\}<\/p>/gi, c.showComparison ? compare : "");
   const lightIntro = richText(fillName(c.intro, opts.name), TEXT_MID)
     .replace(/margin:0 0 14px/g, "margin:0 0 10px")
     .replace(/<p style=/g, '<p class="ms-card-text" style=');
@@ -1098,26 +1122,8 @@ export function broadcastEmail(opts: {
   return wrapper(`
     ${preheader(escapeHtml(fillName(c.intro, opts.name).replace(/\*\*/g, "").slice(0, 140)))}
     ${hero}
-    ${c.message ? (c.lightLook ? richTextLight(fillName(c.message, opts.name)) : richText(fillName(c.message, opts.name), TEXT_DARK)) : ""}
-    ${
-      c.showComparison
-        ? `<table cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 22px;">
-      <tr>
-        <td style="padding:14px 16px;border-radius:12px;background:#fef2f2;border:1px solid #fecaca;">
-          <div style="color:#991b1b;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;">Without a package</div>
-          <div style="color:${TEXT_DARK};font-size:14px;margin-top:4px;">Account hacked or disabled → <strong style="color:#dc2626;">you pay a recovery fee</strong></div>
-        </td>
-      </tr>
-      <tr><td style="height:8px;"></td></tr>
-      <tr>
-        <td style="padding:14px 16px;border-radius:12px;background:${GREEN_BG};border:2px solid #86efac;">
-          <div style="color:#166534;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;">With a MetaShield package</div>
-          <div style="color:${TEXT_DARK};font-size:14px;margin-top:4px;">Account hacked or disabled → <strong style="color:${GREEN};font-size:16px;">₦0 recovery fee</strong></div>
-        </td>
-      </tr>
-    </table>`
-        : ""
-    }
+    ${c.message ? messageHtml(c.lightLook ? richTextLight(fillName(c.message, opts.name)) : richText(fillName(c.message, opts.name), TEXT_DARK)) : ""}
+    ${c.showComparison && !hasCompareSpot ? compare : ""}
     ${
       c.showIncluded
         ? iconList(
@@ -1173,8 +1179,10 @@ export function broadcastText(opts: { name: string; unsubscribeUrl: string; cont
   const c = opts.content ?? DEFAULT_BROADCAST_CONTENT;
   const plain = (s: string) => fillName(s, opts.name).replace(/\*\*/g, "");
   const parts = [plain(c.headline), plain(c.intro)];
-  if (c.message) parts.push(plain(c.message));
-  if (c.showComparison) parts.push("Without a package: you pay a recovery fee.\nWith a MetaShield package: ₦0 recovery fee.");
+  const compareText =
+    "WITHOUT A PACKAGE\nAccount disabled or ad account issues → you pay a recovery fee\n\nWITH A METASHIELD PACKAGE\nAccount hacked or disabled → ₦0 recovery fee";
+  if (c.message) parts.push(plain(c.message).replace(/^\{compare\}$/gim, c.showComparison ? compareText : "").replace(/\n{3,}/g, "\n\n").trim());
+  if (c.showComparison && !COMPARE_SPOT.test(c.message)) parts.push(compareText);
   if (c.showPackages) {
     const free = c.freeMonthTags ? " — 1st month free" : "";
     parts.push(
