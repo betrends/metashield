@@ -1,6 +1,7 @@
 // Admin → Email users. Admin only.
 //
 // GET  ?preview=1 → the email as a web page (sample name), for the preview.
+// GET  ?preview=checklist → the protection checklist email (sample name).
 // GET  ?clients=all|no_package|with_package|none&leads=1
 //        → how many people the email would reach, the last few sends, and
 //          whether a real sending address is set up. No addresses are
@@ -88,6 +89,11 @@ export async function GET(request: Request) {
   const role = await getAdminRole();
   if (!role || role.type !== "admin") return NextResponse.json({ error: "not_authorized" }, { status: 403 });
   const url = new URL(request.url);
+  if (url.searchParams.get("preview") === "checklist") {
+    // The protection checklist as clients with a package receive it (sample name).
+    const html = protectionChecklistEmail({ clientName: "Sample Client", planName: "", existing: true });
+    return new Response(html, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
+  }
   if (url.searchParams.get("preview") === "1") {
     // What the email looks like (sample name), for the page's preview.
     const html = broadcastEmail({ name: "Sample Client", unsubscribeUrl: "#", reason: "client" });

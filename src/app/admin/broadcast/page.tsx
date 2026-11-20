@@ -82,6 +82,7 @@ export default function AdminBroadcastPage() {
   const checklistRequestId = useRef<string>(newRequestId());
   const [checklist, setChecklist] = useState<{ kind: "idle" | "busy" | "ok" | "error"; action?: string; text?: string }>({ kind: "idle" });
   const [confirmChecklist, setConfirmChecklist] = useState(false);
+  const [showChecklistPreview, setShowChecklistPreview] = useState(false);
   const subjectTouched = useRef(false);
   const [content, setContent] = useState<BroadcastContent>(DEFAULT_BROADCAST_CONTENT);
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
@@ -361,8 +362,30 @@ export default function AdminBroadcastPage() {
             >
               {checklist.kind === "busy" && checklist.action === "test_checklist" ? "Sending test…" : "Send a test to me"}
             </button>
+            <button
+              type="button"
+              onClick={() => setShowChecklistPreview((v) => !v)}
+              aria-expanded={showChecklistPreview}
+              className="rounded-full px-5 py-2 text-sm font-semibold text-brand-700 transition hover:bg-brand-50"
+            >
+              {showChecklistPreview ? "Hide preview ▲" : "Preview email ▼"}
+            </button>
           </div>
         </div>
+        {showChecklistPreview ? (
+          <div className="mt-5 overflow-hidden rounded-2xl border border-ink-100 bg-white shadow-sm">
+            <div className="border-b border-ink-100 px-4 py-3">
+              <p className="truncate text-sm font-semibold text-ink-900">Compulsory: do these 6 things to keep your account protected</p>
+              <p className="text-xs text-ink-400">From {info.sender.from || "MetaShield"} · sample client shown as &ldquo;Sample&rdquo;</p>
+            </div>
+            <iframe
+              title="Protection checklist email preview"
+              src="/api/admin/broadcast?preview=checklist"
+              sandbox=""
+              className="mx-auto block h-[720px] w-full max-w-[640px] bg-[#f5f3ff]"
+            />
+          </div>
+        ) : null}
         {checklist.kind === "ok" || checklist.kind === "error" ? (
           <p className={`mt-3 text-sm ${checklist.kind === "ok" ? "text-emerald-700" : "text-amber-800"}`}>{checklist.text}</p>
         ) : null}
