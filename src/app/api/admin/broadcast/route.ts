@@ -47,6 +47,7 @@ import {
 } from "@/lib/email-templates";
 import { DEFAULT_BROADCAST_CONTENT, parseBroadcastContent, type BroadcastContent } from "@/lib/broadcast-content";
 import { unsubscribeUrl } from "@/lib/server/unsubscribe";
+import { senderFrom } from "@/lib/server/sender";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -67,7 +68,7 @@ type Template = "custom" | "checklist";
 function emailFor(r: Pick<Recipient, "email" | "name" | "kind">, subject: string, content: BroadcastContent, template: Template = "custom") {
   if (template === "checklist") {
     return {
-      from: process.env.RESEND_FROM_EMAIL || "MetaShield <onboarding@resend.dev>",
+      from: senderFrom(),
       to: [r.email],
       subject,
       html: protectionChecklistEmail({ clientName: r.name, planName: "", existing: true }),
@@ -76,7 +77,7 @@ function emailFor(r: Pick<Recipient, "email" | "name" | "kind">, subject: string
   }
   const unsub = unsubscribeUrl(r.email);
   return {
-    from: process.env.RESEND_FROM_EMAIL || "MetaShield <onboarding@resend.dev>",
+    from: senderFrom(),
     to: [r.email],
     subject,
     html: broadcastEmail({ name: r.name, unsubscribeUrl: unsub, reason: r.kind, content }),

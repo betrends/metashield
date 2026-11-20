@@ -5,6 +5,7 @@
 import { NextResponse } from "next/server";
 import { createClient as createServerClient, createAdminClient } from "@/lib/supabase/server";
 import { Resend } from "resend";
+import { senderFrom } from "@/lib/server/sender";
 
 // Any package (current or an older plan) includes emergency support.
 const ELIGIBLE_PLANS = ["watch", "elite", "biz", "annual", "lifetime", "basic", "professional", "business", "one_time"];
@@ -114,7 +115,7 @@ export async function POST(request: Request) {
   // Fire urgent email to the team
   const resendKey = process.env.RESEND_API_KEY;
   const notifyTo = process.env.NOTIFY_EMAIL;
-  const fromAddress = process.env.RESEND_FROM_EMAIL || "MetaShield <onboarding@resend.dev>";
+  const fromAddress = senderFrom();
 
   if (resendKey && notifyTo) {
     try {

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminRole } from "@/lib/admin/auth";
+import { withSenderName } from "@/lib/server/sender";
 
 export async function GET() {
   const role = await getAdminRole();
@@ -8,7 +9,7 @@ export async function GET() {
   }
 
   const apiKey = process.env.RESEND_API_KEY;
-  const fromAddress = process.env.RESEND_FROM_EMAIL;
+  const fromAddress = withSenderName(process.env.RESEND_FROM_EMAIL);
   const toAddress = process.env.ADMIN_EMAIL;
 
   if (!apiKey) return NextResponse.json({ error: "RESEND_API_KEY not set" }, { status: 500 });

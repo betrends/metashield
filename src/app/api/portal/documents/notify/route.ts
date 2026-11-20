@@ -18,6 +18,7 @@ import { documentsSubmittedEmail } from "@/lib/email-templates";
 import { documentTypeLabel, readyForReview, type CaseDocument } from "@/lib/portal/workflow";
 import type { CaseStage } from "@/lib/portal/mock-data";
 import { moveStage, postCaseMessage } from "@/lib/server/case-events";
+import { senderFrom } from "@/lib/server/sender";
 
 const DOCUMENTS_RECEIVED_MESSAGE =
   "Document upload received. Your documents have been submitted successfully and are awaiting review.";
@@ -115,7 +116,7 @@ export async function POST(request: Request) {
     const clientName = (user.user_metadata?.full_name as string | undefined) || clientEmail.split("@")[0] || "A client";
     try {
       const { error: sendError } = await new Resend(process.env.RESEND_API_KEY).emails.send({
-        from: process.env.RESEND_FROM_EMAIL || "MetaShield <onboarding@resend.dev>",
+        from: senderFrom(),
         to: recipients,
         replyTo: clientEmail || undefined,
         subject: `📎 ${batch.length} document${batch.length !== 1 ? "s" : ""} submitted by ${clientName}`.replace(/[\r\n]+/g, " "),

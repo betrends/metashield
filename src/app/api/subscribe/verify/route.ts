@@ -6,6 +6,7 @@ import { createClient as createServerClient, createAdminClient } from "@/lib/sup
 import { addOneMonth, getPlan, hasBonusMonth, isPlanId, planEndsOn } from "@/lib/portal/billing";
 import { subscriptionWelcomeEmail } from "@/lib/email-templates";
 import { sendProtectionChecklist, startsNewProtection } from "@/lib/server/protection-checklist";
+import { withSenderName } from "@/lib/server/sender";
 
 export async function POST(request: Request) {
   const supabase = await createServerClient();
@@ -138,7 +139,7 @@ export async function POST(request: Request) {
 
   // Send welcome email to the client
   const resendKey = process.env.RESEND_API_KEY;
-  const fromAddress = process.env.RESEND_FROM_EMAIL;
+  const fromAddress = withSenderName(process.env.RESEND_FROM_EMAIL);
   if (resendKey && fromAddress && user.email) {
     const clientName = (user.user_metadata?.full_name as string | undefined) || user.email.split("@")[0];
     try {

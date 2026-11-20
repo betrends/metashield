@@ -14,6 +14,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isPlanId } from "@/lib/portal/billing";
+import { withSenderName } from "@/lib/server/sender";
 
 export type ClientAudience = "all" | "no_package" | "with_package" | "none";
 export type Audience = { clients: ClientAudience; leads: boolean; extra: string[] };
@@ -137,7 +138,7 @@ export async function buildRecipients(admin: SupabaseClient, audience: Audience)
 // Resend sends from RESEND_FROM_EMAIL. Its test address (resend.dev) only
 // delivers to the Resend account owner, so a real sending domain is needed.
 export function senderReady(): { ok: boolean; from: string } {
-  const from = process.env.RESEND_FROM_EMAIL || "";
+  const from = withSenderName(process.env.RESEND_FROM_EMAIL) ?? "";
   return { ok: !!process.env.RESEND_API_KEY && !!from && !/resend\.dev/i.test(from), from };
 }
 

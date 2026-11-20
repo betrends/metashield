@@ -10,6 +10,7 @@ import { Resend } from "resend";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { contactNotificationEmail, contactAutoReplyEmail } from "@/lib/email-templates";
+import { senderFrom } from "@/lib/server/sender";
 
 type Source = "contact_form" | "health_check" | "recovery_eligibility" | "payment_receipt";
 const VALID_SOURCES: Source[] = [
@@ -89,7 +90,7 @@ export async function POST(request: Request) {
   if (resendKey) {
     try {
       const resend = new Resend(resendKey);
-      const fromAddress = process.env.RESEND_FROM_EMAIL || "MetaShield <onboarding@resend.dev>";
+      const fromAddress = senderFrom();
       const platform = metadata && typeof metadata === "object" && "platform" in metadata
         ? String((metadata as Record<string, unknown>).platform)
         : null;

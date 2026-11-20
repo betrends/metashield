@@ -7,6 +7,7 @@
 
 import { isPlanId } from "@/lib/portal/billing";
 import { PROTECTION_CHECKLIST_SUBJECT, protectionChecklistEmail, protectionChecklistText } from "@/lib/email-templates";
+import { senderFrom } from "@/lib/server/sender";
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -29,7 +30,7 @@ export async function sendProtectionChecklist(opts: { to: string; clientName: st
   try {
     const { Resend } = await import("resend");
     const { error } = await new Resend(resendKey).emails.send({
-      from: process.env.RESEND_FROM_EMAIL || "MetaShield <onboarding@resend.dev>",
+      from: senderFrom(),
       to: opts.to,
       subject: PROTECTION_CHECKLIST_SUBJECT,
       html: protectionChecklistEmail({ clientName: opts.clientName, planName: opts.planName }),
