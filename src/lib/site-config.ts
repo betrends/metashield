@@ -13,6 +13,9 @@ export const contact = {
   // Official WhatsApp support number (confirmed by MetaShield 2026-10-25).
   whatsapp: "https://wa.me/2347080223440",
   whatsappDisplay: "+234 708 022 3440",
+  // WhatsApp for inquiries, shown at the bottom of every email.
+  inquiriesWhatsapp: "https://wa.me/2348161914010",
+  inquiriesWhatsappDisplay: "0816 191 4010",
   instagram: "https://instagram.com/metashield",
   address: "Lagos, Nigeria",
 };
