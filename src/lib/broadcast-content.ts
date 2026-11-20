@@ -12,7 +12,7 @@ export type BroadcastContent = {
   message: string; // extra paragraphs under the box (optional)
   showComparison: boolean; // "Without a package / With a package ₦0" boxes
   showIncluded: boolean; // "Every package includes" list
-  showPackages: boolean; // the four packages and prices
+  showPackages: boolean; // the packages and prices
   buttonText: string;
   buttonLink: BroadcastLink;
   customLink: string; // used when buttonLink is "custom"
