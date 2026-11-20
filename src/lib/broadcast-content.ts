@@ -51,11 +51,11 @@ export const FREE_MONTH_SUBJECT = "Is your Instagram protected? Your first month
 
 export const FREE_MONTH_BROADCAST_CONTENT: BroadcastContent = {
   label: "🛡️ Protect your accounts",
-  headline: "{name}, if your Instagram got hacked tonight, could you get it back?",
+  headline: "{name}, if your Instagram got suspended tonight, could you get it back?",
   intro:
-    "Every day, accounts are **hacked, disabled or restricted** without warning — years of posts, followers and customers gone overnight. Most people only look for help after it happens, when it's harder and costs more.",
+    "Every day, accounts are **suspended, disabled or restricted** without warning — years of posts, followers and customers gone overnight. Most people only look for help after it happens, when it's harder and costs more.",
   message:
-    "**MetaShield protects your accounts before something goes wrong.** We check your account security, help you fix weak spots, and if your account is ever hacked, disabled or restricted, our team handles the recovery.\n\nWithout a package, a one-off recovery starts from **₦100,000**. With a package, eligible recoveries cost **₦0 extra**.\n\n**🎁 And right now, your first month is free.**\nStart a **Watch, Elite or Business** package and pay **₦0 for the first month**. No card needed.\n\n**How it works**\n1. Open the packages page and pick a monthly package.\n2. Tap **Start my free month** — your package starts straight away.\n3. Near the end of the month we'll email you a reminder. Nothing is charged automatically.\n\nAccount recovery at no extra cost starts once you make your first payment. Prefer a yearly plan? The **Annual Plan** gives you **13 months for the price of 12** on your first package.",
+    "**MetaShield protects your accounts before something goes wrong.** We check your account security, help you fix weak spots, and if your account is ever suspended, disabled or restricted, our team handles the recovery.\n\n**Without a MetaShield package, you will pay for account recovery — and we all know how expensive it is.** With a package, eligible recoveries cost **₦0 extra**.\n\n**🎁 And right now, your first month is free.**\nStart a **Watch, Elite or Business** package and pay **₦0 for the first month**. No card needed.\n\n**How it works**\n1. Open the packages page and pick a monthly package.\n2. Tap **Start my free month** — your package starts straight away.\n3. Near the end of the month we'll email you a reminder. Nothing is charged automatically.\n\nAccount recovery at no extra cost starts once you make your first payment. Prefer a yearly plan? The **Annual Plan** gives you **13 months for the price of 12** on your first package.",
   showComparison: false,
   showIncluded: true,
   showPackages: true,
