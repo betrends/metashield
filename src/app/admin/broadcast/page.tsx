@@ -551,7 +551,7 @@ export default function AdminBroadcastPage() {
               </button>
             </div>
             <p className="mt-2 text-xs text-ink-500">
-              Change anything below — the preview updates as you type. Type <Code>{"{name}"}</Code> to use each person&apos;s first name.
+              Change anything below — the preview updates as you type. Type <Code>{"{name}"}</Code> to use each person&apos;s first name, and a line with just <Code>{"{compare}"}</Code> to put the &ldquo;without / with a package&rdquo; boxes there.
             </p>
 
             <div className="mt-5 space-y-4">
