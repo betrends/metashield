@@ -54,10 +54,9 @@ export const FREE_MONTH_SUBJECT = "Is your Instagram protected? Your first month
 export const FREE_MONTH_BROADCAST_CONTENT: BroadcastContent = {
   label: "MetaShield · Account protection",
   headline: "{name}, if your Instagram got suspended tonight, could you get it back?",
-  intro:
-    "Every day, accounts are **suspended, disabled or restricted** without warning — years of posts, followers and customers gone overnight. Most people only look for help after it happens, when it's harder and costs more.",
+  intro: "",
   message:
-    "**MetaShield protects your accounts before something goes wrong.** We check your account security, help you fix weak spots, and if your account is ever suspended, disabled or restricted, our team handles the recovery.\n\n{compare}\n\n**🎁 And right now, your first month is free.**\nStart a **Watch, Elite or Business** package and pay **₦0 for the first month**. No card needed.\n\n**How it works**\n1. Open the packages page and pick a monthly package.\n2. Tap **Start my free month** — your package starts straight away.\n3. Near the end of the month we'll email you a reminder. Nothing is charged automatically.\n\nAccount recovery at no extra cost starts once you make your first payment. Prefer a yearly plan? The **Annual Plan** gives you **13 months for the price of 12** on your first package.",
+    "**MetaShield protects your accounts before something goes wrong.**\n\n{compare}\n\n**🎁 And right now, your first month is free.**\nStart a **Watch, Elite or Business** package and pay **₦0 for the first month**. No card needed.\n\n**How it works**\n1. Open the packages page and pick a monthly package.\n2. Tap **Start my free month** — your package starts straight away.\n3. Near the end of the month we'll email you a reminder. Nothing is charged automatically.\n\nAccount recovery at no extra cost starts once you make your first payment. Prefer a yearly plan? The **Annual Plan** gives you **13 months for the price of 12** on your first package.",
   showComparison: true,
   showIncluded: true,
   showPackages: true,

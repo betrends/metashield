@@ -1128,7 +1128,7 @@ export function broadcastEmail(opts: {
       ${intro}
     </div>`;
   return wrapper(`
-    ${preheader(escapeHtml(fillName(c.intro, opts.name).replace(/\*\*/g, "").slice(0, 140)))}
+    ${preheader(escapeHtml(fillName(c.intro || c.message || c.headline, opts.name).replace(/\*\*/g, "").replace(/\{compare\}/gi, "").replace(/\s+/g, " ").trim().slice(0, 140)))}
     ${hero}
     ${c.message ? messageHtml(c.lightLook ? richTextLight(fillName(c.message, opts.name)) : richText(fillName(c.message, opts.name), TEXT_DARK)) : ""}
     ${c.showComparison && !hasCompareSpot ? compare : ""}
