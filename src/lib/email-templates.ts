@@ -963,7 +963,8 @@ export function protectionFollowupEmail(opts: {
     <p style="margin:0 0 10px;color:${TEXT_DARK};font-size:15px;font-weight:800;">Pick your package — recovery included in every one:</p>
     <table cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 14px;">
       ${pkg("Watch", "₦10,000/mo", "Instagram + Facebook")}
-      ${pkg("Elite", "₦15,000/mo", "Instagram + Facebook + Meta ad account")}
+      ${pkg("Elite", "₦15,000/mo", "2 Instagram + Facebook + Meta ad account")}
+      ${pkg("Business", "₦50,000/mo", "Up to 3 Instagram + 3 Facebook + 3 Meta ad accounts")}
       ${pkg("Annual Plan", "₦120,000/yr", "2 Instagram + 2 Facebook")}
       ${pkg("Lifetime Plan", "₦500,000 once", "Instagram + Facebook + Meta ad account", "No renewals")}
     </table>
@@ -1079,7 +1080,8 @@ export function broadcastEmail(opts: {
         ? `<p style="margin:0 0 10px;color:${TEXT_DARK};font-size:15px;font-weight:800;">Pick your package:</p>
     <table cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 14px;">
       ${row("Watch", "₦10,000/mo", "Instagram + Facebook")}
-      ${row("Elite", "₦15,000/mo", "Instagram + Facebook + Meta ad account", "Recommended")}
+      ${row("Elite", "₦15,000/mo", "2 Instagram + Facebook + Meta ad account", "Recommended")}
+      ${row("Business", "₦50,000/mo", "Up to 3 Instagram + 3 Facebook + 3 Meta ad accounts")}
       ${row("Annual Plan", "₦120,000/yr", "2 Instagram + 2 Facebook")}
       ${row("Lifetime Plan", "₦500,000 once", "Instagram + Facebook + Meta ad account", "No renewals")}
     </table>`
@@ -1117,7 +1119,7 @@ export function broadcastText(opts: { name: string; unsubscribeUrl: string; cont
   if (c.showComparison) parts.push("Without a package: you pay a recovery fee.\nWith a MetaShield package: ₦0 recovery fee.");
   if (c.showPackages)
     parts.push(
-      "Packages:\n- Watch: ₦10,000/month (Instagram + Facebook)\n- Elite: ₦15,000/month (Instagram + Facebook + Meta ad account)\n- Annual Plan: ₦120,000/year (2 Instagram + 2 Facebook)\n- Lifetime Plan: ₦500,000 once (Instagram + Facebook + Meta ad account)"
+      "Packages:\n- Watch: ₦10,000/month (Instagram + Facebook)\n- Elite: ₦15,000/month (2 Instagram + Facebook + Meta ad account)\n- Business: ₦50,000/month (up to 3 Instagram + 3 Facebook + 3 Meta ad accounts)\n- Annual Plan: ₦120,000/year (2 Instagram + 2 Facebook)\n- Lifetime Plan: ₦500,000 once (Instagram + Facebook + Meta ad account)"
     );
   if (c.buttonText) parts.push(`${c.buttonText.replace(/\s*→\s*$/, "")}: ${broadcastButtonHref(c, PORTAL_URL)}`);
   if (c.ps) parts.push(`P.S. ${plain(c.ps)}`);

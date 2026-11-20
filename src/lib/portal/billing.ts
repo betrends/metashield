@@ -7,7 +7,9 @@
 // "true" in Vercel. Until then clients ask for a package on WhatsApp and the
 // admin switches it on from the client's page (Activate package).
 
-export type PlanId = "watch" | "elite" | "annual" | "lifetime";
+// "biz" is MetaShield Business (₦50,000/month). Its id isn't "business"
+// because an old, retired plan already used that id.
+export type PlanId = "watch" | "elite" | "biz" | "annual" | "lifetime";
 // Plans sold before October 2026 — only kept so old records still display.
 export type LegacyPlanId = "basic" | "professional" | "business" | "one_time";
 export type AnyPlanId = PlanId | LegacyPlanId;
@@ -63,11 +65,33 @@ export const plans: Plan[] = [
     priceSuffix: "/month",
     period: "month",
     tagline: "Free account recovery + ad account issue support",
-    description: "Instagram, Facebook and one Meta advertising account.",
+    description: "Two Instagram accounts, one Facebook and one Meta advertising account.",
     features: [
-      "One registered Instagram account",
+      "Two registered Instagram accounts",
       "One registered Facebook account",
       "One registered Meta advertising account",
+      "Help with eligible Meta advertising issues",
+      "Guidance on advertising restrictions and access problems",
+      "Help understanding available advertising reviews and appeals",
+      "Monthly account security check",
+      "Priority support during published support hours",
+    ],
+    note: "Advertising budgets and third-party charges are not included.",
+    covers: { instagram: true, facebook: true, ads: true },
+  },
+  {
+    id: "biz",
+    name: "MetaShield Business",
+    price: "₦50,000",
+    priceKobo: 50_000_00,
+    priceSuffix: "/month",
+    period: "month",
+    tagline: "For brands and teams running several accounts",
+    description: "Up to three Instagram, three Facebook and three Meta advertising accounts.",
+    features: [
+      "Up to three registered Instagram accounts",
+      "Up to three registered Facebook accounts",
+      "Up to three registered Meta advertising accounts",
       "Help with eligible Meta advertising issues",
       "Guidance on advertising restrictions and access problems",
       "Help understanding available advertising reviews and appeals",
@@ -147,11 +171,11 @@ export function planEndsOn(plan: Plan, from: Date = new Date()): string | null {
 }
 
 // ── First month free ────────────────────────────────────────────────────
-// New clients (never had a package) can start Watch or Elite with a free
+// New clients (never had a package) can start Watch, Elite or Business with a free
 // first month — no card. Account recovery at no extra cost starts with
 // their first payment. On Annual, a new client's first payment gets a
 // bonus 13th month instead. Lifetime is unchanged.
-export const FREE_MONTH_PLAN_IDS: string[] = ["watch", "elite"];
+export const FREE_MONTH_PLAN_IDS: string[] = ["watch", "elite", "biz"];
 export const BONUS_MONTH_PLAN_IDS: string[] = ["annual"];
 
 export function hasFreeFirstMonth(id: unknown): boolean {

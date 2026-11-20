@@ -24,8 +24,12 @@ const FEATURED = "elite";
 
 const periodLabel: Record<Plan["period"], string> = { month: "/month", year: "/year", lifetime: "one-time" };
 
-// How many of each account a package covers (Annual covers two of each).
-const accountCount: Record<string, number> = { annual: 2 };
+// How many of each account a package covers, when it's more than one.
+const accountCount: Record<string, { ig?: number; fb?: number; ads?: number }> = {
+  elite: { ig: 2 },
+  biz: { ig: 3, fb: 3, ads: 3 },
+  annual: { ig: 2, fb: 2 },
+};
 
 type Look = { icon: ReactNode; tile: string; badge: string };
 const looks: Record<string, Look> = {
@@ -40,6 +44,13 @@ const looks: Record<string, Look> = {
     tile: "from-fuchsia-500 to-brand-600",
     badge: "Monthly",
     icon: <path d="m12 3 2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6-4.5-4.2 6.1-.7L12 3Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />,
+  },
+  biz: {
+    tile: "from-indigo-500 to-slate-800",
+    badge: "Monthly",
+    icon: (
+      <path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h13A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5v-9ZM9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7M4 12.5h16M11 12.5v1.5h2v-1.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    ),
   },
   annual: {
     tile: "from-emerald-500 to-teal-600",
@@ -123,12 +134,12 @@ export function PackagesGrid(props: Props) {
 
   return (
     <div>
-      {/* Phones: swipe sideways between the cards. Tablets: 2 per row. Computers: all 4 in a row. */}
+      {/* Phones: swipe sideways between the cards. Tablets: 2 per row. Computers: 3 per row (monthly packages first). */}
       <div
         ref={rowRef}
         onScroll={onScroll}
         data-reveal={reveal}
-        className="pkg-row -mx-4 flex items-start snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 pt-5 sm:items-stretch [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-5 sm:overflow-visible sm:px-0 sm:pb-0 xl:grid-cols-4 [&::-webkit-scrollbar]:hidden"
+        className="pkg-row -mx-4 flex items-start snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 pt-5 sm:items-stretch [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-5 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3 [&::-webkit-scrollbar]:hidden"
       >
         {plans.map((plan, i) => {
           const isCurrent = props.mode === "portal" && props.currentPlanId === plan.id;
@@ -138,7 +149,8 @@ export function PackagesGrid(props: Props) {
           const featured = plan.id === FEATURED && !isCurrent;
           const dark = plan.id === FEATURED;
           const look = looks[String(plan.id)] ?? looks.watch;
-          const n = accountCount[String(plan.id)] ?? 1;
+          const n = accountCount[String(plan.id)] ?? {};
+          const times = (k?: number) => (k && k > 1 ? `${k}× ` : "");
           return (
             <article
               key={plan.id}
@@ -188,7 +200,7 @@ export function PackagesGrid(props: Props) {
                 </span>
               ) : null}
               <div className={`${offerFree || offerBonus ? "mt-2" : ""} flex items-baseline gap-1.5`}>
-                <span className={`text-4xl font-extrabold tracking-tight xl:text-[2.1rem] ${dark ? "text-white" : "text-ink-900"}`}>{plan.price}</span>
+                <span className={`text-4xl font-extrabold tracking-tight  ${dark ? "text-white" : "text-ink-900"}`}>{plan.price}</span>
                 <span className={`whitespace-nowrap text-sm font-medium ${dark ? "text-brand-200" : "text-ink-500"}`}>{periodLabel[plan.period]}</span>
               </div>
               {offerFree ? (
@@ -200,9 +212,9 @@ export function PackagesGrid(props: Props) {
 
               {/* What it covers */}
               <div className="mt-4 flex flex-wrap gap-1.5">
-                <CoverChip dark={dark} on={plan.covers.instagram} label={`${n > 1 ? `${n}× ` : ""}Instagram`} />
-                <CoverChip dark={dark} on={plan.covers.facebook} label={`${n > 1 ? `${n}× ` : ""}Facebook`} />
-                <CoverChip dark={dark} on={plan.covers.ads} label="Meta ads" />
+                <CoverChip dark={dark} on={plan.covers.instagram} label={`${times(n.ig)}Instagram`} />
+                <CoverChip dark={dark} on={plan.covers.facebook} label={`${times(n.fb)}Facebook`} />
+                <CoverChip dark={dark} on={plan.covers.ads} label={`${times(n.ads)}Meta ads`} />
               </div>
 
               {/* The selling point */}
