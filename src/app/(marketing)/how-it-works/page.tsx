@@ -128,7 +128,7 @@ export default async function HowItWorksPage() {
                   {t("🛡️ Locked out later? Message us on WhatsApp — recovery is included in your package.")}
                 </div>
               </Card>
-              <div className="absolute -right-4 -top-4 rounded-xl border border-green-100 bg-white px-4 py-2.5 shadow-lg">
+              <div className="absolute -bottom-5 -left-4 rounded-xl border border-green-100 bg-white px-4 py-2.5 shadow-lg">
                 <p className="text-xs font-semibold text-green-600">{t("🎁 First month")}</p>
                 <p className="text-sm font-bold text-ink-900">{t("Free")}</p>
               </div>
@@ -232,7 +232,7 @@ export default async function HowItWorksPage() {
             {t("Start with a free month of protection — or message us on WhatsApp if your account is already locked.")}
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <ButtonLink href="/pricing#packages" size="lg" className="bg-white text-brand-700 hover:bg-brand-50">
+            <ButtonLink href="/pricing#packages" size="lg" className="!bg-white !text-brand-700 hover:!bg-brand-50">
               {t("See protection packages")}
             </ButtonLink>
             <ButtonLink href={recoveryWhatsappUrl()} target="_blank" size="lg" variant="outline" className="!border-white/40 !text-white hover:!bg-white/10">
