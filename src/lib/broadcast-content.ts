@@ -1,3 +1,4 @@
+import { recoveryWhatsappUrl } from "@/lib/site-config";
 // What the admin can change in a bulk email (Admin → Email users), with
 // the original packages announcement as the starting point. Used by the
 // page (form + defaults) and the server (checks every field before it goes
@@ -71,7 +72,8 @@ export const FREE_MONTH_BROADCAST_CONTENT: BroadcastContent = {
 export const BROADCAST_LINKS: { value: BroadcastLink; label: string; path: string }[] = [
   { value: "packages", label: "Packages page", path: "/pricing#packages" },
   { value: "health_check", label: "Free account health check", path: "/check-my-account" },
-  { value: "eligibility", label: "Recovery eligibility check", path: "/recovery-eligibility" },
+  // Kept as "eligibility" so older saved emails still work; recovery is on WhatsApp now.
+  { value: "eligibility", label: "Recovery on WhatsApp", path: "/recovery-eligibility" },
   { value: "sign_up", label: "Sign up page", path: "/portal/login?mode=sign-up" },
   { value: "custom", label: "Another link…", path: "" },
 ];
@@ -121,14 +123,39 @@ export function parseBroadcastContent(input: unknown): BroadcastContent {
 
 export function broadcastButtonHref(c: BroadcastContent, siteUrl: string): string {
   if (c.buttonLink === "custom" && c.customLink) return c.customLink;
+  if (c.buttonLink === "eligibility") return recoveryWhatsappUrl();
   const path = BROADCAST_LINKS.find((l) => l.value === c.buttonLink)?.path || "/pricing#packages";
   return `${siteUrl.replace(/\/$/, "")}${path}`;
 }
 
-// {name} → first name, or "Hi there" when we don't know it (and the
-// headline starts with it).
+// A usable first name from whatever someone typed as their name, or "".
+// Left out (so the email says "Hi there" or drops the name): brand or
+// platform words (people typing "MetaShield", "Instagram"…), usernames and
+// handles (digits, @, _, dots), placeholders ("test", "admin", "user"),
+// single letters and very long words. "ada" / "ADA" → "Ada".
+const NOT_A_NAME =
+  /meta\s*shield|^meta$|instagram|insta$|^ig$|facebook|^fb$|whatsapp|tiktok|admin|^test|^user|^client|^customer|^account|^support|^info$|^hello$|^hi$|^none$|^null$|^undefined$|^n\/?a$|^name$|^sir$|^ma$|^madam$|^mr$|^mrs$|^ms$|^miss$|^dr$/i;
+
+export function firstNameOf(raw: unknown): string {
+  const words = String(raw ?? "").trim().split(/\s+/).filter(Boolean);
+  // Skip a title in front ("Mr John" → "John").
+  const word = (words.length > 1 && /^(mr|mrs|ms|miss|dr|sir|madam)\.?$/i.test(words[0]) ? words[1] : words[0]) ?? "";
+  if (/[\d@_.]/.test(word)) return ""; // a username or email, not a name
+  const w = word.replace(/^[^\p{L}]+|[^\p{L}]+$/gu, "");
+  if (w.length < 2 || w.length > 20) return "";
+  if (!/^[\p{L}][\p{L}'’-]*$/u.test(w)) return ""; // digits, @, _, dots → a username, not a name
+  if (NOT_A_NAME.test(w)) return "";
+  return w.charAt(0).toLocaleUpperCase() + w.slice(1).toLocaleLowerCase();
+}
+
+// {name} → first name. Without a usable name, a headline that starts with
+// "{name}, " just starts with the next word ("If your Instagram…"), and any
+// other {name} becomes "there".
 export function fillName(s: string, name: string): string {
-  const first = name.trim().split(/\s+/)[0] || "";
+  const first = firstNameOf(name);
   if (first) return s.replace(/\{name\}/gi, first);
-  return s.replace(/^\{name\}/i, "Hi there").replace(/\{name\}/gi, "there");
+  return s
+    .replace(/^\s*\{name\}\s*[,:!-]?\s*(\S)/i, (_m, c: string) => c.toLocaleUpperCase())
+    .replace(/^\{name\}/i, "Hi there")
+    .replace(/\{name\}/gi, "there");
 }

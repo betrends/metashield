@@ -12,7 +12,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: "/account-immunity",      priority: 0.9, changeFrequency: "monthly" },
     { url: "/business-ads",          priority: 0.8, changeFrequency: "monthly" },
     { url: "/check-my-account",      priority: 0.9, changeFrequency: "weekly" },
-    { url: "/recovery-eligibility",  priority: 0.8, changeFrequency: "weekly" },
     { url: "/pricing",               priority: 0.8, changeFrequency: "weekly" },
     { url: "/how-it-works",          priority: 0.7, changeFrequency: "monthly" },
     { url: "/reviews",               priority: 0.7, changeFrequency: "weekly" },

@@ -4,7 +4,7 @@ import { ButtonLink } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Section, SectionHeading, Eyebrow } from "@/components/ui/Section";
 import { Container } from "@/components/ui/Container";
-import { brandName } from "@/lib/site-config";
+import { brandName, recoveryWhatsappUrl } from "@/lib/site-config";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getT();
@@ -94,7 +94,7 @@ export default async function AboutPage() {
               <p className="mt-5 text-lg text-ink-600">
                 {brandName}{" "}{t("is an independent account-support service based in Nigeria, helping individuals and businesses recover, protect and manage their digital accounts across Instagram, Facebook, Meta Business, TikTok and more.")}</p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <ButtonLink href="/recovery-eligibility" size="lg">{t("Check Your Eligibility")}</ButtonLink>
+                <ButtonLink href={recoveryWhatsappUrl()} target="_blank" size="lg">{t("Start recovery on WhatsApp")}</ButtonLink>
                 <ButtonLink href="/contact" variant="outline" size="lg">{t("Talk to Our Team")}</ButtonLink>
               </div>
             </div>
@@ -228,8 +228,8 @@ export default async function AboutPage() {
           <h2 className="text-balance text-3xl font-bold text-white sm:text-4xl">{t("Questions before you get started?")}</h2>
           <p className="mx-auto mt-4 max-w-xl text-balance text-brand-100">{t("Our team responds within 24 hours. No obligation, no pressure — just a clear answer about whether we can help with your situation.")}</p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <ButtonLink href="/contact" size="lg" className="bg-white text-brand-700 hover:bg-brand-50">{t("Contact Our Team")}</ButtonLink>
-            <ButtonLink href="/check-my-account" size="lg" variant="outline">{t("Run a Free Health Check")}</ButtonLink>
+            <ButtonLink href="/contact" size="lg" className="!bg-white !text-brand-700 hover:!bg-brand-50">{t("Contact Our Team")}</ButtonLink>
+            <ButtonLink href="/check-my-account" size="lg" variant="outline" className="!border-white/40 !text-white hover:!bg-white/10">{t("Run a Free Health Check")}</ButtonLink>
           </div>
         </div>
       </Section>

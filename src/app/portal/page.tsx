@@ -17,6 +17,7 @@ import {
 import { fetchSubscription, type ClientSubscription } from "@/lib/portal/subscriptions";
 import { createClient } from "@/lib/supabase/client";
 import { BrandLoader } from "@/components/BrandLoader";
+import { recoveryWhatsappUrl } from "@/lib/site-config";
 
 function greeting() {
   const h = new Date().getHours();
@@ -204,8 +205,8 @@ export default function PortalOverviewPage() {
         <ButtonLink href="/portal/accounts/new" size="sm" variant="outline">
           + Run Health Check
         </ButtonLink>
-        <ButtonLink href="/portal/cases/new" size="sm" variant="outline">
-          + New Case
+        <ButtonLink href={recoveryWhatsappUrl()} target="_blank" size="sm" variant="outline">
+          Recover an account (WhatsApp)
         </ButtonLink>
         {!hasActiveSubscription && (
           <ButtonLink href="/portal/billing" size="sm">
@@ -285,7 +286,7 @@ export default function PortalOverviewPage() {
       {/* Cases */}
       <div className="mt-10">
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-ink-900">Active Cases</h2>
+          <h2 className="text-base font-semibold text-ink-900">Recovery cases</h2>
           {cases.length > 0 && (
             <Link href="/portal/cases" className="text-sm font-semibold text-brand-700 hover:text-brand-800">
               View all
@@ -299,8 +300,8 @@ export default function PortalOverviewPage() {
                 <path d="M4 7a1 1 0 0 1 1-1h4l2 2h8a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
               </svg>
             </div>
-            <p className="text-sm text-ink-500">No open cases right now.</p>
-            <ButtonLink href="/portal/cases/new" size="sm" variant="outline">Check Recovery Eligibility</ButtonLink>
+            <p className="text-sm text-ink-500">Need an account recovered? Recovery is handled on WhatsApp.</p>
+            <ButtonLink href={recoveryWhatsappUrl()} target="_blank" size="sm" variant="outline">Start recovery on WhatsApp</ButtonLink>
           </Card>
         ) : (
           <div className="mt-4 grid gap-4 sm:grid-cols-2">

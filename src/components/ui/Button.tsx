@@ -60,6 +60,7 @@ export function ButtonLink({
     <Link
       href={href}
       target={target}
+      rel={target === "_blank" ? "noopener noreferrer" : undefined}
       onClick={onClick}
       className={`${base} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
     >

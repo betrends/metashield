@@ -7,6 +7,7 @@ import { ButtonLink } from "@/components/ui/Button";
 import { PaymentStatusBadge } from "@/components/portal/PaymentStatusBadge";
 import { fetchCases, migratePendingLocalRecords, type PortalCase } from "@/lib/portal/data";
 import { BrandLoader } from "@/components/BrandLoader";
+import { recoveryWhatsappUrl } from "@/lib/site-config";
 
 export default function PortalCasesPage() {
   const [cases, setCases] = useState<PortalCase[] | "loading">("loading");
@@ -28,17 +29,28 @@ export default function PortalCasesPage() {
     <div>
       <h1 className="text-2xl font-semibold text-ink-900">Cases</h1>
       <p className="mt-1 text-sm text-ink-500">
-        Every recovery case you&apos;ve opened, past and present.
+        Your recovery cases from before, kept for your records.
       </p>
+      <div className="mt-5 flex flex-col gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-ink-700">
+          <span className="font-semibold text-green-800">Recovery is now handled on WhatsApp.</span> Need an account
+          recovered, or want to continue a case? Message us.
+        </p>
+        <a
+          href={recoveryWhatsappUrl()}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="shrink-0 rounded-full bg-[#25D366] px-4 py-2 text-center text-sm font-bold text-white hover:bg-[#1fb957]"
+        >
+          WhatsApp us
+        </a>
+      </div>
 
       {cases === "loading" ? (
         <BrandLoader label="Loading your cases…" />
       ) : cases.length === 0 ? (
         <Card className="mt-8 flex flex-col items-center gap-3 py-12 text-center">
-          <p className="text-sm text-ink-500">You haven&apos;t opened any cases yet.</p>
-          <ButtonLink href="/portal/cases/new" size="sm">
-            Check Recovery Eligibility
-          </ButtonLink>
+          <p className="text-sm text-ink-500">You don&apos;t have any recovery cases here.</p>
         </Card>
       ) : (
         <div className="mt-8 space-y-3">
