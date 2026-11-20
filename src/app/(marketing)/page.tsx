@@ -7,7 +7,7 @@ import { Container } from "@/components/ui/Container";
 import { RiskBadge } from "@/components/ui/RiskBadge";
 import { recoveryPlatforms } from "@/lib/content/recovery";
 import { caseStudies } from "@/lib/content/case-studies";
-import { servicesNav } from "@/lib/site-config";
+import { servicesNav, recoveryWhatsappUrl } from "@/lib/site-config";
 import dynamic from "next/dynamic";
 import { NoExtraCostBanner } from "@/components/NoExtraCostBanner";
 
@@ -422,7 +422,7 @@ export default async function Home() {
                     />
                   </svg>
                 </ButtonLink>
-                <ButtonLink href="/recovery-eligibility" variant="outline" size="lg" className="w-full sm:w-auto">{t("Start Your Recovery")}</ButtonLink>
+                <ButtonLink href={recoveryWhatsappUrl()} target="_blank" variant="outline" size="lg" className="w-full sm:w-auto">{t("Start recovery on WhatsApp")}</ButtonLink>
               </div>
 
               <div className="mt-12">
@@ -761,13 +761,13 @@ export default async function Home() {
       <Section className="pb-24">
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-600 to-brand-800 px-8 py-14 text-center sm:px-16">
           <h2 className="text-3xl font-semibold text-white text-balance sm:text-4xl">{t("Ready to secure your digital presence?")}</h2>
-          <p className="mx-auto mt-4 max-w-xl text-brand-100 text-balance">{t("Answer a few questions and we'll tell you whether your case is a good fit for professional recovery support.")}</p>
+          <p className="mx-auto mt-4 max-w-xl text-brand-100 text-balance">{t("Protect your accounts before anything goes wrong. Already locked out? Message us on WhatsApp and we'll handle your recovery.")}</p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <ButtonLink
-              href="/recovery-eligibility"
+              href={recoveryWhatsappUrl()} target="_blank"
               size="lg"
               className="!bg-white !text-brand-700 hover:!bg-brand-50"
-            >{t("Check Recovery Eligibility")}</ButtonLink>
+            >{t("Start recovery on WhatsApp")}</ButtonLink>
             <ButtonLink
               href="/contact"
               variant="outline"

@@ -5,6 +5,7 @@ import { Section, SectionHeading, Eyebrow } from "@/components/ui/Section";
 import { Container } from "@/components/ui/Container";
 import { PackagesGrid } from "@/components/PackagesGrid";
 import { PACKAGES_HEADLINE } from "@/lib/portal/billing";
+import { recoveryWhatsappUrl } from "@/lib/site-config";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getT();
@@ -161,8 +162,9 @@ export default async function PricingPage() {
           </div>
         </div>
 
-        <div className="mt-8 flex justify-center">
-          <ButtonLink href="/recovery-eligibility" size="lg">{t("Check Your Recovery Eligibility")}</ButtonLink>
+        <div className="mt-8 flex flex-col items-center gap-3">
+          <ButtonLink href={recoveryWhatsappUrl()} target="_blank" size="lg">{t("Start recovery on WhatsApp")}</ButtonLink>
+          <p className="max-w-md text-center text-sm text-ink-500">{t("Recovery is handled on WhatsApp. Send us your account details and we'll confirm the fee before we start.")}</p>
         </div>
       </Section>
 
@@ -228,7 +230,7 @@ export default async function PricingPage() {
           <p className="mx-auto mt-4 max-w-xl text-balance text-brand-100">{t("No commitment, no payment. Find out exactly what's wrong with your account and what it will take to recover it.")}</p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <ButtonLink href="/check-my-account" size="lg" className="bg-white text-brand-700 hover:bg-brand-50">{t("Check My Account Health — Free")}</ButtonLink>
-            <ButtonLink href="/recovery-eligibility" size="lg" variant="outline">{t("Check Recovery Eligibility")}</ButtonLink>
+            <ButtonLink href={recoveryWhatsappUrl()} target="_blank" size="lg" variant="outline">{t("Start recovery on WhatsApp")}</ButtonLink>
           </div>
         </div>
       </Section>

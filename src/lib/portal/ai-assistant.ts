@@ -67,7 +67,7 @@ export function respondTo(message: string, accounts: PortalAccount[]): string {
   }
 
   if (/(case|recover|appeal|disabled|restrict)/.test(q)) {
-    return "For anything already restricted or disabled, the Recovery Eligibility Checker is the fastest way to open a case — I can't file appeals myself, but I'll keep you posted on any open case's status.";
+    return "For anything already restricted or disabled, message our team on WhatsApp (0816 191 4010) — recovery is handled there, and it's included in MetaShield packages. I can't file appeals myself.";
   }
 
   if (/(ad|advertis|campaign)/.test(q)) {
@@ -77,5 +77,5 @@ export function respondTo(message: string, accounts: PortalAccount[]): string {
       : "I don't see a dedicated ad account yet — run a health check on one and I'll start tracking it.";
   }
 
-  return "I can tell you about account health, risk flags, security steps, or point you to a recovery case. For anything more complex, message our team directly and they'll take it from here.";
+  return "I can tell you about account health, risk flags and security steps. For recovery or anything more complex, message our team on WhatsApp (0816 191 4010) and they'll take it from here.";
 }

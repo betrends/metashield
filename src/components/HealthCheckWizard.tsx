@@ -2,7 +2,7 @@
 
 import { useT } from "@/lib/i18n/client";
 import { ChangeEvent, useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import { recoveryWhatsappUrl } from "@/lib/site-config";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { RiskBadge } from "@/components/ui/RiskBadge";
@@ -602,10 +602,12 @@ export function HealthCheckWizard() {
           )}
 
           <div className="mt-6 flex flex-col items-center justify-center gap-x-6 gap-y-2 text-center sm:flex-row">
-            <Link
-              href="/recovery-eligibility"
+            <a
+              href={recoveryWhatsappUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-sm font-semibold text-brand-700 hover:text-brand-800"
-            >{t("Already Restricted? Check Recovery")}</Link>
+            >{t("Already restricted? Recover it on WhatsApp")}</a>
             <button
               type="button"
               onClick={handleRestart}

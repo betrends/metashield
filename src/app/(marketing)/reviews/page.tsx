@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { Section, Eyebrow } from "@/components/ui/Section";
 import { Container } from "@/components/ui/Container";
 import { reviews } from "@/lib/content/reviews";
+import { recoveryWhatsappUrl } from "@/lib/site-config";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getT();
@@ -96,7 +97,7 @@ export default async function ReviewsPage() {
           <h2 className="text-3xl font-semibold text-white text-balance sm:text-4xl">{t("Ready to be our next success story?")}</h2>
           <p className="mx-auto mt-4 max-w-xl text-ink-300 text-balance">{t("Run a free eligibility check and see if your case is a good fit for professional recovery support.")}</p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <ButtonLink href="/recovery-eligibility" size="lg">{t("Check Recovery Eligibility")}</ButtonLink>
+            <ButtonLink href={recoveryWhatsappUrl()} target="_blank" size="lg">{t("Start recovery on WhatsApp")}</ButtonLink>
           </div>
         </div>
       </Section>

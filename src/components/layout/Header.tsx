@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { brandName, servicesNav } from "@/lib/site-config";
+import { brandName, servicesNav, recoveryWhatsappUrl } from "@/lib/site-config";
 import { ButtonLink } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { useT } from "@/lib/i18n/client";
@@ -215,11 +215,11 @@ export function Header() {
                 {t("Log In")}
               </ButtonLink>
               <ButtonLink
-                href="/recovery-eligibility"
+                href={recoveryWhatsappUrl()} target="_blank"
                 variant="ghost"
                 className="w-full"
               >
-                {t("Start Your Recovery")}
+                {t("Start recovery on WhatsApp")}
               </ButtonLink>
             </div>
           </Container>

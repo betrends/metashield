@@ -2,31 +2,18 @@ import { getT } from "@/lib/i18n/server";
 import type { Metadata } from "next";
 import { Section, Eyebrow } from "@/components/ui/Section";
 import { Container } from "@/components/ui/Container";
-import dynamic from "next/dynamic";
-const EligibilityWizard = dynamic(
-  () => import("@/components/EligibilityWizard").then(m => m.EligibilityWizard),
-  {
-    loading: () => (
-      <div className="animate-pulse rounded-2xl border border-ink-100 bg-white p-8">
-        <div className="h-4 w-1/3 rounded bg-ink-100" />
-        <div className="mt-4 h-3 w-2/3 rounded bg-ink-50" />
-        <div className="mt-8 space-y-3">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-11 rounded-xl bg-ink-50" />
-          ))}
-        </div>
-        <div className="mt-8 h-11 w-full rounded-xl bg-brand-100" />
-      </div>
-    ),
-  }
-);
+import { ButtonLink } from "@/components/ui/Button";
+import { RecoveryOnWhatsApp } from "@/components/RecoveryOnWhatsApp";
 
+// This address is kept for old links and search results. Recovery is now
+// handled on WhatsApp, so the page points there instead of the old form.
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getT();
   return {
-    title: t("Recovery Eligibility Checker"),
-    description:
-      t("A short questionnaire to see whether your account issue is a good fit for professional recovery support."),
+    title: t("Account Recovery on WhatsApp"),
+    description: t(
+      "Locked out of Instagram, Facebook or a Meta ad account? Message MetaShield on WhatsApp and our team will handle your recovery."
+    ),
   };
 }
 
@@ -38,17 +25,30 @@ export default async function RecoveryEligibilityPage() {
         <Container className="py-14 sm:py-16">
           <div className="mx-auto max-w-2xl text-center">
             <div className="flex justify-center">
-              <Eyebrow>{t("Recovery Eligibility Checker")}</Eyebrow>
+              <Eyebrow>{t("Account Recovery")}</Eyebrow>
             </div>
-            <h1 className="mt-4 text-3xl font-semibold tracking-tight text-ink-900 sm:text-4xl text-balance">{t("Can we help recover your account?")}</h1>
-            <p className="mt-3 text-ink-600 text-balance">{t("A short questionnaire — about two minutes — to see if your situation is a good fit for professional recovery support.")}</p>
+            <h1 className="mt-4 text-3xl font-semibold tracking-tight text-ink-900 sm:text-4xl text-balance">
+              {t("Locked out? Let's get your account back.")}
+            </h1>
+            <p className="mt-3 text-ink-600 text-balance">
+              {t("Message us on WhatsApp with what happened — our team will assess it and handle the recovery with you.")}
+            </p>
           </div>
         </Container>
       </section>
 
       <Section className="pb-24 pt-10 sm:pt-12">
-        <div className="mx-auto max-w-2xl">
-          <EligibilityWizard />
+        <div className="mx-auto max-w-xl">
+          <RecoveryOnWhatsApp />
+          <div className="mt-8 rounded-2xl bg-brand-50 px-5 py-4 text-center">
+            <p className="text-sm font-semibold text-ink-900">{t("Not locked out yet?")}</p>
+            <p className="mt-1 text-sm text-ink-600">
+              {t("Protect your account now — your first month is free, and recovery is included if anything happens.")}
+            </p>
+            <ButtonLink href="/pricing#packages" size="sm" className="mt-3">
+              {t("See protection packages")}
+            </ButtonLink>
+          </div>
         </div>
       </Section>
     </>

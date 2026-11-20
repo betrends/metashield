@@ -4,6 +4,7 @@ import { ButtonLink } from "@/components/ui/Button";
 import { Section, Eyebrow } from "@/components/ui/Section";
 import { Container } from "@/components/ui/Container";
 import { recoveryPlatforms } from "@/lib/content/recovery";
+import { recoveryWhatsappUrl } from "@/lib/site-config";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getT();
@@ -44,9 +45,9 @@ export default async function AccountRecoveryPage() {
               <Eyebrow>{t("Account Recovery")}</Eyebrow>
               <h1 className="mt-4 text-balance text-4xl font-bold tracking-tight text-ink-900 sm:text-5xl">{t("Get your account back — with a")}{" "}
                 <span className="text-brand-600">{t("clear process")}</span>{t(", not guesswork.")}</h1>
-              <p className="mt-5 text-lg text-ink-600">{t("Every recovery case follows the same structured path. Pick your platform below to see exactly how we approach your issue.")}</p>
+              <p className="mt-5 text-lg text-ink-600">{t("Every recovery case follows the same structured path. Pick your platform below to see exactly how we approach your issue.")}{" "}{t("Recovery is handled on WhatsApp — message us and we'll take it from there.")}</p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <ButtonLink href="/recovery-eligibility" size="lg">{t("Check Recovery Eligibility")}</ButtonLink>
+                <ButtonLink href={recoveryWhatsappUrl()} target="_blank" size="lg">{t("Start recovery on WhatsApp")}</ButtonLink>
                 <ButtonLink href="/contact" variant="outline" size="lg">{t("Talk to Our Team")}</ButtonLink>
               </div>
 
@@ -223,10 +224,10 @@ export default async function AccountRecoveryPage() {
                       </ul>
                     </div>
                     <ButtonLink
-                      href="/recovery-eligibility"
+                      href={recoveryWhatsappUrl(`my ${platform.platform} account`)} target="_blank"
                       size="sm"
                       className="w-full"
-                    >{t("Start This Recovery →")}</ButtonLink>
+                    >{t("Start this recovery on WhatsApp →")}</ButtonLink>
                   </div>
                 </div>
               </details>
@@ -242,7 +243,7 @@ export default async function AccountRecoveryPage() {
           <p className="mx-auto mt-4 max-w-xl text-balance text-brand-100">{t("We handle a wide range of account issues across Instagram, Facebook and Meta Business. Reach out and we'll assess your specific case — free initial review.")}</p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <ButtonLink href="/contact" size="lg" variant="outline">{t("Contact Our Team")}</ButtonLink>
-            <ButtonLink href="/recovery-eligibility" size="lg" className="bg-white text-brand-700 hover:bg-brand-50">{t("Check Eligibility Free")}</ButtonLink>
+            <ButtonLink href={recoveryWhatsappUrl()} target="_blank" size="lg" className="bg-white text-brand-700 hover:bg-brand-50">{t("Start recovery on WhatsApp")}</ButtonLink>
           </div>
         </div>
       </Section>

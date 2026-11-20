@@ -4,7 +4,7 @@ import { ButtonLink } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Section, SectionHeading, Eyebrow } from "@/components/ui/Section";
 import { Container } from "@/components/ui/Container";
-import { brandName } from "@/lib/site-config";
+import { brandName, recoveryWhatsappUrl } from "@/lib/site-config";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getT();
@@ -94,7 +94,7 @@ export default async function AboutPage() {
               <p className="mt-5 text-lg text-ink-600">
                 {brandName}{" "}{t("is an independent account-support service based in Nigeria, helping individuals and businesses recover, protect and manage their digital accounts across Instagram, Facebook, Meta Business, TikTok and more.")}</p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <ButtonLink href="/recovery-eligibility" size="lg">{t("Check Your Eligibility")}</ButtonLink>
+                <ButtonLink href={recoveryWhatsappUrl()} target="_blank" size="lg">{t("Start recovery on WhatsApp")}</ButtonLink>
                 <ButtonLink href="/contact" variant="outline" size="lg">{t("Talk to Our Team")}</ButtonLink>
               </div>
             </div>
