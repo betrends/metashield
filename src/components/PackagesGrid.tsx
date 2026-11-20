@@ -12,7 +12,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { PACKAGES_DISCLAIMER, hasBonusMonth, hasFreeFirstMonth, plans, type Plan } from "@/lib/portal/billing";
-import { packageWhatsAppUrl, startPackage, startPackageCheckout } from "@/lib/portal/start-package";
+import { FREE_MONTH_USED_MESSAGE, packageWhatsAppUrl, startPackage, startPackageCheckout } from "@/lib/portal/start-package";
 
 // currentStatus "trial": the client is in their free first month.
 // freeMonthUsed: the client has already had a package, so no free month.
@@ -70,7 +70,8 @@ const looks: Record<string, Look> = {
 
 export function PackagesGrid(props: Props) {
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [errorFor, setErrorFor] = useState<{ id: string; message: string } | null>(null);
+  // kind "info": a note, not an error (e.g. the free month was already used).
+  const [errorFor, setErrorFor] = useState<{ id: string; message: string; kind?: "info" } | null>(null);
   const [freeMonthUsed, setFreeMonthUsed] = useState(props.mode === "portal" && !!props.freeMonthUsed);
   const rowRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
@@ -116,7 +117,7 @@ export function PackagesGrid(props: Props) {
     const message = pay ? await startPackageCheckout(plan) : await startPackage(plan);
     if (message === "free_month_used") {
       setFreeMonthUsed(true);
-      setErrorFor({ id: String(plan.id), message: "You've already had your free month, so this package starts with payment. Tap the button to pay." });
+      setErrorFor({ id: String(plan.id), message: FREE_MONTH_USED_MESSAGE, kind: "info" });
       setBusyId(null);
       return;
     }
@@ -275,10 +276,20 @@ export function PackagesGrid(props: Props) {
                   onClick={() => getPackage(plan, !offerFree)}
                 />
                 {errorFor?.id === plan.id ? (
-                  <p className={`mt-2 text-xs ${dark ? "text-red-300" : "text-risk-high"}`}>
+                  <p
+                    className={`mt-2 rounded-xl px-3 py-2 text-xs leading-relaxed ${
+                      errorFor.kind === "info"
+                        ? dark
+                          ? "bg-white/10 text-brand-50"
+                          : "bg-brand-50 text-ink-700"
+                        : dark
+                          ? "text-red-300"
+                          : "text-risk-high"
+                    }`}
+                  >
                     {errorFor.message}{" "}
                     <a href={packageWhatsAppUrl(plan)} target="_blank" rel="noopener noreferrer" className="font-semibold underline">
-                      WhatsApp
+                      Questions? WhatsApp us
                     </a>
                   </p>
                 ) : null}

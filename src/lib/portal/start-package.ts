@@ -13,9 +13,14 @@ import { hasFreeFirstMonth, packageWhatsAppText, type Plan } from "@/lib/portal/
 
 const PENDING_KEY = "ms-pending-package";
 
+// Package questions go to the WhatsApp line for inquiries.
 export function packageWhatsAppUrl(plan: Plan): string {
-  return `${contact.whatsapp}?text=${encodeURIComponent(packageWhatsAppText(plan))}`;
+  return `${contact.inquiriesWhatsapp}?text=${encodeURIComponent(packageWhatsAppText(plan))}`;
 }
+
+// Shown when someone who has had a package before taps "Start my free month".
+export const FREE_MONTH_USED_MESSAGE =
+  "This account has had a MetaShield package before, so the free month isn't available. Tap “Get this package” to pay.";
 
 export function payAfterSignInPath(planId: string): string {
   return `/portal/billing?plan=${encodeURIComponent(planId)}&pay=1`;

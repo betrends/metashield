@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { getPlan, hasFreeFirstMonth, isPlanId, type PlanId } from "@/lib/portal/billing";
-import { startPackage, startPackageCheckout } from "@/lib/portal/start-package";
+import { FREE_MONTH_USED_MESSAGE, packageWhatsAppUrl, startPackage, startPackageCheckout } from "@/lib/portal/start-package";
 import { PackagesGrid } from "@/components/PackagesGrid";
 import {
   fetchSubscription,
@@ -103,7 +103,7 @@ export default function BillingPage() {
     const message = pay ? await startPackageCheckout(getPlan(planId)) : await startPackage(getPlan(planId));
     if (message === "free_month_used") {
       setFreeMonthUsed(true);
-      setError("You've already had your free month, so this package starts with payment.");
+      setError(FREE_MONTH_USED_MESSAGE);
       setBusy(false);
       return;
     }
@@ -160,7 +160,14 @@ export default function BillingPage() {
           </button>
         </div>
       ) : null}
-      {error ? (
+      {error === FREE_MONTH_USED_MESSAGE ? (
+        <p className="mt-6 rounded-xl bg-brand-50 px-4 py-3 text-sm font-medium text-ink-700 ring-1 ring-brand-100">
+          {error}{" "}
+          <a href={packageWhatsAppUrl(getPlan(picked?.id ?? "watch"))} target="_blank" rel="noopener noreferrer" className="font-semibold text-brand-700 underline">
+            Questions? WhatsApp us
+          </a>
+        </p>
+      ) : error ? (
         <p className="mt-6 rounded-xl bg-risk-high-bg px-4 py-3 text-sm font-medium text-risk-high">
           {error}
         </p>
