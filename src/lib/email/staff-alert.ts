@@ -3,6 +3,7 @@
 
 import { Resend } from "resend";
 import { staffAlertEmail } from "@/lib/email-templates";
+import { senderFrom } from "@/lib/server/sender";
 
 export async function sendStaffAlert(input: {
   subject: string;
@@ -18,7 +19,7 @@ export async function sendStaffAlert(input: {
   try {
     const resend = new Resend(apiKey);
     const { error } = await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || "MetaShield <onboarding@resend.dev>",
+      from: senderFrom(),
       to: recipients,
       subject: input.subject.replace(/[\r\n]+/g, " ").slice(0, 200),
       html: staffAlertEmail({ title: input.subject, lines: input.lines, link: input.link }),

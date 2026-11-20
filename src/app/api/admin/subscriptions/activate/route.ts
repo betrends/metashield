@@ -15,6 +15,7 @@ import { getAdminRole } from "@/lib/admin/auth";
 import { addOneMonth, getPlan, hasBonusMonth, isPlanId, planEndsOn } from "@/lib/portal/billing";
 import { subscriptionWelcomeEmail } from "@/lib/email-templates";
 import { sendProtectionChecklist, startsNewProtection } from "@/lib/server/protection-checklist";
+import { senderFrom } from "@/lib/server/sender";
 
 export async function POST(request: Request) {
   const role = await getAdminRole();
@@ -113,7 +114,7 @@ export async function POST(request: Request) {
       const { Resend } = await import("resend");
       const resend = new Resend(resendKey);
       await resend.emails.send({
-        from: process.env.RESEND_FROM_EMAIL || "MetaShield <onboarding@resend.dev>",
+        from: senderFrom(),
         to: client.email,
         subject: `Welcome to ${plan.name}`,
         html: subscriptionWelcomeEmail({

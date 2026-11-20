@@ -15,6 +15,7 @@ import {
   paymentConfirmedEmail,
   balanceDueEmail,
 } from "@/lib/email-templates";
+import { senderFrom } from "@/lib/server/sender";
 
 export type CaseEmailKind =
   | "case_submitted"
@@ -142,7 +143,7 @@ export async function sendCaseUpdateEmail(input: CaseEmailInput): Promise<{ sent
 
   try {
     const resend = new Resend(apiKey);
-    const fromAddress = process.env.RESEND_FROM_EMAIL || "MetaShield <onboarding@resend.dev>";
+    const fromAddress = senderFrom();
     const { error } = await resend.emails.send({
       from: fromAddress,
       to,

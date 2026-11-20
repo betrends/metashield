@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import { createClient as createServerClient, createAdminClient } from "@/lib/supabase/server";
 import { sendCaseUpdateEmail } from "@/lib/email/case-update";
 import { escapeHtml } from "@/lib/email-templates";
+import { senderFrom } from "@/lib/server/sender";
 
 export async function POST(request: Request) {
   const supabase = await createServerClient();
@@ -102,7 +103,7 @@ export async function POST(request: Request) {
     if (apiKey) {
       const { Resend } = await import("resend");
       const resend = new Resend(apiKey);
-      const fromAddress = process.env.RESEND_FROM_EMAIL || "MetaShield <onboarding@resend.dev>";
+      const fromAddress = senderFrom();
       const label = isReassignment ? "You've been reassigned a case" : "You've been assigned a new case";
       // Case title, client name and issue come from the client — escape
       // them before putting them into HTML.

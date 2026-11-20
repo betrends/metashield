@@ -31,6 +31,7 @@ import { formatNaira } from "@/lib/portal/case-fees";
 import { PAYMENT_COLUMNS, pickPaymentRecord, summarizePayment } from "@/lib/portal/payments";
 import { postCaseMessage } from "@/lib/server/case-events";
 import { unsubscribeUrl } from "@/lib/server/unsubscribe";
+import { senderFrom } from "@/lib/server/sender";
 
 export const dynamic = "force-dynamic";
 
@@ -195,7 +196,7 @@ export async function GET(request: Request) {
     const riskLevel = typeof meta.riskLevel === "string" ? meta.riskLevel : null;
     try {
       const { error } = await new Resend(resendKey).emails.send({
-        from: process.env.RESEND_FROM_EMAIL || "MetaShield <onboarding@resend.dev>",
+        from: senderFrom(),
         to: email,
         subject: isHealthCheck
           ? protectionFollowupSubject({ name, handle, riskLevel, final })
@@ -275,7 +276,7 @@ export async function GET(request: Request) {
     const freeMonth = p.status === "trial";
     try {
       const { error } = await new Resend(resendKey).emails.send({
-        from: process.env.RESEND_FROM_EMAIL || "MetaShield <onboarding@resend.dev>",
+        from: senderFrom(),
         to: user.email,
         subject: freeMonth
           ? kind === "ended"
