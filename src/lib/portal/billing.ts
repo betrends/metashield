@@ -7,7 +7,7 @@
 // "true" in Vercel. Until then clients ask for a package on WhatsApp and the
 // admin switches it on from the client's page (Activate package).
 
-// "biz" is MetaShield Business (₦50,000/month). Its id isn't "business"
+// "biz" is MetaShield Business (₦25,000/month). Its id isn't "business"
 // because an old, retired plan already used that id.
 export type PlanId = "watch" | "elite" | "biz" | "annual" | "lifetime";
 // Plans sold before October 2026 — only kept so old records still display.
@@ -82,8 +82,8 @@ export const plans: Plan[] = [
   {
     id: "biz",
     name: "MetaShield Business",
-    price: "₦50,000",
-    priceKobo: 50_000_00,
+    price: "₦25,000",
+    priceKobo: 25_000_00,
     priceSuffix: "/month",
     period: "month",
     tagline: "For brands and teams running several accounts",
