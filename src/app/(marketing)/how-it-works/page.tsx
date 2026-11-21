@@ -235,7 +235,7 @@ export default async function HowItWorksPage() {
             <ButtonLink href="/pricing#packages" size="lg" className="!bg-white !text-brand-700 hover:!bg-brand-50">
               {t("See protection packages")}
             </ButtonLink>
-            <ButtonLink href={recoveryWhatsappUrl()} target="_blank" size="lg" variant="outline" className="!border-white/40 !text-white hover:!bg-white/10">
+            <ButtonLink href={recoveryWhatsappUrl()} target="_blank" size="lg" variant="outline" className="!border-white/40 !bg-transparent !text-white hover:!bg-white/10">
               {t("Start recovery")}
             </ButtonLink>
           </div>

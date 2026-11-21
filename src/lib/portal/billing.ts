@@ -32,7 +32,7 @@ export type Plan = {
   highlighted?: boolean;
 };
 
-export const PACKAGES_HEADLINE = "One Subscription. Account Recovery at No Extra Cost.";
+export const PACKAGES_HEADLINE = "One package. Recovery at no extra cost.";
 
 export const PACKAGES_DISCLAIMER =
   "Account recovery is provided at no additional recovery service fee for eligible cases covered by your plan. Recovery, appeal approval, and restriction removal are not guaranteed. Meta makes the final decisions. All packages are subject to MetaShield's terms and conditions.";

@@ -200,7 +200,7 @@ export default async function BusinessAdsPage() {
           <p className="mx-auto mt-4 max-w-xl text-balance text-brand-100">{t("We currently support Instagram, Facebook and Meta Business. TikTok, X, Snapchat and Google Ads support is planned as we grow.")}</p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <ButtonLink href="/check-my-account" size="lg" className="!bg-white !text-brand-700 hover:!bg-brand-50">{t("Run an Account Health Check")}</ButtonLink>
-            <ButtonLink href="/contact" size="lg" variant="outline" className="!border-white/40 !text-white hover:!bg-white/10">{t("Talk to Our Team")}</ButtonLink>
+            <ButtonLink href="/contact" size="lg" variant="outline" className="!border-white/40 !bg-transparent !text-white hover:!bg-white/10">{t("Talk to Our Team")}</ButtonLink>
           </div>
         </div>
       </Section>

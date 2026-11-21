@@ -21,7 +21,7 @@ function FooterColumn({
           <li key={link.href}>
             <Link
               href={link.href}
-              className="text-sm text-ink-300 transition-colors hover:text-brand-300"
+              className="text-sm text-ink-300 transition-colors hover:text-white"
             >
               {t(link.label)}
             </Link>
@@ -35,12 +35,12 @@ function FooterColumn({
 export async function Footer() {
   const t = await getT();
   return (
-    <footer className="bg-ink-900 text-ink-300">
+    <footer className="bg-ink-950 text-ink-300">
       <Container className="py-16">
         <div className="grid grid-cols-2 gap-10 sm:grid-cols-3 lg:grid-cols-5">
           <div className="col-span-2">
             <Link href="/" className="flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white">
+              <span className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-white text-ink-900">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                   <path
                     d="M12 2.5 4 6v6c0 5.1 3.4 8.9 8 9.5 4.6-.6 8-4.4 8-9.5V6l-8-3.5Z"
@@ -55,7 +55,7 @@ export async function Footer() {
                   />
                 </svg>
               </span>
-              <span className="text-base font-semibold text-white">
+              <span className="font-serif text-xl font-medium text-white">
                 {brandName}
               </span>
             </Link>

@@ -34,33 +34,33 @@ const accountCount: Record<string, { ig?: number; fb?: number; ads?: number }> =
 type Look = { icon: ReactNode; tile: string; badge: string };
 const looks: Record<string, Look> = {
   watch: {
-    tile: "from-sky-500 to-brand-600",
+    tile: "from-ink-800 to-ink-900",
     badge: "Monthly",
     icon: (
       <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Zm9.5 3a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
     ),
   },
   elite: {
-    tile: "from-fuchsia-500 to-brand-600",
+    tile: "from-ink-800 to-ink-900",
     badge: "Monthly",
     icon: <path d="m12 3 2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6-4.5-4.2 6.1-.7L12 3Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />,
   },
   biz: {
-    tile: "from-indigo-500 to-slate-800",
+    tile: "from-ink-800 to-ink-900",
     badge: "Monthly",
     icon: (
       <path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h13A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5v-9ZM9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7M4 12.5h16M11 12.5v1.5h2v-1.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     ),
   },
   annual: {
-    tile: "from-emerald-500 to-teal-600",
+    tile: "from-ink-800 to-ink-900",
     badge: "Yearly",
     icon: (
       <path d="M4 7.5A2.5 2.5 0 0 1 6.5 5h11A2.5 2.5 0 0 1 20 7.5v10a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5v-10ZM4 10h16M8.5 3v4m7-4v4m-7 7.5 2 2 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     ),
   },
   lifetime: {
-    tile: "from-amber-400 to-orange-500",
+    tile: "from-ink-800 to-ink-900",
     badge: "Pay once",
     icon: (
       <path d="M12 12c-2-2.7-3.6-4-5.5-4a4 4 0 0 0 0 8c1.9 0 3.5-1.3 5.5-4Zm0 0c2 2.7 3.6 4 5.5 4a4 4 0 0 0 0-8c-1.9 0-3.5 1.3-5.5 4Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
@@ -158,12 +158,12 @@ export function PackagesGrid(props: Props) {
               style={{ ["--d" as string]: `${i * 110}ms` }}
               className={`pkg-reveal pkg-card group relative flex w-[86%] shrink-0 snap-center flex-col rounded-3xl p-6 sm:w-auto ${
                 dark
-                  ? "pkg-featured bg-gradient-to-b from-[#1b1240] via-[#24145a] to-[#2e1a6e] text-white shadow-2xl shadow-brand-900/30"
-                  : "border border-ink-100 bg-white shadow-sm"
+                  ? "bg-ink-950 text-white ring-1 ring-ink-900"
+                  : "border border-ink-200/70 bg-white"
               } ${isCurrent ? "ring-2 ring-brand-500" : ""}`}
             >
               {featured ? (
-                <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-gradient-to-r from-fuchsia-500 to-brand-500 px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-lg shadow-brand-600/40">
+                <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-brand-600 px-3.5 py-1 text-xs font-semibold text-white">
                   ★ Recommended
                 </span>
               ) : null}
@@ -176,7 +176,7 @@ export function PackagesGrid(props: Props) {
               {/* Icon, name, billing badge */}
               <div className="flex items-start justify-between gap-3">
                 <span
-                  className={`pkg-icon flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${look.tile} text-white shadow-lg`}
+                  className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${look.tile} ${dark ? "!from-white/15 !to-white/10" : ""} text-white`}
                 >
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     {look.icon}
@@ -196,12 +196,12 @@ export function PackagesGrid(props: Props) {
               {/* Price (same height on every card, with or without the free-month tag) */}
               <div className="mt-4 sm:min-h-[8.5rem]">
               {offerFree || offerBonus ? (
-                <span className="pkg-free inline-flex w-fit items-center gap-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-white shadow-md shadow-emerald-600/30">
+                <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-risk-low-bg px-3 py-1 text-xs font-semibold text-risk-low">
                   🎁 {offerFree ? "1st month free" : "+1 month free"}
                 </span>
               ) : null}
               <div className={`${offerFree || offerBonus ? "mt-2" : ""} flex items-baseline gap-1.5`}>
-                <span className={`text-4xl font-extrabold tracking-tight  ${dark ? "text-white" : "text-ink-900"}`}>{plan.price}</span>
+                <span className={`font-serif text-[2.6rem] leading-none tracking-[-0.02em] ${dark ? "text-white" : "text-ink-900"}`}>{plan.price}</span>
                 <span className={`whitespace-nowrap text-sm font-medium ${dark ? "text-brand-200" : "text-ink-500"}`}>{periodLabel[plan.period]}</span>
               </div>
               {offerFree ? (
@@ -224,7 +224,7 @@ export function PackagesGrid(props: Props) {
                   dark ? "bg-emerald-400/15 ring-1 ring-emerald-300/30" : "bg-emerald-50 ring-1 ring-emerald-200"
                 }`}
               >
-                <span className="pkg-pulse relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
+                <span className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-risk-low text-white">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <path d="M12 2.5 4 6v6c0 5.1 3.4 8.9 8 9.5 4.6-.6 8-4.4 8-9.5V6l-8-3.5Z" fill="currentColor" fillOpacity=".25" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
                     <path d="m8.5 12.2 2.4 2.4 4.6-4.9" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
@@ -355,7 +355,7 @@ function PackageButton({
   disabled: boolean;
   onClick: () => void;
 }) {
-  const base = "flex w-full items-center justify-center gap-2 rounded-full px-5 py-3.5 text-sm font-bold transition";
+  const base = "flex w-full items-center justify-center gap-2 h-12 rounded-xl px-5 text-[15px] font-semibold transition-colors";
   if (isCurrent) {
     return (
       <span className={`${base} ${dark ? "bg-white/10 text-brand-100 ring-1 ring-white/20" : "bg-ink-50 text-ink-500 ring-1 ring-ink-200"}`}>
@@ -369,10 +369,10 @@ function PackageButton({
       onClick={onClick}
       disabled={disabled}
       aria-label={`${label} — ${plan.name}`}
-      className={`pkg-shine group/btn ${base} ${
+      className={`group/btn ${base} ${
         dark
-          ? "pkg-shine-auto bg-white text-brand-800 shadow-lg shadow-black/20 hover:bg-brand-50"
-          : "bg-gradient-to-r from-brand-600 to-brand-700 text-white shadow-md shadow-brand-600/25 hover:shadow-lg hover:shadow-brand-600/35"
+          ? "bg-white text-ink-900 hover:bg-ink-100"
+          : "bg-brand-600 text-white hover:bg-brand-700"
       } disabled:opacity-60`}
     >
       {busy ? busyLabel : label}

@@ -242,7 +242,7 @@ export default async function AccountRecoveryPage() {
           <h2 className="text-balance text-3xl font-bold text-white sm:text-4xl">{t("Don't see your exact issue?")}</h2>
           <p className="mx-auto mt-4 max-w-xl text-balance text-brand-100">{t("We handle a wide range of account issues across Instagram, Facebook and Meta Business. Reach out and we'll assess your specific case — free initial review.")}</p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <ButtonLink href="/contact" size="lg" variant="outline" className="!border-white/40 !text-white hover:!bg-white/10">{t("Contact Our Team")}</ButtonLink>
+            <ButtonLink href="/contact" size="lg" variant="outline" className="!border-white/40 !bg-transparent !text-white hover:!bg-white/10">{t("Contact Our Team")}</ButtonLink>
             <ButtonLink href={recoveryWhatsappUrl()} target="_blank" size="lg" className="!bg-white !text-brand-700 hover:!bg-brand-50">{t("Start recovery")}</ButtonLink>
           </div>
         </div>

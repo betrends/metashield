@@ -239,7 +239,7 @@ export default async function AccountProtectionPage() {
           <p className="mx-auto mt-4 max-w-xl text-balance text-brand-100">{t("Most accounts show risk signals weeks before enforcement action. Run a free health check and find out where yours stands.")}</p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <ButtonLink href="/check-my-account" size="lg" className="!bg-white !text-brand-700 hover:!bg-brand-50">{t("Run a Free Health Check")}</ButtonLink>
-            <ButtonLink href="/contact" size="lg" variant="outline" className="!border-white/40 !text-white hover:!bg-white/10">{t("Talk to Our Team")}</ButtonLink>
+            <ButtonLink href="/contact" size="lg" variant="outline" className="!border-white/40 !bg-transparent !text-white hover:!bg-white/10">{t("Talk to Our Team")}</ButtonLink>
           </div>
         </div>
       </Section>

@@ -229,7 +229,7 @@ export default async function AboutPage() {
           <p className="mx-auto mt-4 max-w-xl text-balance text-brand-100">{t("Our team responds within 24 hours. No obligation, no pressure — just a clear answer about whether we can help with your situation.")}</p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <ButtonLink href="/contact" size="lg" className="!bg-white !text-brand-700 hover:!bg-brand-50">{t("Contact Our Team")}</ButtonLink>
-            <ButtonLink href="/check-my-account" size="lg" variant="outline" className="!border-white/40 !text-white hover:!bg-white/10">{t("Run a Free Health Check")}</ButtonLink>
+            <ButtonLink href="/check-my-account" size="lg" variant="outline" className="!border-white/40 !bg-transparent !text-white hover:!bg-white/10">{t("Run a Free Health Check")}</ButtonLink>
           </div>
         </div>
       </Section>

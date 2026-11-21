@@ -230,7 +230,7 @@ export default async function PricingPage() {
           <p className="mx-auto mt-4 max-w-xl text-balance text-brand-100">{t("No commitment, no payment. Find out exactly what's wrong with your account and what it will take to recover it.")}</p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <ButtonLink href="/check-my-account" size="lg" className="!bg-white !text-brand-700 hover:!bg-brand-50">{t("Check My Account Health — Free")}</ButtonLink>
-            <ButtonLink href={recoveryWhatsappUrl()} target="_blank" size="lg" variant="outline" className="!border-white/40 !text-white hover:!bg-white/10">{t("Start recovery")}</ButtonLink>
+            <ButtonLink href={recoveryWhatsappUrl()} target="_blank" size="lg" variant="outline" className="!border-white/40 !bg-transparent !text-white hover:!bg-white/10">{t("Start recovery")}</ButtonLink>
           </div>
         </div>
       </Section>

@@ -6,24 +6,27 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { BrandLoader } from "@/components/BrandLoader";
 
-const adminNavItems = [
+// Protection first. Recovery now happens on WhatsApp, so the old recovery
+// pages sit in a quieter "Recovery archive" group — still one click away.
+type NavItem = { label: string; href: string; icon: string; group?: string };
+const adminNavItems: NavItem[] = [
   { label: "Dashboard", href: "/admin", icon: "grid" },
-  { label: "Recovery Requests", href: "/admin/cases", icon: "folder" },
   { label: "Clients", href: "/admin/clients", icon: "users" },
-  { label: "Documents", href: "/admin/documents", icon: "doc" },
-  { label: "Agents", href: "/admin/agents", icon: "headset" },
-  { label: "Agent View", href: "/admin/agent-dashboard", icon: "grid" },
-  { label: "Appeals", href: "/admin/appeals", icon: "flag" },
-  { label: "Payments", href: "/admin/payments", icon: "card" },
   { label: "Packages", href: "/admin/subscriptions", icon: "repeat" },
-  { label: "Reports", href: "/admin/reports", icon: "chart" },
-  { label: "Messages", href: "/admin/messages", icon: "mail" },
+  { label: "Payments", href: "/admin/payments", icon: "card" },
   { label: "Email Users", href: "/admin/broadcast", icon: "send" },
+  { label: "Messages", href: "/admin/messages", icon: "mail" },
   { label: "Support Tickets", href: "/admin/support", icon: "ticket" },
+  { label: "Reports", href: "/admin/reports", icon: "chart" },
   { label: "Settings", href: "/admin/settings", icon: "gear" },
+  { label: "Recovery Requests", href: "/admin/cases", icon: "folder", group: "Recovery archive" },
+  { label: "Documents", href: "/admin/documents", icon: "doc", group: "Recovery archive" },
+  { label: "Appeals", href: "/admin/appeals", icon: "flag", group: "Recovery archive" },
+  { label: "Agents", href: "/admin/agents", icon: "headset", group: "Recovery archive" },
+  { label: "Agent View", href: "/admin/agent-dashboard", icon: "grid", group: "Recovery archive" },
 ];
 
-const agentNavItems = [
+const agentNavItems: NavItem[] = [
   { label: "Dashboard", href: "/admin/agent-dashboard", icon: "grid" },
   { label: "My Cases", href: "/admin/cases", icon: "folder" },
   { label: "Messages", href: "/admin/messages", icon: "mail" },
@@ -296,7 +299,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       {/* Mobile top bar */}
       <div className="sticky top-0 z-30 flex items-center justify-between border-b border-ink-100 bg-white/95 px-4 py-3 backdrop-blur lg:hidden">
         <div className="flex items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white">
+          <span className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-ink-900 text-white">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <path
                 d="M12 2.5 4 6v6c0 5.1 3.4 8.9 8 9.5 4.6-.6 8-4.4 8-9.5V6l-8-3.5Z"
@@ -367,7 +370,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             </button>
           </div>
           <Link href={isAgent ? "/admin/agent-dashboard" : "/admin"} className="hidden items-center gap-2 px-2 lg:flex">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-white">
+            <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-ink-900 text-white">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                 <path
                   d="M12 2.5 4 6v6c0 5.1 3.4 8.9 8 9.5 4.6-.6 8-4.4 8-9.5V6l-8-3.5Z"
@@ -383,26 +386,32 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               </svg>
             </span>
             <div>
-              <p className="text-sm font-semibold text-ink-900">MetaShield</p>
+              <p className="font-serif text-lg font-medium leading-tight text-ink-900">MetaShield</p>
               <p className="text-[11px] text-ink-400">{isAgent ? "Agent Portal" : "Admin Portal"}</p>
             </div>
           </Link>
 
           <nav className="mt-4 flex-1 space-y-1 lg:mt-8">
-            {navItems.map((item) => {
+            {navItems.map((item, i) => {
               const active = pathname === item.href;
+              const startsGroup = item.group && item.group !== navItems[i - 1]?.group;
               return (
+                <div key={item.href}>
+                {startsGroup ? (
+                  <p className="mt-6 px-3 pb-1.5 text-xs font-medium text-ink-400">{item.group}</p>
+                ) : null}
                 <Link
                   key={item.href}
                   href={item.href}
                   onClick={() => setMobileNavOpen(false)}
-                  className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
-                    active ? "bg-brand-600 text-white shadow-sm" : "text-ink-500 hover:bg-ink-50 hover:text-ink-900"
+                  className={`flex items-center gap-3 rounded-xl px-3 py-2 text-[14.5px] transition-colors ${
+                    active ? "bg-ink-900 font-semibold text-white" : item.group ? "text-ink-500 hover:bg-ink-50 hover:text-ink-900" : "text-ink-600 hover:bg-ink-50 hover:text-ink-900"
                   }`}
                 >
                   <NavIcon name={item.icon} />
                   {item.label}
                 </Link>
+                </div>
               );
             })}
           </nav>

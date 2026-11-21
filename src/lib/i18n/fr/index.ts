@@ -16,6 +16,7 @@ import { healthcheck } from "./healthcheck";
 import { eligibility } from "./eligibility";
 import { legal } from "./legal";
 import { whatsapp } from "./whatsapp";
+import { redesign } from "./redesign";
 
 export const fr: Record<string, string> = {
   ...layout,
@@ -32,4 +33,5 @@ export const fr: Record<string, string> = {
   ...eligibility,
   ...legal,
   ...whatsapp,
+  ...redesign,
 };
