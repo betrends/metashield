@@ -63,7 +63,7 @@ Full upfront payment: clients who choose to pay the full case fee upfront before
 
 Subscription plans: monthly or annual subscription plans are billed at the price shown at the time of sign-up and renew automatically unless cancelled before the renewal date. Subscription fees are not refundable for the current billing period.
 
-All payments are processed securely by Korapay. We do not store your card details. If you believe you were charged in error, contact {email} within 7 days.`,
+All payments are processed securely by our payment providers, Paystack and Korapay. We do not store your card details: for automatic renewals, the payment provider keeps the card and charges it on each renewal date until you turn automatic payment off or cancel. If you believe you were charged in error, contact {email} within 7 days.`,
   },
   {
     heading: "6. Exclusivity during the review process",

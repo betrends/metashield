@@ -1,12 +1,16 @@
-// Verifies a Korapay payment reference and activates the subscription.
-// Called by the billing page after Korapay redirects back with ?reference=xxx.
+// Confirms a card payment and switches the package on. Called by the
+// Packages page when the client comes back from checkout with
+// ?kpref=<reference>. References starting "msp-" are Paystack payments
+// (monthly and yearly packages then renew automatically), the rest Korapay.
+// Paystack also sends its own notification (/api/paystack/webhook); a
+// payment is only ever counted once.
 
 import { NextResponse } from "next/server";
 import { createClient as createServerClient, createAdminClient } from "@/lib/supabase/server";
-import { addOneMonth, getPlan, hasBonusMonth, isPlanId, planEndsOn } from "@/lib/portal/billing";
-import { subscriptionWelcomeEmail } from "@/lib/email-templates";
-import { sendProtectionChecklist, startsNewProtection } from "@/lib/server/protection-checklist";
-import { withSenderName } from "@/lib/server/sender";
+import { getPlan, isPlanId } from "@/lib/portal/billing";
+import { activatePaidPackage } from "@/lib/server/activate-package";
+import { isPaystackReference, metadataOf, verifyPaystackTransaction } from "@/lib/server/paystack";
+import { setupAutoRenew } from "@/lib/server/paystack-autopay";
 
 export async function POST(request: Request) {
   const supabase = await createServerClient();
@@ -28,6 +32,55 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "missing_reference" }, { status: 400 });
   }
 
+  const clientName = (user.user_metadata?.full_name as string | undefined) || "";
+
+  // ── Paystack ──
+  if (isPaystackReference(reference)) {
+    const res = await verifyPaystackTransaction(reference);
+    const tx = res.data;
+    if (!res.status || !tx || tx.status !== "success") {
+      console.error("Paystack verify failed:", res.message, tx?.status);
+      return NextResponse.json({ error: "payment_not_successful", detail: res.message }, { status: 400 });
+    }
+    const md = metadataOf(tx);
+    // The payment must belong to the signed-in client.
+    if (md.userId !== user.id) {
+      return NextResponse.json({ error: "reference_not_yours" }, { status: 403 });
+    }
+    if (!isPlanId(md.planId)) {
+      return NextResponse.json({ error: "invalid_plan_in_metadata" }, { status: 400 });
+    }
+    const plan = getPlan(md.planId);
+    const amountKobo = Number(tx.amount ?? 0);
+    if (amountKobo < plan.priceKobo || (tx.currency && tx.currency !== "NGN")) {
+      console.error("Paystack amount below package price:", { reference, amountKobo, plan: plan.id });
+      return NextResponse.json({ error: "amount_mismatch" }, { status: 400 });
+    }
+    const admin = createAdminClient();
+    const result = await activatePaidPackage(admin, {
+      userId: user.id,
+      email: user.email ?? null,
+      clientName,
+      plan,
+      reference,
+      amountKobo,
+    });
+    if (!result.ok) return NextResponse.json({ error: result.error }, { status: 500 });
+    let autoRenew = false;
+    if (!result.alreadyRecorded && user.email) {
+      autoRenew = (await setupAutoRenew(admin, { userId: user.id, email: user.email, plan, tx, renewsOn: result.renewsOn })).autoRenew;
+    }
+    return NextResponse.json({
+      ok: true,
+      planId: plan.id,
+      planName: plan.name,
+      checklistSent: result.checklistSent,
+      alreadyRecorded: result.alreadyRecorded,
+      autoRenew,
+    });
+  }
+
+  // ── Korapay ──
   const secretKey = process.env.KORAPAY_SECRET_KEY;
   if (!secretKey) {
     return NextResponse.json({ error: "KORAPAY_SECRET_KEY not configured" }, { status: 500 });
@@ -55,29 +108,6 @@ export async function POST(request: Request) {
     console.error("Korapay amount below package price:", { reference, paidNaira, plan: plan.id });
     return NextResponse.json({ error: "amount_mismatch" }, { status: 400 });
   }
-  const admin = createAdminClient();
-  const { data: existing } = await admin
-    .from("subscriptions")
-    .select("id, plan_id, status, renews_on")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  // Monthly packages run a month, Annual a year, Lifetime never ends.
-  // Renewing the same package early adds the new period on top of what's
-  // left, so the client doesn't lose days.
-  const now = new Date();
-  // Decided before the package is switched on: a new start gets the checklist.
-  const isNewProtection = startsNewProtection(existing, now);
-  const currentEnd = existing?.renews_on ? new Date(existing.renews_on) : null;
-  const extendFrom =
-    (existing?.status === "active" && existing.plan_id === plan.id && currentEnd && currentEnd > now) ||
-    // Paying during the free month: the paid period starts when it ends.
-    (existing?.status === "trial" && currentEnd && currentEnd > now)
-      ? currentEnd
-      : now;
-  let renewsOn = planEndsOn(plan, extendFrom);
-  // First month free on Annual: a new client's first payment gets 13 months.
-  if (!existing && hasBonusMonth(plan.id) && renewsOn) renewsOn = addOneMonth(renewsOn);
 
   // The charge must belong to the signed-in user, so one client can't
   // activate a plan with someone else's payment reference.
@@ -86,88 +116,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "reference_not_yours" }, { status: 403 });
   }
 
-  // Already recorded (e.g. the billing page verified this reference
-  // before) — report success without inserting a second invoice.
-  const { data: priorInvoice } = await admin
-    .from("invoices")
-    .select("id")
-    .eq("paystack_reference", reference)
-    .maybeSingle();
-  if (priorInvoice) {
-    return NextResponse.json({ ok: true, planId, planName: plan.name, alreadyRecorded: true });
-  }
-
-  let subscriptionId: string;
-  if (existing) {
-    const { error: updateError } = await admin
-      .from("subscriptions")
-      .update({ plan_id: planId, status: "active", renews_on: renewsOn, updated_at: new Date().toISOString() })
-      .eq("id", existing.id);
-    if (updateError) {
-      // Previously ignored: the client was charged but the plan stayed
-      // inactive while the page said "subscribed".
-      console.error("Failed to activate subscription:", updateError);
-      return NextResponse.json({ error: "db_error" }, { status: 500 });
-    }
-    subscriptionId = existing.id;
-  } else {
-    const { data: inserted, error } = await admin
-      .from("subscriptions")
-      .insert({ user_id: user.id, plan_id: planId, status: "active", renews_on: renewsOn })
-      .select("id")
-      .single();
-    if (error || !inserted) {
-      console.error("Failed to create subscription:", error);
-      return NextResponse.json({ error: "db_error" }, { status: 500 });
-    }
-    subscriptionId = inserted.id;
-  }
-
-  const { error: invoiceError } = await admin.from("invoices").insert({
-    user_id: user.id,
-    subscription_id: subscriptionId,
-    amount_kobo: plan.priceKobo,
-    currency: "NGN",
-    status: "paid",
-    paystack_reference: reference,
+  const result = await activatePaidPackage(createAdminClient(), {
+    userId: user.id,
+    email: user.email ?? null,
+    clientName,
+    plan,
+    reference,
+    amountKobo: Math.round(paidNaira * 100),
   });
-  if (invoiceError) {
-    // The plan is active; only the history row is missing. Log it for
-    // reconciliation rather than telling a paying client it failed.
-    console.error("Subscription activated but invoice insert failed:", invoiceError, { reference });
-  }
-
-  // Send welcome email to the client
-  const resendKey = process.env.RESEND_API_KEY;
-  const fromAddress = withSenderName(process.env.RESEND_FROM_EMAIL);
-  if (resendKey && fromAddress && user.email) {
-    const clientName = (user.user_metadata?.full_name as string | undefined) || user.email.split("@")[0];
-    try {
-      const { Resend } = await import("resend");
-      const resend = new Resend(resendKey);
-      await resend.emails.send({
-        from: fromAddress,
-        to: user.email,
-        subject: `Welcome to ${plan.name}`,
-        html: subscriptionWelcomeEmail({
-          clientName,
-          planName: plan.name,
-          planPrice: plan.price,
-          priceSuffix: plan.priceSuffix ?? "",
-          features: plan.features,
-          renewsOn,
-        }),
-      });
-    } catch (e) {
-      console.error("Failed to send subscription welcome email:", e);
-    }
-  }
-
-  // The compulsory "keep your account protected" checklist, once per new start.
-  let checklistSent = false;
-  if (isNewProtection && user.email) {
-    checklistSent = await sendProtectionChecklist({ to: user.email, clientName: (user.user_metadata?.full_name as string | undefined) || "", planName: plan.name });
-  }
-
-  return NextResponse.json({ ok: true, checklistSent, planId, planName: plan.name });
+  if (!result.ok) return NextResponse.json({ error: result.error }, { status: 500 });
+  return NextResponse.json({
+    ok: true,
+    checklistSent: result.checklistSent,
+    planId,
+    planName: plan.name,
+    alreadyRecorded: result.alreadyRecorded,
+  });
 }

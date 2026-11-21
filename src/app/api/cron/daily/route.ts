@@ -247,6 +247,19 @@ export async function GET(request: Request) {
     if (!kind) continue;
     const periodEnd = String(p.renews_on).slice(0, 10);
 
+    // Paid packages on automatic card renewal don't need a "renew now"
+    // reminder: Paystack charges the card the day before the end date. If
+    // that charge fails, the client gets the "payment didn't go through"
+    // email instead, and the "ended" email still goes out if nothing is paid.
+    if (kind === "ending_soon" && p.status === "active") {
+      const { data: autopay } = await admin
+        .from("paystack_billing")
+        .select("auto_renew")
+        .eq("user_id", p.user_id)
+        .maybeSingle();
+      if (autopay?.auto_renew) continue;
+    }
+
     // Claim this reminder first (unique per package period), so it's sent once.
     const { data: claim, error: claimError } = await admin
       .from("package_reminders")
