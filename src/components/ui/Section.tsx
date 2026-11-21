@@ -13,7 +13,7 @@ export function Section({
   id?: string;
 }) {
   return (
-    <section id={id} className={`py-16 sm:py-24 ${className}`}>
+    <section id={id} className={`py-20 sm:py-28 ${className}`}>
       <Container className={containerClassName}>{children}</Container>
     </section>
   );
@@ -21,7 +21,8 @@ export function Section({
 
 export function Eyebrow({ children }: { children: ReactNode }) {
   return (
-    <p className="inline-flex items-center gap-2 rounded-full bg-brand-100 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wide text-brand-800">
+    <p className="inline-flex items-center gap-2.5 text-sm font-medium text-brand-700">
+      <span aria-hidden="true" className="h-px w-6 bg-brand-300" />
       {children}
     </p>
   );
@@ -47,11 +48,11 @@ export function SectionHeading({
           <Eyebrow>{eyebrow}</Eyebrow>
         </div>
       ) : null}
-      <h2 className="mt-4 text-3xl sm:text-4xl font-semibold tracking-tight text-ink-900 text-balance">
+      <h2 className="mt-4 text-[2rem] leading-[1.12] sm:text-[2.75rem] text-ink-900 text-balance">
         {title}
       </h2>
       {description ? (
-        <p className="mt-4 text-base sm:text-lg text-ink-500 text-balance">
+        <p className="mt-5 text-base leading-relaxed sm:text-lg text-ink-500 text-balance">
           {description}
         </p>
       ) : null}

@@ -1,43 +1,79 @@
 @import "tailwindcss";
 
+/* ---- Typefaces (self-hosted, SIL Open Font Licence — see /public/fonts) ----
+   Newsreader: headings — a calm, editorial serif that reads as trustworthy.
+   Hanken Grotesk: everything else — a clear, modern sans for UI and text. */
+@font-face {
+  font-family: "Newsreader";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url(/fonts/newsreader-latin-opsz-normal.woff2) format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Newsreader";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url(/fonts/newsreader-latin-ext-opsz-normal.woff2) format("woff2-variations");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Hanken Grotesk";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url(/fonts/hanken-grotesk-latin-wght-normal.woff2) format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Hanken Grotesk";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url(/fonts/hanken-grotesk-latin-ext-wght-normal.woff2) format("woff2-variations");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
 :root {
   --background: #ffffff;
-  --foreground: #101b29;
+  --foreground: #17162a;
 
-  /* Brand — violet/indigo scale, matching the reference. 100/200 are the
-     tint used for backgrounds/badges; 600 is the accessible, deeper
-     violet used for buttons, links and anything that sits on white. */
-  --color-brand-50: #f5f3ff;
-  --color-brand-100: #ede9fe;
-  --color-brand-200: #ddd6fe;
-  --color-brand-300: #c4b5fd;
-  --color-brand-400: #a78bfa;
-  --color-brand-500: #8b5cf6;
-  --color-brand-600: #7c3aed;
-  --color-brand-700: #6d28d9;
-  --color-brand-800: #5b21b6;
-  --color-brand-900: #4c1d95;
+  /* Brand — a calm royal violet. Deeper and less saturated than a "tech"
+     purple, so it reads as assured rather than loud. 600 is the action
+     colour (buttons, links); 50–200 are quiet tints. */
+  --color-brand-50: #f4f2fc;
+  --color-brand-100: #eae6fa;
+  --color-brand-200: #d5ccf4;
+  --color-brand-300: #b5a6ea;
+  --color-brand-400: #8f7bdd;
+  --color-brand-500: #6c54d0;
+  --color-brand-600: #5038bf;
+  --color-brand-700: #432ea3;
+  --color-brand-800: #362584;
+  --color-brand-900: #281c63;
 
-  /* Ink — deep navy scale for headings, body text and dark surfaces. */
-  --color-ink-50: #f5f8fb;
-  --color-ink-100: #e7edf3;
-  --color-ink-200: #cbd8e4;
-  --color-ink-300: #a9bcce;
-  --color-ink-400: #7c93ac;
-  --color-ink-500: #57708c;
-  --color-ink-600: #3e5670;
-  --color-ink-700: #2b3f57;
-  --color-ink-800: #1c2c3f;
-  --color-ink-900: #101b29;
-  --color-ink-950: #0a1220;
+  /* Ink — night indigo greys for text, borders and dark surfaces. */
+  --color-ink-50: #f6f6fa;
+  --color-ink-100: #ececf3;
+  --color-ink-200: #dcdce7;
+  --color-ink-300: #b6b6c9;
+  --color-ink-400: #8a8aa2;
+  --color-ink-500: #65657e;
+  --color-ink-600: #4c4b63;
+  --color-ink-700: #37364c;
+  --color-ink-800: #252439;
+  --color-ink-900: #17162a;
+  --color-ink-950: #0e0d1c;
 
-  /* Risk / status colors used across the health check, case status pills */
-  --color-risk-low: #1a9c6b;
-  --color-risk-low-bg: #e7f8f1;
-  --color-risk-medium: #b8860b;
-  --color-risk-medium-bg: #fdf5e2;
-  --color-risk-high: #c8402c;
-  --color-risk-high-bg: #fbe9e7;
+  /* Status: deep "protected" green, amber for review, brick red for risk. */
+  --color-risk-low: #1d7f58;
+  --color-risk-low-bg: #e8f5ee;
+  --color-risk-medium: #9a6608;
+  --color-risk-medium-bg: #fbf3e1;
+  --color-risk-high: #bd3a2b;
+  --color-risk-high-bg: #fbebe8;
 
   /* Accent icon-badge colors used on feature cards throughout. Brand
      (violet) already covers one card; these keep the other three
@@ -91,14 +127,52 @@
   --color-accent-blue: var(--color-accent-blue);
   --color-accent-blue-bg: var(--color-accent-blue-bg);
 
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: "Hanken Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-serif: "Newsreader", ui-serif, Georgia, "Times New Roman", serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  font-feature-settings: "kern", "liga", "calt";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* ---- Premium type system (unlayered, so it sets the tone everywhere) ----
+   Headings: Newsreader at a calm weight with slightly tight spacing. The
+   pages' own size classes still apply; weight and family come from here. */
+h1,
+h2 {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  font-optical-sizing: auto;
+}
+h1 {
+  line-height: 1.08;
+}
+h2 {
+  line-height: 1.15;
+}
+h3,
+h4 {
+  letter-spacing: -0.005em;
+}
+p {
+  text-wrap: pretty;
+}
+/* Calm over shouty: small all-caps labels read as sentence case. */
+.uppercase {
+  text-transform: none;
+  letter-spacing: 0;
+}
+::selection {
+  background: var(--color-brand-200);
+  color: var(--color-ink-900);
 }
 
 /* Prevent horizontal overflow on all screen sizes */
@@ -131,10 +205,7 @@ html {
 
 /* Soft violet hero / section backdrop */
 .bg-brand-glow {
-  background:
-    radial-gradient(60% 55% at 15% 10%, var(--color-brand-100) 0%, transparent 60%),
-    radial-gradient(50% 50% at 100% 0%, var(--color-brand-200) 0%, transparent 55%),
-    #ffffff;
+  background: linear-gradient(180deg, var(--color-ink-50) 0%, #ffffff 100%);
 }
 
 /* ---- Animation keyframes, used across the homepage hero + icon graphics ---- */

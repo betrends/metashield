@@ -4,24 +4,23 @@ import { ButtonHTMLAttributes, ReactNode } from "react";
 type Variant = "primary" | "secondary" | "ghost" | "outline";
 type Size = "sm" | "md" | "lg";
 
+// Calm, premium buttons: softly rounded (not pills), no bounce on hover,
+// colour does the work. One primary per section; the rest are quieter.
 const variantClasses: Record<Variant, string> = {
-  primary:
-    "bg-brand-600 text-white hover:bg-brand-700 shadow-sm shadow-brand-900/10",
-  secondary:
-    "bg-ink-900 text-white hover:bg-ink-800 shadow-sm shadow-ink-900/10",
-  outline:
-    "border border-ink-200 text-ink-800 hover:border-brand-400 hover:bg-brand-50",
+  primary: "bg-brand-600 text-white hover:bg-brand-700",
+  secondary: "bg-ink-900 text-white hover:bg-ink-800",
+  outline: "border border-ink-200 bg-white text-ink-900 hover:border-ink-300 hover:bg-ink-50",
   ghost: "text-ink-700 hover:bg-ink-50",
 };
 
 const sizeClasses: Record<Size, string> = {
-  sm: "px-3.5 py-2 text-sm",
-  md: "px-5 py-2.5 text-sm",
-  lg: "px-6 py-3.5 text-base",
+  sm: "h-9 px-3.5 text-sm",
+  md: "h-11 px-5 text-[15px]",
+  lg: "h-12 px-6 text-[15px]",
 };
 
 const base =
-  "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-all duration-150 hover:scale-[1.03] active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:opacity-50 disabled:pointer-events-none disabled:hover:scale-100";
+  "inline-flex items-center justify-center gap-2 rounded-xl font-semibold tracking-[-0.005em] transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:opacity-50 disabled:pointer-events-none";
 
 type CommonProps = {
   children: ReactNode;
