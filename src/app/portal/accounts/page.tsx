@@ -10,19 +10,26 @@ import { BrandLoader } from "@/components/BrandLoader";
 import { fetchSubscription, type ClientSubscription } from "@/lib/portal/subscriptions";
 import { coveredAccountIds } from "@/lib/portal/account-limits";
 import { AccountAllowance } from "@/components/portal/AccountAllowance";
+import { fetchChecklistDone, healthWithChecklist } from "@/lib/portal/checklist";
 
 export default function PortalAccountsPage() {
   const [accounts, setAccounts] = useState<PortalAccount[] | "loading">("loading");
   const [subscription, setSubscription] = useState<ClientSubscription | null>(null);
+  const [doneCount, setDoneCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       await migratePendingLocalRecords();
-      const [result, sub] = await Promise.all([fetchAccounts(), fetchSubscription().catch(() => null)]);
+      const [result, sub, done] = await Promise.all([
+        fetchAccounts(),
+        fetchSubscription().catch(() => null),
+        fetchChecklistDone(),
+      ]);
       if (!cancelled) {
         setAccounts(result);
         setSubscription(sub);
+        setDoneCount(done.size);
       }
     }
     load();
@@ -78,7 +85,7 @@ export default function PortalAccountsPage() {
                   <RiskBadge level={account.level} />
                 </div>
                 <p className="mt-4 text-2xl font-semibold text-ink-900">
-                  {account.health}
+                  {healthWithChecklist(account.health, doneCount)}
                   <span className="text-sm text-ink-400">/100</span>
                 </p>
 

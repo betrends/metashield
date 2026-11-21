@@ -22,6 +22,8 @@ import { recoveryWhatsappUrl } from "@/lib/site-config";
 import { getPlan } from "@/lib/portal/billing";
 import { CHECKLIST_DO } from "@/lib/protection-steps";
 import { coveredAccountIds } from "@/lib/portal/account-limits";
+import { CHECKLIST_TOTAL, fetchChecklistDone, healthWithChecklist, setChecklistStep } from "@/lib/portal/checklist";
+import type { InstagramStep } from "@/lib/instagram-links";
 
 function greeting() {
   const h = new Date().getHours();
@@ -59,6 +61,35 @@ export default function PortalOverviewPage() {
   const [subscription, setSubscription] = useState<ClientSubscription | null | "loading">("loading");
   const [userName, setUserName] = useState<string>("");
   const [emergencyOpen, setEmergencyOpen] = useState(false);
+  const [checklistDone, setChecklistDone] = useState<Set<InstagramStep>>(new Set());
+  const [savingStep, setSavingStep] = useState<InstagramStep | null>(null);
+  const [checklistError, setChecklistError] = useState<string | null>(null);
+
+  async function toggleStep(step: InstagramStep) {
+    const done = !checklistDone.has(step);
+    setSavingStep(step);
+    setChecklistError(null);
+    // Update straight away so the score moves as they tick; undo if saving fails.
+    setChecklistDone((prev) => {
+      const next = new Set(prev);
+      if (done) next.add(step);
+      else next.delete(step);
+      return next;
+    });
+    try {
+      await setChecklistStep(step, done);
+    } catch {
+      setChecklistDone((prev) => {
+        const next = new Set(prev);
+        if (done) next.delete(step);
+        else next.add(step);
+        return next;
+      });
+      setChecklistError("That didn't save. Check your connection and try again.");
+    } finally {
+      setSavingStep(null);
+    }
+  }
 
   useEffect(() => {
     createClient()
@@ -79,12 +110,14 @@ export default function PortalOverviewPage() {
 
     async function load() {
       await migratePendingLocalRecords();
-      const [accountsResult, casesResult, subscriptionResult] = await Promise.all([
+      const [accountsResult, casesResult, subscriptionResult, doneResult] = await Promise.all([
         fetchAccounts(),
         fetchCases(),
         fetchSubscription(),
+        fetchChecklistDone(),
       ]);
       if (cancelled) return;
+      setChecklistDone(doneResult);
       setAccounts(accountsResult);
       setCases(casesResult);
       setSubscription(subscriptionResult);
@@ -109,10 +142,14 @@ export default function PortalOverviewPage() {
   const renewDate = subscription?.renewsOn
     ? new Date(subscription.renewsOn).toLocaleDateString("en-US", { month: "short", day: "numeric" })
     : "";
-  const averageHealth =
+  // Health goes up as checklist steps are ticked (lib/portal/checklist.ts).
+  const doneCount = checklistDone.size;
+  const baseHealth =
     accounts.length > 0
       ? Math.round(accounts.reduce((sum, a) => sum + a.health, 0) / accounts.length)
       : 0;
+  const averageHealth = healthWithChecklist(baseHealth, doneCount);
+  const checklistBoost = averageHealth - baseHealth;
   const hc = healthColor(averageHealth);
   const covered = coveredAccountIds(accounts, subscription);
 
@@ -176,8 +213,13 @@ export default function PortalOverviewPage() {
               <>
                 <p className={`mt-2 text-2xl font-semibold ${hc.text}`}>{averageHealth}<span className="text-sm font-normal text-ink-400">/100</span></p>
                 <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-ink-100">
-                  <div className={`h-full rounded-full ${hc.bar} transition-all`} style={{ width: `${averageHealth}%` }} />
+                  <div className={`h-full rounded-full ${hc.bar} transition-all duration-700`} style={{ width: `${averageHealth}%` }} />
                 </div>
+                <p className="mt-2 text-xs text-ink-500">
+                  {checklistBoost > 0
+                    ? `+${checklistBoost} from your checklist`
+                    : "Tick off your checklist to raise it"}
+                </p>
               </>
             ) : (
               <>
@@ -191,8 +233,21 @@ export default function PortalOverviewPage() {
         <a href="#checklist">
           <Card className="h-full p-5 transition-colors hover:border-brand-200">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-400">Protection checklist</p>
-            <p className="mt-2 text-2xl font-semibold text-ink-900">{CHECKLIST_DO.length} steps</p>
-            <p className="mt-1 text-xs font-medium text-brand-600">Do these to stay protected →</p>
+            <p className="mt-2 text-2xl font-semibold text-ink-900">
+              {doneCount}
+              <span className="text-sm font-normal text-ink-400"> of {CHECKLIST_TOTAL} done</span>
+            </p>
+            <div className="mt-3 flex gap-1" aria-hidden="true">
+              {CHECKLIST_DO.map((step) => (
+                <span
+                  key={step.ig}
+                  className={`h-1.5 flex-1 rounded-full transition-colors duration-500 ${checklistDone.has(step.ig) ? "bg-risk-low" : "bg-ink-100"}`}
+                />
+              ))}
+            </div>
+            <p className="mt-2 text-xs font-medium text-brand-600">
+              {doneCount === CHECKLIST_TOTAL ? "All done — well protected" : "Each step raises your health →"}
+            </p>
           </Card>
         </a>
       </div>
@@ -284,15 +339,25 @@ export default function PortalOverviewPage() {
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
             <h2 className="text-base font-semibold text-ink-900">Your protection checklist</h2>
-            <p className="mt-0.5 text-sm text-ink-500">Do these on every account you want protected. On your phone, each button opens the Instagram app.</p>
+            <p className="mt-0.5 text-sm text-ink-500">Do these on every account you want protected, then mark each one as done. Every step raises your account health — all six takes it to {healthWithChecklist(0, CHECKLIST_TOTAL)}.</p>
           </div>
         </div>
         <Card className="mt-4 divide-y divide-ink-100 p-0">
-          {CHECKLIST_DO.map((step, i) => (
-            <div key={step.ig} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          {CHECKLIST_DO.map((step, i) => {
+            const done = checklistDone.has(step.ig);
+            return (
+            <div key={step.ig} className={`flex flex-col gap-3 px-5 py-4 transition-colors sm:flex-row sm:items-center sm:justify-between ${done ? "bg-risk-low-bg/40" : ""}`}>
               <div className="flex items-start gap-3">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white">
-                  {i + 1}
+                <span
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white transition-colors ${done ? "bg-risk-low" : "bg-brand-600"}`}
+                >
+                  {done ? (
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M20 6 9 17l-5-5" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  ) : (
+                    i + 1
+                  )}
                 </span>
                 <div>
                   <p className="text-sm font-semibold text-ink-900">
@@ -301,17 +366,36 @@ export default function PortalOverviewPage() {
                   <p className="mt-0.5 text-xs text-ink-500">{step.how}</p>
                 </div>
               </div>
-              <a
-                href={`/go/instagram?step=${step.ig}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="shrink-0 self-start rounded-full border border-brand-200 px-3.5 py-1.5 text-xs font-semibold text-brand-700 hover:bg-brand-50 sm:self-center"
-              >
-                Open Instagram app →
-              </a>
+              <div className="flex shrink-0 flex-wrap items-center gap-2 self-start sm:self-center">
+                {!done ? (
+                  <a
+                    href={`/go/instagram?step=${step.ig}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-full border border-brand-200 px-3.5 py-1.5 text-xs font-semibold text-brand-700 hover:bg-brand-50"
+                  >
+                    Open Instagram app
+                  </a>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => toggleStep(step.ig)}
+                  disabled={savingStep === step.ig}
+                  aria-pressed={done}
+                  className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 ${
+                    done
+                      ? "bg-risk-low text-white hover:bg-risk-low/90"
+                      : "bg-ink-900 text-white hover:bg-ink-800"
+                  }`}
+                >
+                  {done ? "Done ✓" : "Mark as done"}
+                </button>
+              </div>
             </div>
-          ))}
+            );
+          })}
         </Card>
+        {checklistError ? <p className="mt-2 text-sm font-medium text-risk-high">{checklistError}</p> : null}
       </div>
 
       {/* Accounts */}
@@ -349,7 +433,8 @@ export default function PortalOverviewPage() {
                 </thead>
                 <tbody>
                   {accounts.map((account) => {
-                    const ac = healthColor(account.health);
+                    const shownHealth = healthWithChecklist(account.health, doneCount);
+                    const ac = healthColor(shownHealth);
                     return (
                       <tr
                         key={account.id}
@@ -365,9 +450,9 @@ export default function PortalOverviewPage() {
                         <td className="px-5 py-3.5">
                           <div className="flex items-center gap-2">
                             <div className="h-1.5 w-16 overflow-hidden rounded-full bg-ink-100">
-                              <div className={`h-full rounded-full ${ac.bar}`} style={{ width: `${account.health}%` }} />
+                              <div className={`h-full rounded-full ${ac.bar} transition-all duration-700`} style={{ width: `${shownHealth}%` }} />
                             </div>
-                            <span className={`text-xs font-semibold ${ac.text}`}>{account.health}</span>
+                            <span className={`text-xs font-semibold ${ac.text}`}>{shownHealth}</span>
                           </div>
                         </td>
                         <td className="px-5 py-3.5">
