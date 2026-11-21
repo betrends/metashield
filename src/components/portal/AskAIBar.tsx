@@ -14,7 +14,7 @@ export function AskAIBar() {
   }
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-ink-100 bg-[#0a1226]/95 backdrop-blur-md">
+    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-ink-100 bg-[#1d2e5e]/95 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-8">
         {/* Icon + label */}
         <div className="hidden items-center gap-2 sm:flex">

@@ -564,25 +564,25 @@ html {
    not affected. */
 .portal-dark {
   color-scheme: dark;
-  --portal-bg: #070d1f;
-  --portal-surface: #0e1730;
-  --portal-surface-2: #132042;
+  --portal-bg: #1a2a57;
+  --portal-surface: #22356b;
+  --portal-surface-2: #2a3f7c;
 
-  --color-ink-50: #0b1430;
-  --color-ink-100: #1a2647;
-  --color-ink-200: #243257;
-  --color-ink-300: #3a4a76;
-  --color-ink-400: #7181a8;
-  --color-ink-500: #94a2c4;
-  --color-ink-600: #b3bedb;
+  --color-ink-50: #263b78;
+  --color-ink-100: #314888;
+  --color-ink-200: #3e5699;
+  --color-ink-300: #5770b0;
+  --color-ink-400: #9aaad3;
+  --color-ink-500: #b4c1e2;
+  --color-ink-600: #cad4ee;
   --color-ink-700: #cbd4ea;
   --color-ink-800: #e1e7f5;
   --color-ink-900: #f2f5fc;
   --color-ink-950: #ffffff;
 
-  --color-brand-50: #0f1f4a;
-  --color-brand-100: #15295e;
-  --color-brand-200: #1f3d82;
+  --color-brand-50: #2c4a9a;
+  --color-brand-100: #3656ad;
+  --color-brand-200: #4466c2;
   --color-brand-300: #3d63bb;
   --color-brand-400: #5d86f2;
   --color-brand-500: #3f74f5;
@@ -592,11 +592,11 @@ html {
   --color-brand-900: #cfdcff;
 
   --color-risk-low: #4ade80;
-  --color-risk-low-bg: #0e2a22;
+  --color-risk-low-bg: #1d4a4a;
   --color-risk-medium: #fbbf24;
-  --color-risk-medium-bg: #2c220b;
+  --color-risk-medium-bg: #4a3f2a;
   --color-risk-high: #f87171;
-  --color-risk-high-bg: #34161a;
+  --color-risk-high-bg: #4d2a3a;
 
   background-color: var(--portal-bg);
   color: var(--color-ink-900);
@@ -608,7 +608,7 @@ html {
 .portal-dark .bg-white\/80,
 .portal-dark .bg-white\/90,
 .portal-dark .bg-white\/95 {
-  background-color: rgb(14 23 48 / 0.92);
+  background-color: rgb(34 53 107 / 0.94);
 }
 .portal-dark input,
 .portal-dark textarea,
