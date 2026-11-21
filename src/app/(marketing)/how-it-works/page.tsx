@@ -4,51 +4,73 @@ import { ButtonLink } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Section, SectionHeading, Eyebrow } from "@/components/ui/Section";
 import { Container } from "@/components/ui/Container";
+import { recoveryWhatsappUrl } from "@/lib/site-config";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getT();
   return {
     title: t("How It Works"),
-    description:
-      t("The full case journey from new lead to resolution — with clear status updates at every stage, so you're never left guessing."),
+    description: t(
+      "MetaShield protects your Instagram, Facebook and ad accounts — and if something goes wrong, we handle the recovery with you on WhatsApp."
+    ),
   };
 }
 
-const workflowStages = [
-  { stage: "New Lead", description: "You submit a case or complete the eligibility checker.", icon: "📩", color: "bg-blue-100 text-blue-700" },
-  { stage: "Assessment Pending", description: "Our team reviews the details you've provided.", icon: "🔍", color: "bg-amber-100 text-amber-700" },
-  { stage: "Payment Pending", description: "Once assessed, you'll receive a quote and next steps.", icon: "💳", color: "bg-purple-100 text-purple-700" },
-  { stage: "Documents Required", description: "We request any evidence or documentation needed.", icon: "📋", color: "bg-orange-100 text-orange-700" },
-  { stage: "Under Review", description: "Your case and documents are reviewed against platform requirements.", icon: "⚖️", color: "bg-indigo-100 text-indigo-700" },
-  { stage: "Recovery Process", description: "We prepare and submit your appeal or recovery request.", icon: "⚙️", color: "bg-brand-100 text-brand-700" },
-  { stage: "Awaiting Platform Response", description: "We monitor for a response and follow up where needed.", icon: "⏳", color: "bg-sky-100 text-sky-700" },
-  { stage: "Resolved / Unresolved", description: "You're notified of the outcome, with next steps either way.", icon: "✅", color: "bg-green-100 text-green-700" },
-];
-
-const exampleTimeline = [
-  { date: "Aug 18", event: "Case submitted", done: true },
-  { date: "Aug 18", event: "Documents received", done: true },
-  { date: "Aug 19", event: "Initial assessment", done: true },
-  { date: "Aug 20", event: "Appeal submitted", done: true },
-  { date: "Aug 21", event: "Awaiting response", done: false },
-];
-
-const features = [
+// MetaShield is protection-first. Recovery is still included in packages,
+// but it is handled on WhatsApp — the website no longer takes recovery cases.
+const protectionSteps = [
   {
-    title: "Live case tracking",
-    description: "See exactly which stage your case is at, without having to message us for an update.",
-    icon: "📊",
+    title: "Pick a package",
+    description: "Watch, Elite or Business. Your first month is free — no card needed.",
+    icon: "📦",
+    color: "bg-blue-100 text-blue-700",
   },
   {
-    title: "Secure messaging",
-    description: "Send and receive documents, screenshots and updates in one place — no scattered chats.",
+    title: "Do your protection checklist",
+    description:
+      "We email you the must-do steps: selfie verification, the right date of birth, checking logged-in devices and more.",
+    icon: "✅",
+    color: "bg-green-100 text-green-700",
+  },
+  {
+    title: "Regular security checks",
+    description: "We check your account security and help you fix weak spots before they become a problem.",
+    icon: "🔍",
+    color: "bg-amber-100 text-amber-700",
+  },
+  {
+    title: "Recovery included",
+    description:
+      "If your account is ever suspended, disabled or restricted, eligible recoveries covered by your plan come at no extra cost.",
+    icon: "🛡️",
+    color: "bg-brand-100 text-brand-700",
+  },
+];
+
+const recoverySteps = [
+  {
+    title: "Message us on WhatsApp",
+    description: "Tell us which account it is and what happened. Screenshots of any message from Meta help.",
     icon: "💬",
   },
   {
-    title: "Document center",
-    description: "Upload evidence securely. We will never ask for your social media password.",
-    icon: "📁",
+    title: "We assess your case",
+    description:
+      "We work out what went wrong and tell you the fee before anything starts. Package clients pay no recovery fee for covered accounts.",
+    icon: "🔍",
   },
+  {
+    title: "We handle the recovery",
+    description: "We guide you through Meta's recovery and appeal process and keep you updated on WhatsApp.",
+    icon: "⚙️",
+  },
+];
+
+const checklistPreview = [
+  "Selfie verification added",
+  "Date of birth is correct",
+  "Unknown devices logged out",
+  "Two-factor authentication on",
 ];
 
 export default async function HowItWorksPage() {
@@ -59,80 +81,73 @@ export default async function HowItWorksPage() {
       <section className="overflow-hidden bg-gradient-to-b from-brand-50 to-white">
         <Container className="py-16 sm:py-20">
           <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
-            {/* Left */}
             <div className="max-w-xl">
               <Eyebrow>{t("How It Works")}</Eyebrow>
-              <h1 className="mt-4 text-balance text-4xl font-bold tracking-tight text-ink-900 sm:text-5xl">{t("A clear process, from")}{" "}
-                <span className="text-brand-600">{t("first message")}</span>{" "}{t("to resolution.")}</h1>
-              <p className="mt-5 text-lg text-ink-600">{t("You shouldn't have to chase updates. Every case moves through the same defined stages — and you'll know exactly where things stand at each step.")}</p>
+              <h1 className="mt-4 text-balance text-4xl font-bold tracking-tight text-ink-900 sm:text-5xl">
+                {t("Protect your account first.")}{" "}
+                <span className="text-brand-600">{t("If anything happens, we recover it.")}</span>
+              </h1>
+              <p className="mt-5 text-lg text-ink-600">
+                {t(
+                  "MetaShield keeps your Instagram, Facebook and ad accounts safe — and when something goes wrong, our team handles the recovery with you on WhatsApp."
+                )}
+              </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <ButtonLink href="/recovery-eligibility" size="lg">{t("Start Your Case")}</ButtonLink>
-                <ButtonLink href="/contact" variant="outline" size="lg">{t("Ask a Question")}</ButtonLink>
+                <ButtonLink href="/pricing#packages" size="lg">{t("See protection packages")}</ButtonLink>
+                <ButtonLink href={recoveryWhatsappUrl()} target="_blank" variant="outline" size="lg">
+                  {t("Start recovery")}
+                </ButtonLink>
               </div>
             </div>
 
-            {/* Right — mini timeline preview */}
+            {/* Right — what a protected account looks like */}
             <div className="relative">
               <Card className="p-6 shadow-xl shadow-brand-900/5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-[11px] font-semibold text-brand-700">{t("Case #AG-10482")}</p>
-                    <p className="mt-1 text-base font-semibold text-ink-900">{t("Instagram Account Recovery")}</p>
+                    <p className="text-[11px] font-semibold text-brand-700">{t("MetaShield Elite")}</p>
+                    <p className="mt-1 text-base font-semibold text-ink-900">{t("Your protection checklist")}</p>
                   </div>
-                  <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">{t("Under Review")}</span>
+                  <span className="rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700">
+                    {t("Protected")}
+                  </span>
                 </div>
-                <ol className="mt-6 space-y-4 border-l-2 border-brand-100 pl-5">
-                  {exampleTimeline.map((item, i) => (
-                    <li key={i} className="relative">
-                      <span
-                        className={`absolute -left-[26px] top-1 flex h-3 w-3 items-center justify-center rounded-full ${
-                          item.done
-                            ? "bg-brand-600 ring-4 ring-brand-100"
-                            : "bg-ink-200 ring-4 ring-ink-50"
-                        }`}
-                      />
-                      <p className="text-xs text-ink-400">{t(item.date)}</p>
-                      <p
-                        className={`text-sm font-medium ${
-                          item.done ? "text-ink-800" : "text-ink-400"
-                        }`}
-                      >
-                        {t(item.event)}
-                      </p>
+                <ul className="mt-6 space-y-3">
+                  {checklistPreview.map((item) => (
+                    <li key={item} className="flex items-center gap-3 text-sm font-medium text-ink-800">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                          <path d="M20 6 9 17l-5-5" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </span>
+                      {t(item)}
                     </li>
                   ))}
-                </ol>
-                <div className="mt-5 rounded-xl bg-brand-50 px-3 py-2.5 text-xs text-brand-800">{t("🔔 You'll get an email when anything changes.")}</div>
+                </ul>
+                <div className="mt-5 rounded-xl bg-brand-50 px-3 py-2.5 text-xs text-brand-800">
+                  {t("🛡️ Locked out later? Message us on WhatsApp — recovery is included in your package.")}
+                </div>
               </Card>
-
-              {/* Floating badge */}
-              <div className="absolute -right-4 -top-4 rounded-xl border border-green-100 bg-white px-4 py-2.5 shadow-lg">
-                <p className="text-xs font-semibold text-green-600">{t("✅ No guessing")}</p>
-                <p className="text-sm font-bold text-ink-900">{t("Always informed")}</p>
+              <div className="absolute -bottom-5 -left-4 rounded-xl border border-green-100 bg-white px-4 py-2.5 shadow-lg">
+                <p className="text-xs font-semibold text-green-600">{t("🎁 First month")}</p>
+                <p className="text-sm font-bold text-ink-900">{t("Free")}</p>
               </div>
             </div>
           </div>
         </Container>
       </section>
 
-      {/* Workflow stages */}
+      {/* Protection steps */}
       <Section>
         <SectionHeading
-          eyebrow={t("Case workflow")}
-          title={t("Every case follows the same eight stages")}
-          description={t("No surprises, no ambiguity — you know exactly what's happening at each step.")}
+          eyebrow={t("Account protection")}
+          title={t("How MetaShield protects you")}
+          description={t("Four simple steps, so problems are caught early — and handled fast if they happen.")}
           align="center"
         />
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {workflowStages.map((item, i) => (
-            <div
-              key={item.stage}
-              className="relative rounded-2xl border border-ink-100 bg-white p-5 shadow-sm"
-            >
-              {/* Connector line (desktop) */}
-              {i < workflowStages.length - 1 && i % 4 !== 3 && (
-                <div className="absolute -right-2.5 top-8 hidden h-px w-5 bg-ink-100 lg:block" />
-              )}
+          {protectionSteps.map((item, i) => (
+            <div key={item.title} className="relative rounded-2xl border border-ink-100 bg-white p-5 shadow-sm">
               <div className="flex items-center gap-3">
                 <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xl ${item.color}`}>
                   {item.icon}
@@ -141,67 +156,70 @@ export default async function HowItWorksPage() {
                   {i + 1}
                 </span>
               </div>
-              <h3 className="mt-3 text-sm font-semibold text-ink-900">{t(item.stage)}</h3>
+              <h3 className="mt-3 text-sm font-semibold text-ink-900">{t(item.title)}</h3>
               <p className="mt-1 text-xs leading-relaxed text-ink-500">{t(item.description)}</p>
             </div>
           ))}
         </div>
+        <div className="mt-10 flex justify-center">
+          <ButtonLink href="/pricing#packages" size="lg">{t("Start my free month")}</ButtonLink>
+        </div>
       </Section>
 
-      {/* Portal features */}
+      {/* Recovery on WhatsApp */}
       <Section className="bg-ink-50/50">
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <div>
-            <Eyebrow>{t("What you'll see in your portal")}</Eyebrow>
-            <h2 className="mt-4 text-balance text-3xl font-bold tracking-tight text-ink-900 sm:text-4xl">{t("Log in instead of sending “any update?”")}</h2>
-            <p className="mt-4 text-ink-500">{t("Every recovery case gets a running timeline so you always know what's happened and what's next — no chasing required.")}</p>
+            <Eyebrow>{t("Already locked out?")}</Eyebrow>
+            <h2 className="mt-4 text-balance text-3xl font-bold tracking-tight text-ink-900 sm:text-4xl">
+              {t("Recovery happens on WhatsApp")}
+            </h2>
+            <p className="mt-4 text-ink-500">
+              {t("Whether you have a package or not, message us on WhatsApp and our team takes it from there.")}
+            </p>
             <div className="mt-8 space-y-5">
-              {features.map((feature) => (
-                <div key={feature.title} className="flex gap-4">
+              {recoverySteps.map((step, i) => (
+                <div key={step.title} className="flex gap-4">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-xl">
-                    {feature.icon}
+                    {step.icon}
                   </span>
                   <div>
-                    <p className="text-sm font-semibold text-ink-900">{t(feature.title)}</p>
-                    <p className="mt-0.5 text-sm text-ink-500">{t(feature.description)}</p>
+                    <p className="text-sm font-semibold text-ink-900">
+                      {i + 1}. {t(step.title)}
+                    </p>
+                    <p className="mt-0.5 text-sm text-ink-500">{t(step.description)}</p>
                   </div>
                 </div>
               ))}
             </div>
             <div className="mt-8">
-              <ButtonLink href="/portal/login?mode=sign-up" size="lg">{t("Create Your Portal Account")}</ButtonLink>
+              <ButtonLink href={recoveryWhatsappUrl()} target="_blank" size="lg">{t("Start recovery")}</ButtonLink>
             </div>
           </div>
 
           <Card className="p-7">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#25D366] text-white">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.87 9.87 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2Z" />
+                </svg>
+              </span>
               <div>
-                <p className="text-[11px] font-semibold text-brand-700">{t("Case #AG-10482")}</p>
-                <p className="mt-1 text-base font-semibold text-ink-900">{t("Instagram Account Recovery")}</p>
+                <p className="text-sm font-bold text-ink-900">{t("MetaShield Recovery")}</p>
+                <p className="text-xs text-ink-500">{t("WhatsApp · 0816 191 4010")}</p>
               </div>
-              <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">{t("Under Review")}</span>
             </div>
-            <ol className="mt-6 space-y-4 border-l-2 border-brand-100 pl-5">
-              {exampleTimeline.map((item, i) => (
-                <li key={i} className="relative">
-                  <span
-                    className={`absolute -left-[26px] top-1 flex h-3 w-3 items-center justify-center rounded-full ${
-                      item.done
-                        ? "bg-brand-600 ring-4 ring-brand-100"
-                        : "bg-ink-200 ring-4 ring-ink-50"
-                    }`}
-                  />
-                  <p className="text-xs text-ink-400">{t(item.date)}</p>
-                  <p
-                    className={`text-sm font-medium ${
-                      item.done ? "text-ink-800" : "text-ink-400"
-                    }`}
-                  >
-                    {t(item.event)}
-                  </p>
-                </li>
-              ))}
-            </ol>
+            <div className="mt-6 space-y-3 text-sm">
+              <p className="ml-auto w-fit max-w-[85%] rounded-2xl rounded-tr-sm bg-[#dcf8c6] px-4 py-2.5 text-ink-800">
+                {t("Hello MetaShield, I need help recovering my Instagram account.")}
+              </p>
+              <p className="w-fit max-w-[85%] rounded-2xl rounded-tl-sm bg-white px-4 py-2.5 text-ink-800 shadow-sm ring-1 ring-ink-100">
+                {t("Hi! Sorry about that. What happened, and do you have a screenshot of any message from Instagram?")}
+              </p>
+            </div>
+            <p className="mt-6 rounded-xl bg-amber-50 px-3 py-2.5 text-xs leading-relaxed text-amber-800">
+              {t("We will never ask for your password. Recovery isn't guaranteed — Meta makes the final decision.")}
+            </p>
           </Card>
         </div>
       </Section>
@@ -210,10 +228,16 @@ export default async function HowItWorksPage() {
       <Section className="pb-24">
         <div className="rounded-3xl bg-brand-600 px-8 py-14 text-center sm:px-16">
           <h2 className="text-balance text-3xl font-bold text-white sm:text-4xl">{t("Ready to get started?")}</h2>
-          <p className="mx-auto mt-4 max-w-xl text-balance text-brand-100">{t("Answer a few questions and we'll tell you whether your case is a good fit for professional recovery support — free, no obligation.")}</p>
+          <p className="mx-auto mt-4 max-w-xl text-balance text-brand-100">
+            {t("Start with a free month of protection — or message us on WhatsApp if your account is already locked.")}
+          </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <ButtonLink href="/recovery-eligibility" size="lg" className="bg-white text-brand-700 hover:bg-brand-50">{t("Check Recovery Eligibility")}</ButtonLink>
-            <ButtonLink href="/contact" size="lg" variant="outline">{t("Contact Our Team")}</ButtonLink>
+            <ButtonLink href="/pricing#packages" size="lg" className="!bg-white !text-brand-700 hover:!bg-brand-50">
+              {t("See protection packages")}
+            </ButtonLink>
+            <ButtonLink href={recoveryWhatsappUrl()} target="_blank" size="lg" variant="outline" className="!border-white/40 !text-white hover:!bg-white/10">
+              {t("Start recovery")}
+            </ButtonLink>
           </div>
         </div>
       </Section>

@@ -19,6 +19,8 @@ import {
 import type { FollowerRange } from "@/lib/portal/case-fees";
 import { pickDefaultCaseId, safeStorageName } from "@/lib/portal/case-rules";
 import { pickPaymentRecord, type PaymentKind, type PaymentRecord } from "@/lib/portal/payments";
+import { fetchSubscription } from "@/lib/portal/subscriptions";
+import { canAddAccount } from "@/lib/portal/account-limits";
 
 export type PortalAccount = {
   id: string;
@@ -615,15 +617,20 @@ async function runMigration(): Promise<MigrationResult> {
       clearLocalAccount();
     } else {
       try {
-        const created = await createAccount({
-          handle: localAccount.handle,
-          platform: localAccount.platform,
-          health: localAccount.health,
-          level: localAccount.level,
-          protectionActive: localAccount.protectionActive,
-          categories: localAccount.categories,
-        });
-        accountId = created.id;
+        // Kept only if their package covers it (account-limits.ts) — a
+        // check done before signing up isn't saved without a package.
+        const [sub, existing] = await Promise.all([fetchSubscription(), fetchAccounts()]);
+        if (canAddAccount(localAccount.platform, existing, sub).ok) {
+          const created = await createAccount({
+            handle: localAccount.handle,
+            platform: localAccount.platform,
+            health: localAccount.health,
+            level: localAccount.level,
+            protectionActive: localAccount.protectionActive,
+            categories: localAccount.categories,
+          });
+          accountId = created.id;
+        }
         clearLocalAccount();
       } catch (err) {
         console.error("Failed to migrate local account:", err);

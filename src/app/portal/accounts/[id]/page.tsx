@@ -8,15 +8,20 @@ import { ButtonLink } from "@/components/ui/Button";
 import { RiskBadge } from "@/components/ui/RiskBadge";
 import { fetchAccount, type PortalAccount } from "@/lib/portal/data";
 import { BrandLoader } from "@/components/BrandLoader";
+import { CHECKLIST_TOTAL, fetchChecklistDone, healthWithChecklist } from "@/lib/portal/checklist";
 
 export default function PortalAccountDetailPage() {
   const params = useParams<{ id: string }>();
   const [account, setAccount] = useState<PortalAccount | null | undefined>(undefined);
+  const [doneCount, setDoneCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     fetchAccount(params.id).then((result) => {
       if (!cancelled) setAccount(result);
+    });
+    fetchChecklistDone().then((done) => {
+      if (!cancelled) setDoneCount(done.size);
     });
     return () => {
       cancelled = true;
@@ -68,11 +73,13 @@ export default function PortalAccountDetailPage() {
             Account health
           </p>
           <p className="mt-3 text-5xl font-semibold text-ink-900">
-            {account.health}
+            {healthWithChecklist(account.health, doneCount)}
             <span className="text-lg text-ink-400">/100</span>
           </p>
           <p className="mt-3 text-xs text-ink-500">
-            Protection: {account.protectionActive ? "Active" : "Not enrolled"}
+            {doneCount > 0
+              ? `Assessment ${account.health} · +${healthWithChecklist(account.health, doneCount) - account.health} from your checklist (${doneCount} of ${CHECKLIST_TOTAL} done)`
+              : "Tick off your protection checklist on the dashboard to raise it"}
           </p>
         </Card>
 

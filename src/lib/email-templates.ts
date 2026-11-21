@@ -1,6 +1,13 @@
-import { DEFAULT_BROADCAST_CONTENT, broadcastButtonHref, fillName, type BroadcastContent } from "@/lib/broadcast-content";
-import { INSTAGRAM_STEPS, instagramStepLink, type InstagramStep } from "@/lib/instagram-links";
-import { contact } from "@/lib/site-config";
+import { DEFAULT_BROADCAST_CONTENT, broadcastButtonHref, fillName, firstNameOf, type BroadcastContent } from "@/lib/broadcast-content";
+import { INSTAGRAM_STEPS, instagramStepLink } from "@/lib/instagram-links";
+import { contact, recoveryWhatsappUrl } from "@/lib/site-config";
+import { CHECKLIST_DO } from "@/lib/protection-steps";
+
+// "Ada, your free month has ended." — or "Your free month has ended." when
+// there's no usable first name.
+function withName(first: string, text: string): string {
+  return first ? `${first}, ${text}` : text.charAt(0).toUpperCase() + text.slice(1);
+}
 
 // One line for plain-text emails.
 export const INQUIRIES_WHATSAPP_TEXT = `Questions? WhatsApp us: ${contact.inquiriesWhatsappDisplay} (${contact.inquiriesWhatsapp})`;
@@ -576,11 +583,11 @@ export function subscriptionWelcomeEmail(opts: {
   renewsOn: string | null;
 }) {
   const { clientName, planName, planPrice, priceSuffix, features, renewsOn } = escapeOpts(opts);
-  const firstName = clientName.split(" ")[0];
+  const firstName = firstNameOf(clientName);
   return wrapper(`
     <div style="margin-bottom:8px;">${statusBadge("Package Active", GREEN, GREEN_BG)}</div>
     <h1 style="margin:16px 0 8px;color:${BRAND_DARK};font-size:24px;font-weight:700;line-height:1.3;">
-      Welcome to ${planName}, ${firstName}! 🛡️
+      Welcome to ${planName}${firstName ? `, ${firstName}` : ""}! 🛡️
     </h1>
     <p style="margin:0 0 24px;color:${TEXT_MID};font-size:15px;line-height:1.7;">
       Your package is active. Eligible recoveries covered by your plan have no recovery fee — here's what's included.
@@ -706,7 +713,7 @@ export function packageRenewalEmail(opts: {
       ${ended ? `Your ${planName} package has ended` : `Your ${planName} package ends on ${date}`}
     </h1>
     <p style="margin:0 0 16px;color:${TEXT_MID};font-size:15px;line-height:1.7;">
-      Hi ${name.split(" ")[0] || "there"}, ${
+      Hi ${firstNameOf(name) || "there"}, ${
         ended
           ? `your package ended on <strong>${date}</strong>. Until you renew, new recovery cases are charged the normal recovery fee.`
           : `renew before <strong>${date}</strong> to keep account recovery at no extra recovery fee. Renewing early adds the new period on top — you don't lose any days.`
@@ -740,13 +747,13 @@ function freeMonthEndingEmail(opts: {
   const renewUrl = escapeHtml(opts.renewUrl);
   const date = new Date(opts.endsOn).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
   const ended = opts.kind === "ended";
-  const first = name.split(" ")[0] || "there";
+  const first = firstNameOf(name);
   return wrapper(`
     ${preheader(ended ? `Your free month has ended. Pay ${price} to keep your account protected.` : `Your free month ends on ${date}. Pay ${price} to keep your account protected.`)}
     ${urgencyHero(
       ended ? "Free month ended" : "Free month ending",
       ended ? "#dc2626" : "#7c3aed",
-      ended ? `${first}, your free month has ended.` : `${first}, your free month ends on ${date}.`,
+      ended ? withName(first, `your free month has ended.`) : withName(first, `your free month ends on ${date}.`),
       ended
         ? `Your account is no longer protected by ${planName}. Pay to switch your protection back on.`
         : `Pay before <strong style="color:#ffffff;">${date}</strong> to keep your account protected. Your paid month starts when the free one ends — you don't lose any days.`
@@ -869,9 +876,9 @@ function bigButton(text: string, href: string) {
 // Sent the morning after someone checked their recovery eligibility (and
 // left "email me" ticked) but hasn't opened a case. No prices.
 export function eligibilityFollowupSubject(opts: { name: string; platform?: string | null; final?: boolean }) {
-  const first = opts.name.split(" ")[0] || "";
-  if (opts.final) return `Last reminder: ${first ? `${first}, still` : "still"} want your ${opts.platform || "account"} back?`;
-  return `⏳ ${first ? `${first}, don't` : "Don't"} let your ${opts.platform || "account"} go for good`;
+  const first = firstNameOf(opts.name);
+  if (opts.final) return `Last reminder: ${first ? withName(first, `still`) : "still"} want your ${opts.platform || "account"} back?`;
+  return `⏳ ${first ? withName(first, `don't`) : "Don't"} let your ${opts.platform || "account"} go for good`;
 }
 
 export function eligibilityFollowupEmail(opts: {
@@ -883,27 +890,27 @@ export function eligibilityFollowupEmail(opts: {
 }) {
   const { name, platform, issue } = escapeOpts({ name: opts.name, platform: opts.platform ?? "", issue: opts.issue ?? "" });
   const unsubscribeUrl = escapeHtml(opts.unsubscribeUrl);
-  const first = name.split(" ")[0] || "there";
+  const first = firstNameOf(name);
   const acct = platform ? `${platform} account` : "account";
   return wrapper(`
     ${preheader(
       opts.final
         ? "This is our last email about your eligibility check. Meta's appeal window doesn't stay open forever."
-        : "Meta only gives a limited time to appeal. It takes about 2 minutes to start your case."
+        : "Meta only gives a limited time to appeal. Message us on WhatsApp and we'll start right away."
     )}
     ${
       opts.final
         ? urgencyHero(
             "Last reminder",
             "#dc2626",
-            `${first}, still locked out of your ${acct}?`,
-            `This is the last time we'll email you about your eligibility check${issue ? ` (<strong style="color:#ffffff;">${issue}</strong>)` : ""}. If you still want your account back, don't leave it any longer — starting your case takes about 2 minutes.`
+            withName(first, `still locked out of your ${acct}?`),
+            `This is the last time we'll email you about your eligibility check${issue ? ` (<strong style="color:#ffffff;">${issue}</strong>)` : ""}. If you still want your account back, don't leave it any longer — message us on WhatsApp and we'll start right away.`
           )
         : urgencyHero(
             "⏳ Time matters",
             "#dc2626",
-            `${first}, your ${acct} isn't gone yet. But the clock is running.`,
-            `You checked your recovery eligibility with MetaShield${issue ? ` (<strong style="color:#ffffff;">${issue}</strong>)` : ""}, and your situation looked like a case we can work on. The sooner it's submitted, the better.`
+            withName(first, `your ${acct} isn't gone yet. But the clock is running.`),
+            `You checked your recovery eligibility with MetaShield${issue ? ` (<strong style="color:#ffffff;">${issue}</strong>)` : ""}, and your situation looked like a case we can work on. The sooner we start, the better.`
           )
     }
     ${iconList(
@@ -919,24 +926,24 @@ export function eligibilityFollowupEmail(opts: {
     ${iconList(
       "What MetaShield does for you:",
       [
-        "We prepare and submit your case through the available Meta support channels.",
-        "Your own agent keeps you updated at every step — message or call them any time.",
-        "You pay a 50% deposit to start. The other 50% is only due after a successful recovery.",
+        "We handle your recovery through the available Meta support channels.",
+        "Everything happens on WhatsApp — we keep you updated at every step.",
+        "We tell you the fee before we start. With a MetaShield package, there's no recovery fee.",
       ],
       "✓",
       "#16a34a"
     )}
-    ${bigButton("Start my recovery now →", `${PORTAL_URL}/recovery-eligibility`)}
+    ${bigButton("Start my recovery →", recoveryWhatsappUrl(platform ? `my ${platform} account` : "my account"))}
     <p style="margin:0 0 16px;color:${TEXT_DARK};font-size:14px;line-height:1.7;">
       <strong>P.S.</strong> ${
         opts.final
           ? "We won't email you about this again — if you need us later, we're one message away."
-          : "Waiting rarely brings a disabled account back on its own. It takes about 2 minutes to start your case."
+          : "Waiting rarely brings a disabled account back on its own. One WhatsApp message is all it takes to start."
       }
     </p>
     <p style="margin:0;color:${TEXT_LIGHT};font-size:12px;line-height:1.6;">
       An eligibility check does not guarantee recovery — the final decision remains with Meta.
-      Questions? Reply to this email or contact us at ${PORTAL_URL}/contact.
+      Questions? WhatsApp us on ${contact.inquiriesWhatsappDisplay}.
     </p>
     <p style="margin:12px 0 0;color:${TEXT_LIGHT};font-size:11px;">
       You received this because you asked us to email you about your eligibility result.
@@ -948,12 +955,12 @@ export function eligibilityFollowupEmail(opts: {
 // Sent the morning after someone ran the account health check (and left
 // "email me" ticked) but has no package yet: the Account Protection packages.
 export function protectionFollowupSubject(opts: { name: string; handle?: string | null; riskLevel?: string | null; final?: boolean }) {
-  const first = opts.name.split(" ")[0] || "";
+  const first = firstNameOf(opts.name);
   const acct = opts.handle || "your account";
   if (opts.final) return `Last reminder: account recovery at no extra cost for ${acct}`;
   return opts.riskLevel === "high" || opts.riskLevel === "medium"
     ? `⚠️ Risk found on ${acct} — get account recovery at no extra cost`
-    : `${first ? `${first}, if` : "If"} ${acct} is ever hacked or disabled, we recover it at no extra cost`;
+    : `${first ? withName(first, `if`) : "If"} ${acct} is ever hacked or disabled, we recover it at no extra cost`;
 }
 
 export function protectionFollowupEmail(opts: {
@@ -966,7 +973,7 @@ export function protectionFollowupEmail(opts: {
 }) {
   const { name, platform, handle } = escapeOpts({ name: opts.name, platform: opts.platform ?? "", handle: opts.handle ?? "" });
   const unsubscribeUrl = escapeHtml(opts.unsubscribeUrl);
-  const first = name.split(" ")[0] || "there";
+  const first = firstNameOf(name);
   const acct = handle || (platform ? `your ${platform} account` : "your account");
   const risky = opts.riskLevel === "high" || opts.riskLevel === "medium";
   const pkg = (n: string, price: string, covers: string, tag = "") => `
@@ -987,8 +994,8 @@ export function protectionFollowupEmail(opts: {
       opts.final ? "Last reminder" : risky ? "⚠️ Risk found on your account" : "🛡️ Account recovery at no extra cost",
       opts.final || risky ? "#dc2626" : "#7c3aed",
       opts.final
-        ? `${first}, ${acct} is still unprotected. Account recovery at no extra cost is one step away.`
-        : `${first}, if ${acct} is ever hacked or disabled, we recover it — at no extra cost.`,
+        ? withName(first, `${acct} is still unprotected. Account recovery at no extra cost is one step away.`)
+        : withName(first, `if ${acct} is ever hacked or disabled, we recover it — at no extra cost.`),
       `One MetaShield subscription protects your account <strong style="color:#ffffff;">and</strong> covers account recovery at no extra recovery fee.${
         risky ? ` <strong style="color:#ffffff;">Your health check flagged risk factors on this account — don't wait for something to go wrong.</strong>` : ""
       }`
@@ -1219,48 +1226,9 @@ export const PROTECTION_CHECKLIST_SUBJECT = "Compulsory: do these 6 things to ke
 // ig: which step of our /go/instagram page the button opens — that page
 // opens the Instagram APP and shows what to tap (lib/instagram-links.ts).
 // The email shows the same taps, in the same numbered style.
-type ChecklistStep = { title: string; how: string; ig: InstagramStep; icon: string };
 
 const IG_ACCOUNTS_CENTER = instagramStepLink(PORTAL_URL, "center");
 
-const CHECKLIST_DO: ChecklistStep[] = [
-  {
-    title: "Add your verification selfie",
-    how: "This helps Meta confirm the account is yours if it is ever flagged.",
-    ig: "selfie",
-    icon: "🤳",
-  },
-  {
-    title: "Make sure your date of birth is correct",
-    how: "Check it matches your real date of birth.",
-    ig: "birthday",
-    icon: "🎂",
-  },
-  {
-    title: "Remove devices you don't recognise",
-    how: "Check every phone and computer logged in to your account and log out any you don't know.",
-    ig: "devices",
-    icon: "📱",
-  },
-  {
-    title: "Use a different email and phone number for each account",
-    how: "If you have 4 accounts, use 4 different email addresses and 4 different phone numbers — never share one between accounts.",
-    ig: "contacts",
-    icon: "✉️",
-  },
-  {
-    title: "Turn on two-factor authentication",
-    how: "Use an authenticator app or text message, so nobody can log in with just your password.",
-    ig: "two_factor",
-    icon: "🔐",
-  },
-  {
-    title: "Only post content that follows Instagram's guidelines",
-    how: "Keep every post, reel and story within Instagram's Community Guidelines. Account Status shows if anything you posted goes against them.",
-    ig: "guidelines",
-    icon: "📋",
-  },
-];
 
 
 const CHECKLIST_DONT: string[] = [
@@ -1274,7 +1242,7 @@ const CHECKLIST_DONT: string[] = [
 // existing: sent to clients whose package was already running (from Admin
 // → Email users) — "is active" instead of "is now active".
 export function protectionChecklistEmail(opts: { clientName: string; planName: string; existing?: boolean }) {
-  const first = escapeHtml((opts.clientName || "").trim().split(/\s+/)[0] || "there");
+  const first = escapeHtml(firstNameOf(opts.clientName));
   const planName = escapeHtml(opts.planName || "MetaShield package");
   // Each step is a card in the same look as the /go/instagram page: icon
   // tile, small purple label, big centred title, its own text, and a
@@ -1306,7 +1274,7 @@ export function protectionChecklistEmail(opts: { clientName: string; planName: s
     ${lightHero(
       "Compulsory",
       "#dc2626",
-      `${first}, do these today to keep your account protected.`,
+      withName(first, `do these today to keep your account protected.`),
       `Your <strong class="ms-hl" style="color:${BRAND_PURPLE};">${planName}</strong> is ${opts.existing ? "" : "now "}active. To keep your account protected, these steps are <strong class="ms-hl-red" style="color:#dc2626;">compulsory</strong>. They take about 10 minutes.`
     )}
     <p style="margin:0 0 12px;color:${GREEN};font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;">✅ Do these now</p>
@@ -1322,11 +1290,11 @@ export function protectionChecklistEmail(opts: { clientName: string; planName: s
     </p>
     ${bigButton("Open the Instagram app →", IG_ACCOUNTS_CENTER)}
     <p style="margin:0 0 6px;color:${TEXT_DARK};font-size:15px;line-height:1.7;">
-      Stuck on a step? Message your MetaShield agent and we'll walk you through it.
+      Stuck on a step? Message us on WhatsApp and we'll walk you through it.
     </p>
     <table cellpadding="0" cellspacing="0" width="100%" style="margin:6px 0 22px;">
       <tr><td align="center" style="border:2px solid ${BRAND_PURPLE};border-radius:12px;">
-        <a href="${PORTAL_URL}/portal/messages" style="display:block;padding:14px 24px;color:${BRAND_PURPLE};font-size:16px;font-weight:800;text-decoration:none;">Message my agent →</a>
+        <a href="${contact.inquiriesWhatsapp}" style="display:block;padding:14px 24px;color:${BRAND_PURPLE};font-size:16px;font-weight:800;text-decoration:none;">WhatsApp us →</a>
       </td></tr>
     </table>
     <p style="margin:0;color:${TEXT_LIGHT};font-size:12px;line-height:1.6;">
@@ -1338,11 +1306,11 @@ export function protectionChecklistEmail(opts: { clientName: string; planName: s
 
 // Plain-text copy of the checklist (sent alongside the designed email).
 export function protectionChecklistText(opts: { clientName: string; planName: string; existing?: boolean }) {
-  const first = (opts.clientName || "").trim().split(/\s+/)[0] || "there";
+  const first = firstNameOf(opts.clientName);
   const planName = opts.planName || "MetaShield package";
   const strip = (s: string) => s.replace(/<[^>]+>/g, "");
   return [
-    `${first}, do these today to keep your account protected.`,
+    withName(first, `do these today to keep your account protected.`),
     `Your ${planName} is ${opts.existing ? "" : "now "}active. These steps are compulsory and take about 10 minutes.`,
     "DO THESE NOW:",
     ...CHECKLIST_DO.map(
@@ -1352,7 +1320,7 @@ export function protectionChecklistText(opts: { clientName: string; planName: st
     "DO NOT DO THESE:",
     ...CHECKLIST_DONT.map((d) => `- ${strip(d)}`),
     `Open the Instagram app: ${IG_ACCOUNTS_CENTER}`,
-    `Stuck on a step? Message your MetaShield agent: ${PORTAL_URL}/portal/messages`,
+    `Stuck on a step? WhatsApp us: ${contact.inquiriesWhatsappDisplay} (${contact.inquiriesWhatsapp})`,
     INQUIRIES_WHATSAPP_TEXT,
   ].join("\n\n");
 }

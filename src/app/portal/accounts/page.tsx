@@ -7,16 +7,30 @@ import { ButtonLink } from "@/components/ui/Button";
 import { RiskBadge } from "@/components/ui/RiskBadge";
 import { fetchAccounts, migratePendingLocalRecords, type PortalAccount } from "@/lib/portal/data";
 import { BrandLoader } from "@/components/BrandLoader";
+import { fetchSubscription, type ClientSubscription } from "@/lib/portal/subscriptions";
+import { coveredAccountIds } from "@/lib/portal/account-limits";
+import { AccountAllowance } from "@/components/portal/AccountAllowance";
+import { fetchChecklistDone, healthWithChecklist } from "@/lib/portal/checklist";
 
 export default function PortalAccountsPage() {
   const [accounts, setAccounts] = useState<PortalAccount[] | "loading">("loading");
+  const [subscription, setSubscription] = useState<ClientSubscription | null>(null);
+  const [doneCount, setDoneCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       await migratePendingLocalRecords();
-      const result = await fetchAccounts();
-      if (!cancelled) setAccounts(result);
+      const [result, sub, done] = await Promise.all([
+        fetchAccounts(),
+        fetchSubscription().catch(() => null),
+        fetchChecklistDone(),
+      ]);
+      if (!cancelled) {
+        setAccounts(result);
+        setSubscription(sub);
+        setDoneCount(done.size);
+      }
     }
     load();
     return () => {
@@ -39,6 +53,12 @@ export default function PortalAccountsPage() {
         </ButtonLink>
       </div>
 
+      {accounts !== "loading" ? (
+        <div className="mt-6">
+          <AccountAllowance accounts={accounts} subscription={subscription} />
+        </div>
+      ) : null}
+
       {accounts === "loading" ? (
         <BrandLoader label="Loading your accounts…" />
       ) : accounts.length === 0 ? (
@@ -50,7 +70,11 @@ export default function PortalAccountsPage() {
         </Card>
       ) : (
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {accounts.map((account) => (
+          {(() => {
+            // The package covers the oldest accounts up to its limit; any
+            // extra are kept but not covered (lib/portal/account-limits.ts).
+            const covered = coveredAccountIds(accounts, subscription);
+            return accounts.map((account) => (
             <Link key={account.id} href={`/portal/accounts/${account.id}`}>
               <Card className="h-full transition-shadow hover:shadow-md">
                 <div className="flex items-start justify-between">
@@ -61,21 +85,17 @@ export default function PortalAccountsPage() {
                   <RiskBadge level={account.level} />
                 </div>
                 <p className="mt-4 text-2xl font-semibold text-ink-900">
-                  {account.health}
+                  {healthWithChecklist(account.health, doneCount)}
                   <span className="text-sm text-ink-400">/100</span>
                 </p>
 
                 <div className="mt-4 flex items-center justify-between border-t border-ink-100 pt-3 text-xs">
-                  <span className="text-ink-400">Protection</span>
-                  <span
-                    className={
-                      account.protectionActive
-                        ? "font-semibold text-risk-low"
-                        : "font-semibold text-ink-400"
-                    }
-                  >
-                    {account.protectionActive ? "Active" : "Not enrolled"}
-                  </span>
+                  <span className="text-ink-400">Package</span>
+                  {covered.has(account.id) ? (
+                    <span className="font-semibold text-risk-low">Covered</span>
+                  ) : (
+                    <span className="font-semibold text-risk-medium">Not covered — upgrade</span>
+                  )}
                 </div>
 
                 <p className="mt-3 text-center text-xs font-semibold text-brand-700">
@@ -83,7 +103,8 @@ export default function PortalAccountsPage() {
                 </p>
               </Card>
             </Link>
-          ))}
+            ));
+          })()}
         </div>
       )}
     </div>

@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { Section, SectionHeading, Eyebrow } from "@/components/ui/Section";
 import { Container } from "@/components/ui/Container";
 import { recoveryPlatforms } from "@/lib/content/recovery";
+import { recoveryWhatsappUrl } from "@/lib/site-config";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getT();
@@ -79,7 +80,7 @@ export default async function BusinessAdsPage() {
               </h1>
               <p className="mt-5 text-lg text-ink-600">{t("A restricted Business Manager or ad account doesn't just affect one profile — it affects every campaign, Page and team member attached to it. We handle these cases with the operational context your business needs.")}</p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <ButtonLink href="/recovery-eligibility" size="lg">{t("Check Recovery Eligibility")}</ButtonLink>
+                <ButtonLink href={recoveryWhatsappUrl()} target="_blank" size="lg">{t("Start recovery")}</ButtonLink>
                 <ButtonLink href="/contact" variant="outline" size="lg">{t("Talk to Our Team")}</ButtonLink>
               </div>
             </div>
@@ -198,8 +199,8 @@ export default async function BusinessAdsPage() {
           <h2 className="text-balance text-3xl font-bold text-white sm:text-4xl">{t("More platforms coming soon")}</h2>
           <p className="mx-auto mt-4 max-w-xl text-balance text-brand-100">{t("We currently support Instagram, Facebook and Meta Business. TikTok, X, Snapchat and Google Ads support is planned as we grow.")}</p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <ButtonLink href="/check-my-account" size="lg" className="bg-white text-brand-700 hover:bg-brand-50">{t("Run an Account Health Check")}</ButtonLink>
-            <ButtonLink href="/contact" size="lg" variant="outline">{t("Talk to Our Team")}</ButtonLink>
+            <ButtonLink href="/check-my-account" size="lg" className="!bg-white !text-brand-700 hover:!bg-brand-50">{t("Run an Account Health Check")}</ButtonLink>
+            <ButtonLink href="/contact" size="lg" variant="outline" className="!border-white/40 !text-white hover:!bg-white/10">{t("Talk to Our Team")}</ButtonLink>
           </div>
         </div>
       </Section>

@@ -3,6 +3,7 @@
 import { useT } from "@/lib/i18n/client";
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { recoveryWhatsappUrl } from "@/lib/site-config";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { RiskBadge } from "@/components/ui/RiskBadge";
@@ -15,7 +16,10 @@ import {
 } from "@/lib/health-check-score";
 import { setLocalAccount } from "@/lib/portal/local-records";
 import { createClient } from "@/lib/supabase/client";
-import { createAccount } from "@/lib/portal/data";
+import { createAccount, fetchAccounts } from "@/lib/portal/data";
+import { fetchSubscription } from "@/lib/portal/subscriptions";
+import { canAddAccount } from "@/lib/portal/account-limits";
+import { getPlan } from "@/lib/portal/billing";
 import { useStepHistory } from "@/lib/use-step-history";
 
 const platforms = [
@@ -128,6 +132,10 @@ export function HealthCheckWizard() {
   // account instead of the anonymous localStorage + "sign up to see it"
   // hand-off.
   const [createdAccountId, setCreatedAccountId] = useState<string | null>(null);
+  // Signed in, but this result can't be kept (no package, or the package's
+  // account limit is reached): show the score once and say why.
+  const [signedIn, setSignedIn] = useState(false);
+  const [notSavedNote, setNotSavedNote] = useState<string | null>(null);
 
   useEffect(() => {
     cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -202,27 +210,42 @@ export function HealthCheckWizard() {
       // marketing site) — save straight to their real account rather than
       // the anonymous localStorage + "sign up to see it" hand-off.
       let signedInAccountId: string | null = null;
+      let isSignedIn = false;
+      setNotSavedNote(null);
       try {
         const {
           data: { user },
         } = await createClient().auth.getUser();
         if (user) {
-          const created = await createAccount({
-            handle: accountUsername || "Your account",
-            platform: platformLabel,
-            health: computed.overall,
-            level: computed.overallLevel,
-            protectionActive: false,
-            categories,
-          });
-          signedInAccountId = created.id;
+          isSignedIn = true;
+          // Only saved when their package covers one more account of this
+          // kind (lib/portal/account-limits.ts); otherwise it's shown once.
+          const [sub, existing] = await Promise.all([fetchSubscription(), fetchAccounts()]);
+          const check = canAddAccount(platformLabel, existing, sub, sub ? getPlan(sub.planId).name : undefined);
+          if (check.ok) {
+            const created = await createAccount({
+              handle: accountUsername || "Your account",
+              platform: platformLabel,
+              health: computed.overall,
+              level: computed.overallLevel,
+              protectionActive: false,
+              categories,
+            });
+            signedInAccountId = created.id;
+          } else {
+            setNotSavedNote(check.message);
+          }
         }
       } catch (err) {
         console.error("Failed to save account:", err);
+        if (isSignedIn) setNotSavedNote("This score couldn't be saved to your portal.");
       }
+      setSignedIn(isSignedIn);
 
       if (signedInAccountId) {
         setCreatedAccountId(signedInAccountId);
+      } else if (isSignedIn) {
+        // Signed in but not saved — nothing to keep in this browser either.
       } else {
         // Persist so the portal shows this account instead of only
         // generic sample data once they sign up right after.
@@ -289,6 +312,7 @@ export function HealthCheckWizard() {
     setContactInfo({ name: "", email: "", phone: "" });
     setResult(null);
     setCreatedAccountId(null);
+    setNotSavedNote(null);
   }
 
   return (
@@ -543,6 +567,20 @@ export function HealthCheckWizard() {
 
           <p className="mx-auto mt-3 max-w-sm text-center text-xs text-ink-400">{t("Automated preliminary assessment — reviewed by our team, not an official platform score.")}</p>
 
+          {notSavedNote ? (
+            <p className="mx-auto mt-6 max-w-sm rounded-xl border border-risk-medium/30 bg-risk-medium-bg px-4 py-3 text-center text-sm text-ink-800">
+              {t(notSavedNote)}
+            </p>
+          ) : null}
+          {createdAccountId ? (
+            <p className="mx-auto mt-6 max-w-sm rounded-xl border border-risk-low/30 bg-risk-low-bg px-4 py-3 text-center text-sm text-ink-800">
+              {t("Saved to My Accounts.")}{" "}
+              <Link href={`/portal/accounts/${createdAccountId}`} className="font-semibold text-risk-low underline underline-offset-2">
+                {t("View this account")}
+              </Link>
+            </p>
+          ) : null}
+
           {/* Account Protection CTA — urgent below 50, standard above */}
           {result.overall < 50 ? (
             <div className="mx-auto mt-6 max-w-sm overflow-hidden rounded-2xl border-2 border-risk-high bg-white p-6 text-center shadow-lg">
@@ -559,7 +597,7 @@ export function HealthCheckWizard() {
                 {t("Account recovery at no extra cost")}
               </span>
               </div>
-              {createdAccountId ? (
+              {signedIn ? (
                 <ButtonLink href="/portal/billing" size="sm" className="mt-4 w-full">{t("Get Account Protection")}</ButtonLink>
               ) : (
                 <ButtonLink
@@ -588,7 +626,7 @@ export function HealthCheckWizard() {
                 {t("Account recovery at no extra cost")}
               </span>
               </div>
-              {createdAccountId ? (
+              {signedIn ? (
                 <ButtonLink href="/portal/billing" size="sm" className="mt-4 !bg-white !text-brand-700 hover:!bg-brand-50">{t("Subscribe to Account Protection")}</ButtonLink>
               ) : (
                 <ButtonLink
@@ -602,10 +640,12 @@ export function HealthCheckWizard() {
           )}
 
           <div className="mt-6 flex flex-col items-center justify-center gap-x-6 gap-y-2 text-center sm:flex-row">
-            <Link
-              href="/recovery-eligibility"
+            <a
+              href={recoveryWhatsappUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-sm font-semibold text-brand-700 hover:text-brand-800"
-            >{t("Already Restricted? Check Recovery")}</Link>
+            >{t("Already restricted? Start recovery")}</a>
             <button
               type="button"
               onClick={handleRestart}

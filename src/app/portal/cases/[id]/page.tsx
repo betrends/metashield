@@ -5,6 +5,12 @@ import { BackLink } from "@/components/BackLink";
 import { useParams } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { ButtonLink } from "@/components/ui/Button";
+import { recoveryWhatsappUrl } from "@/lib/site-config";
+
+// Recovery now happens on WhatsApp. Old cases stay visible here for the
+// client's records, but nothing can be done on them from the website
+// (no payments, uploads, forms or cancelling). Nothing is deleted.
+const CASES_READ_ONLY = true;
 import { CaseStageStepper } from "@/components/portal/CaseStageStepper";
 import {
   cancelCase,
@@ -148,14 +154,40 @@ export default function PortalCaseDetailPage() {
             {portalCase.platform} · {portalCase.accountHandle}
           </p>
         </div>
-        <ButtonLink href={`/portal/messages?case=${portalCase.id}`} variant="outline" size="sm">
-          {portalCase.agentName ? `Message ${portalCase.agentName.split(" ")[0]}` : "Message the team"}
-        </ButtonLink>
+        {CASES_READ_ONLY ? (
+          <ButtonLink
+            href={recoveryWhatsappUrl(`my account (case #${displayId})`)}
+            target="_blank"
+            variant="outline"
+            size="sm"
+          >
+            Continue on WhatsApp
+          </ButtonLink>
+        ) : (
+          <ButtonLink href={`/portal/messages?case=${portalCase.id}`} variant="outline" size="sm">
+            {portalCase.agentName ? `Message ${portalCase.agentName.split(" ")[0]}` : "Message the team"}
+          </ButtonLink>
+        )}
       </div>
 
       {isCancelled ? (
         <div className="mt-6 rounded-xl border border-ink-200 bg-ink-50 px-4 py-3 text-sm text-ink-700">
           <span className="font-semibold">This case has been cancelled.</span> It stays in your history for your records.
+        </div>
+      ) : CASES_READ_ONLY ? (
+        <div className="mt-6 flex flex-col gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-ink-700">
+            <span className="font-semibold text-green-800">Recovery is now handled on WhatsApp.</span> This page is kept
+            for your records. To continue this case, message us and mention case #{displayId}.
+          </p>
+          <a
+            href={recoveryWhatsappUrl(`my account (case #${displayId})`)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 rounded-full bg-[#25D366] px-4 py-2 text-center text-sm font-bold text-white hover:bg-[#1fb957]"
+          >
+            WhatsApp us
+          </a>
         </div>
       ) : (
         <div className="mt-6 rounded-xl border border-brand-200 bg-brand-50/60 px-4 py-3 text-sm">
@@ -232,7 +264,7 @@ export default function PortalCaseDetailPage() {
             </div>
           </dl>
 
-          {!payment.depositConfirmed ? (
+          {CASES_READ_ONLY ? null : !payment.depositConfirmed ? (
             payment.depositStatus === "pending_review" ? (
               <p className="mt-4 text-sm text-ink-600">
                 <span className="font-semibold text-brand-800">Deposit under review.</span> We&apos;ve received your
@@ -327,7 +359,7 @@ export default function PortalCaseDetailPage() {
         </Card>
       ) : null}
 
-      {payment.depositConfirmed && !isCancelled ? (
+      {!CASES_READ_ONLY && payment.depositConfirmed && !isCancelled ? (
         <>
           <Card className="mt-6">
             <h2 className="text-sm font-semibold text-ink-900">Recovery form</h2>
@@ -373,7 +405,7 @@ export default function PortalCaseDetailPage() {
         </ol>
       </Card>
 
-      {!isCancelled && portalCase.stage !== "Resolved" ? (
+      {!CASES_READ_ONLY && !isCancelled && portalCase.stage !== "Resolved" ? (
         <div className="mt-6 text-right">
           {portalCase.cancellationRequestedAt ? (
             <p className="text-xs text-ink-500">Cancellation requested — our team will reply in your messages.</p>

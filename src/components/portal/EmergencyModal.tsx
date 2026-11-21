@@ -1,7 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { contact } from "@/lib/site-config";
+
+// Package clients' emergency button. Recovery is handled on WhatsApp, so this
+// opens a WhatsApp chat (0816 191 4010) with what happened already typed in.
+function emergencyWhatsappUrl(incident: string, details: string): string {
+  const text = [
+    `Hello MetaShield, I'm a package client and need urgent help: ${incident}.`,
+    details.trim() ? `Details: ${details.trim()}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+  return `${contact.inquiriesWhatsapp}?text=${encodeURIComponent(text)}`;
+}
 
 const INCIDENTS = [
   { value: "hacked", label: "Account hacked" },
@@ -14,37 +26,18 @@ const INCIDENTS = [
 ];
 
 export function EmergencyModal({ onClose }: { onClose: () => void }) {
-  const router = useRouter();
   const [selected, setSelected] = useState<string>("");
   const [details, setDetails] = useState("");
-  const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(e: React.FormEvent) {
+  const incidentLabel = INCIDENTS.find((i) => i.value === selected)?.label ?? "Other";
+
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!selected) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/emergency", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ incidentType: selected, details }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Something went wrong.");
-      setDone(data.caseId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  function handleViewCase(caseId: string) {
-    onClose();
-    router.push(`/portal/cases/${caseId}`);
+    const url = emergencyWhatsappUrl(incidentLabel, details);
+    window.open(url, "_blank", "noopener,noreferrer");
+    setDone(url);
   }
 
   return (
@@ -95,18 +88,19 @@ export function EmergencyModal({ onClose }: { onClose: () => void }) {
                 <path d="m5 13 4 4L19 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
-            <h3 className="mt-4 text-lg font-semibold text-ink-900">Team Notified</h3>
+            <h3 className="mt-4 text-lg font-semibold text-ink-900">WhatsApp opened</h3>
             <p className="mt-2 text-sm text-ink-500">
-              Your emergency has been flagged. Your agent has been alerted and will respond
-              immediately. Check your case for updates.
+              Press send in WhatsApp and our team will take it from there. Your package covers the recovery.
             </p>
             <div className="mt-6 flex flex-col gap-2">
-              <button
-                onClick={() => handleViewCase(done)}
-                className="w-full rounded-xl bg-brand-600 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
+              <a
+                href={done}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full rounded-xl bg-[#25D366] py-2.5 text-sm font-semibold text-white hover:bg-[#1fb957]"
               >
-                View Case →
-              </button>
+                WhatsApp didn&apos;t open? Tap here
+              </a>
               <button
                 onClick={onClose}
                 className="w-full rounded-xl py-2.5 text-sm font-semibold text-ink-500 hover:bg-ink-50"
@@ -119,7 +113,7 @@ export function EmergencyModal({ onClose }: { onClose: () => void }) {
           /* Form */
           <form onSubmit={handleSubmit} className="px-6 py-5">
             <p className="text-sm font-semibold text-ink-700">What happened?</p>
-            <p className="mt-0.5 text-xs text-ink-400">Select the type of incident. Your agent will be notified immediately.</p>
+            <p className="mt-0.5 text-xs text-ink-400">Pick what happened, then we&apos;ll open WhatsApp with it typed in.</p>
 
             <div className="mt-4 space-y-2">
               {INCIDENTS.map((inc) => (
@@ -159,22 +153,16 @@ export function EmergencyModal({ onClose }: { onClose: () => void }) {
               </div>
             )}
 
-            {error && (
-              <p className="mt-3 rounded-lg bg-risk-high-bg px-3 py-2 text-xs font-medium text-risk-high">
-                {error}
-              </p>
-            )}
-
             <button
               type="submit"
-              disabled={!selected || busy}
+              disabled={!selected}
               className="mt-5 w-full rounded-xl bg-risk-high py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {busy ? "Submitting…" : "Submit Incident"}
+              Send on WhatsApp
             </button>
 
             <p className="mt-3 text-center text-[11px] text-ink-400">
-              Your agent will be notified immediately and will respond within the hour.
+              WhatsApp {contact.inquiriesWhatsappDisplay} · We will never ask for your password.
             </p>
           </form>
         )}
