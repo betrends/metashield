@@ -607,7 +607,7 @@ export function HealthCheckWizard() {
               target="_blank"
               rel="noopener noreferrer"
               className="text-sm font-semibold text-brand-700 hover:text-brand-800"
-            >{t("Already restricted? Recover it on WhatsApp")}</a>
+            >{t("Already restricted? Start recovery")}</a>
             <button
               type="button"
               onClick={handleRestart}

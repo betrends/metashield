@@ -95,7 +95,7 @@ export default async function HowItWorksPage() {
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <ButtonLink href="/pricing#packages" size="lg">{t("See protection packages")}</ButtonLink>
                 <ButtonLink href={recoveryWhatsappUrl()} target="_blank" variant="outline" size="lg">
-                  {t("Start recovery on WhatsApp")}
+                  {t("Start recovery")}
                 </ButtonLink>
               </div>
             </div>
@@ -193,7 +193,7 @@ export default async function HowItWorksPage() {
               ))}
             </div>
             <div className="mt-8">
-              <ButtonLink href={recoveryWhatsappUrl()} target="_blank" size="lg">{t("Start recovery on WhatsApp")}</ButtonLink>
+              <ButtonLink href={recoveryWhatsappUrl()} target="_blank" size="lg">{t("Start recovery")}</ButtonLink>
             </div>
           </div>
 
@@ -236,7 +236,7 @@ export default async function HowItWorksPage() {
               {t("See protection packages")}
             </ButtonLink>
             <ButtonLink href={recoveryWhatsappUrl()} target="_blank" size="lg" variant="outline" className="!border-white/40 !text-white hover:!bg-white/10">
-              {t("Start recovery on WhatsApp")}
+              {t("Start recovery")}
             </ButtonLink>
           </div>
         </div>

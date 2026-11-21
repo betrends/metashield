@@ -80,7 +80,7 @@ export default async function BusinessAdsPage() {
               </h1>
               <p className="mt-5 text-lg text-ink-600">{t("A restricted Business Manager or ad account doesn't just affect one profile — it affects every campaign, Page and team member attached to it. We handle these cases with the operational context your business needs.")}</p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <ButtonLink href={recoveryWhatsappUrl()} target="_blank" size="lg">{t("Start recovery on WhatsApp")}</ButtonLink>
+                <ButtonLink href={recoveryWhatsappUrl()} target="_blank" size="lg">{t("Start recovery")}</ButtonLink>
                 <ButtonLink href="/contact" variant="outline" size="lg">{t("Talk to Our Team")}</ButtonLink>
               </div>
             </div>

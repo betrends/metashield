@@ -72,7 +72,7 @@ export const footerNav = {
   ],
   tools: [
     { label: "Check My Account", href: "/check-my-account" },
-    { label: "Recover on WhatsApp", href: recoveryWhatsappUrl() },
+    { label: "Start recovery", href: recoveryWhatsappUrl() },
     { label: "Client Portal", href: "/portal" },
     { label: "Pricing", href: "/pricing" },
   ],

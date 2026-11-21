@@ -422,7 +422,7 @@ export default async function Home() {
                     />
                   </svg>
                 </ButtonLink>
-                <ButtonLink href={recoveryWhatsappUrl()} target="_blank" variant="outline" size="lg" className="w-full sm:w-auto">{t("Start recovery on WhatsApp")}</ButtonLink>
+                <ButtonLink href={recoveryWhatsappUrl()} target="_blank" variant="outline" size="lg" className="w-full sm:w-auto">{t("Start recovery")}</ButtonLink>
               </div>
 
               <div className="mt-12">
@@ -767,7 +767,7 @@ export default async function Home() {
               href={recoveryWhatsappUrl()} target="_blank"
               size="lg"
               className="!bg-white !text-brand-700 hover:!bg-brand-50"
-            >{t("Start recovery on WhatsApp")}</ButtonLink>
+            >{t("Start recovery")}</ButtonLink>
             <ButtonLink
               href="/contact"
               variant="outline"

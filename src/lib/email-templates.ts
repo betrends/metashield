@@ -933,7 +933,7 @@ export function eligibilityFollowupEmail(opts: {
       "✓",
       "#16a34a"
     )}
-    ${bigButton("Start my recovery on WhatsApp →", recoveryWhatsappUrl(platform ? `my ${platform} account` : "my account"))}
+    ${bigButton("Start my recovery →", recoveryWhatsappUrl(platform ? `my ${platform} account` : "my account"))}
     <p style="margin:0 0 16px;color:${TEXT_DARK};font-size:14px;line-height:1.7;">
       <strong>P.S.</strong> ${
         opts.final

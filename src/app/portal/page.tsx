@@ -243,7 +243,7 @@ export default function PortalOverviewPage() {
                     ? "Locked out? Message us on WhatsApp. Free recovery starts after your first payment."
                     : "Locked out? Message us on WhatsApp and we'll handle your recovery."}
                 </p>
-                <p className="mt-3 text-xs font-semibold text-risk-high">Start recovery on WhatsApp →</p>
+                <p className="mt-3 text-xs font-semibold text-risk-high">Start recovery →</p>
               </Card>
             </a>
           )}
@@ -403,7 +403,7 @@ export default function PortalOverviewPage() {
           rel="noopener noreferrer"
           className="shrink-0 rounded-full bg-[#25D366] px-4 py-2 text-center text-sm font-bold text-white hover:bg-[#1fb957]"
         >
-          Start recovery on WhatsApp
+          Start recovery
         </a>
       </div>
 
