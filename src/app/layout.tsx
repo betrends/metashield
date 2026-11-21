@@ -1,27 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { brandName, brandTagline } from "@/lib/site-config";
 import { PwaRegister } from "@/components/PwaRegister";
 import { NavigationTracker } from "@/components/NavigationTracker";
 import { getLocale, getT } from "@/lib/i18n/server";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-  display: "swap",
-  preload: true,
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-  display: "swap",
-  preload: false, // mono is only used in code blocks — don't block render for it
-});
-
 export const viewport: Viewport = {
-  themeColor: "#7c3aed",
+  themeColor: "#5038bf",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -60,10 +45,13 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const locale = await getLocale();
   return (
-    <html
-      lang={locale}
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    <html lang={locale} className="h-full antialiased">
+      <head>
+        {/* Self-hosted fonts (see globals.css): preload the two Latin files
+            used above the fold so headings don't swap late. */}
+        <link rel="preload" href="/fonts/newsreader-latin-opsz-normal.woff2" as="font" type="font/woff2" crossOrigin="" />
+        <link rel="preload" href="/fonts/hanken-grotesk-latin-wght-normal.woff2" as="font" type="font/woff2" crossOrigin="" />
+      </head>
       <body className="min-h-full flex flex-col bg-white text-ink-900">
         <NavigationTracker />
         {children}
