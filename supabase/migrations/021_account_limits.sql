@@ -28,14 +28,14 @@ returns integer
 language sql
 immutable
 as $$
-  select case p_plan
-    when 'watch'    then case p_kind when 'instagram' then 1 when 'facebook' then 1 else 0 end
-    when 'elite'    then case p_kind when 'instagram' then 2 when 'facebook' then 1 when 'ads' then 1 else 0 end
-    when 'biz'      then case p_kind when 'instagram' then 3 when 'facebook' then 3 when 'ads' then 3 else 0 end
-    when 'annual'   then case p_kind when 'instagram' then 2 when 'facebook' then 2 else 0 end
-    when 'lifetime' then case p_kind when 'instagram' then 1 when 'facebook' then 1 when 'ads' then 1 else 0 end
-    when 'basic', 'professional', 'business', 'one_time'
-                    then case p_kind when 'instagram' then 1 when 'facebook' then 1 else 0 end
+  select case
+    when p_plan = 'watch'    then case p_kind when 'instagram' then 1 when 'facebook' then 1 else 0 end
+    when p_plan = 'elite'    then case p_kind when 'instagram' then 2 when 'facebook' then 1 when 'ads' then 1 else 0 end
+    when p_plan = 'biz'      then case p_kind when 'instagram' then 3 when 'facebook' then 3 when 'ads' then 3 else 0 end
+    when p_plan = 'annual'   then case p_kind when 'instagram' then 2 when 'facebook' then 2 else 0 end
+    when p_plan = 'lifetime' then case p_kind when 'instagram' then 1 when 'facebook' then 1 when 'ads' then 1 else 0 end
+    when p_plan in ('basic', 'professional', 'business', 'one_time')
+                             then case p_kind when 'instagram' then 1 when 'facebook' then 1 else 0 end
     else 0
   end
 $$;
