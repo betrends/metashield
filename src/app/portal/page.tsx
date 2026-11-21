@@ -2,10 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { ButtonLink } from "@/components/ui/Button";
-import { RiskBadge } from "@/components/ui/RiskBadge";
 import { EmergencyModal } from "@/components/portal/EmergencyModal";
 import { supportChannels } from "@/components/portal/ContactSupportMenu";
 import {
@@ -25,37 +23,52 @@ import { coveredAccountIds } from "@/lib/portal/account-limits";
 import { CHECKLIST_TOTAL, fetchChecklistDone, healthWithChecklist, setChecklistStep } from "@/lib/portal/checklist";
 import type { InstagramStep } from "@/lib/instagram-links";
 
-function greeting() {
-  const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 17) return "Good afternoon";
-  return "Good evening";
-}
-
 function healthColor(score: number) {
   if (score >= 70) return { bar: "bg-risk-low", text: "text-risk-low" };
   if (score >= 40) return { bar: "bg-risk-medium", text: "text-risk-medium" };
   return { bar: "bg-risk-high", text: "text-risk-high" };
 }
 
-function PlatformBadge({ platform }: { platform: string }) {
+// Platform logo tile for the account rows.
+function PlatformIcon({ platform }: { platform: string }) {
   const p = platform.toLowerCase();
-  const label = p.includes("instagram") ? "IG" : p.includes("facebook") ? "FB" : p.slice(0, 2).toUpperCase();
-  const cls = p.includes("instagram")
-    ? "bg-pink-50 text-pink-600"
-    : p.includes("facebook")
-    ? "bg-blue-50 text-blue-600"
-    : "bg-ink-100 text-ink-500";
+  if (p.includes("instagram")) {
+    return (
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#f58529] sm:h-12 sm:w-12 via-[#dd2a7b] to-[#8134af] text-white">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="3.5" y="3.5" width="17" height="17" rx="5" stroke="currentColor" strokeWidth="1.8" />
+          <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.8" />
+          <circle cx="17.2" cy="6.8" r="1.1" fill="currentColor" />
+        </svg>
+      </span>
+    );
+  }
+  if (p.includes("facebook")) {
+    return (
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#1877f2] text-white sm:h-12 sm:w-12">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M13.5 21v-7.5h2.5l.4-3h-2.9V8.6c0-.9.3-1.5 1.5-1.5h1.5V4.4c-.3 0-1.2-.1-2.2-.1-2.2 0-3.7 1.3-3.7 3.8v2.4H8v3h2.6V21h2.9Z" />
+        </svg>
+      </span>
+    );
+  }
   return (
-    <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold tracking-wide ${cls}`}>
-      {label}
+    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-50 text-xs font-bold text-brand-700">
+      {platform.slice(0, 2).toUpperCase()}
     </span>
   );
 }
 
+// "2 days ago", "today" — when the account's health check was saved.
+function checkedAgo(iso: string): string {
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+  if (days <= 0) return "today";
+  if (days === 1) return "yesterday";
+  if (days < 30) return `${days} days ago`;
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
 
 export default function PortalOverviewPage() {
-  const router = useRouter();
   const [accounts, setAccounts] = useState<PortalAccount[] | "loading">("loading");
   const [cases, setCases] = useState<PortalCase[] | "loading">("loading");
   const [subscription, setSubscription] = useState<ClientSubscription | null | "loading">("loading");
@@ -155,101 +168,177 @@ export default function PortalOverviewPage() {
 
   return (
     <div>
-      {/* Greeting */}
+      {/* Welcome */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-brand-500">
-            {greeting()}
-          </p>
-          <h1 className="mt-0.5 text-2xl font-semibold text-ink-900">
-            {userName ? `${userName}'s Dashboard` : "Your Dashboard"}
+          <h1 className="text-2xl font-semibold tracking-tight text-ink-900 sm:text-[1.75rem]">
+            {userName ? `Welcome back, ${userName}` : "Welcome back"} <span aria-hidden="true">✨</span>
           </h1>
+          <p className="mt-1 text-sm text-ink-500">Here&apos;s the status of your protected accounts.</p>
         </div>
-        {isProtected ? (
-          <Link href="/portal/billing">
-            <span className="flex items-center gap-1.5 rounded-full bg-risk-low-bg px-3 py-1.5 text-xs font-semibold text-risk-low ring-1 ring-inset ring-risk-low/20">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-risk-low opacity-60" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-risk-low" />
-              </span>
-              {inFreeMonth ? `Free month · ${planShort}` : `Protected · ${planShort}`}
-            </span>
-          </Link>
-        ) : (
-          <Link href="/portal/billing">
-            <span className="rounded-full bg-ink-100 px-3 py-1.5 text-xs font-semibold text-ink-600">Not protected yet</span>
-          </Link>
-        )}
       </div>
 
-      {/* Stat cards */}
-      <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-3">
-        {/* Package */}
-        <Link href="/portal/billing" className="col-span-2 lg:col-span-1">
-          <Card className={`h-full p-5 transition-colors hover:border-brand-200 ${isProtected ? "bg-risk-low-bg/30" : ""}`}>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-400">My package</p>
-            {isProtected ? (
-              <>
-                <p className="mt-2 text-2xl font-semibold text-risk-low">{planShort}</p>
-                <p className="mt-1 text-xs text-ink-500">
-                  {inFreeMonth
-                    ? `Free month${renewDate ? ` · ends ${renewDate}` : ""}`
-                    : `Active${renewDate ? ` · renews ${renewDate}` : ""}`}
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="mt-2 text-2xl font-semibold text-ink-400">None yet</p>
-                <p className="mt-1 text-xs font-medium text-brand-600">Start your free month →</p>
-              </>
-            )}
+      {/* Summary: protected accounts, plan, status */}
+      <div className="mt-6 grid gap-4 sm:grid-cols-3">
+        <Link href="/portal/accounts" className="group">
+          <Card className="flex h-full items-center gap-4 p-4 transition-colors group-hover:border-brand-300 sm:p-5">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-700 ring-1 ring-brand-100">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="12" cy="8" r="3.4" stroke="currentColor" strokeWidth="1.7" />
+                <path d="M5 20c1-3.6 4-5.2 7-5.2s6 1.6 7 5.2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+              </svg>
+            </span>
+            <div>
+              <p className="text-sm font-medium text-ink-600">Protected accounts</p>
+              <p className="mt-0.5 text-3xl font-semibold text-ink-900">{covered.size}</p>
+            </div>
           </Card>
         </Link>
-        {/* Health */}
-        <Link href="/portal/accounts">
-          <Card className="h-full p-5 transition-colors hover:border-brand-200">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-400">Account health</p>
-            {accounts.length > 0 ? (
-              <>
-                <p className={`mt-2 text-2xl font-semibold ${hc.text}`}>{averageHealth}<span className="text-sm font-normal text-ink-400">/100</span></p>
-                <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-ink-100">
-                  <div className={`h-full rounded-full ${hc.bar} transition-all duration-700`} style={{ width: `${averageHealth}%` }} />
-                </div>
-                <p className="mt-2 text-xs text-ink-500">
-                  {checklistBoost > 0
+        <Link href="/portal/billing" className="group">
+          <Card className="flex h-full items-center gap-4 p-4 transition-colors group-hover:border-brand-300 sm:p-5">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-700 ring-1 ring-brand-100">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="m12 3 8.5 4.5L12 12 3.5 7.5 12 3Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+                <path d="m3.5 12 8.5 4.5 8.5-4.5M3.5 16.5 12 21l8.5-4.5" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+              </svg>
+            </span>
+            <div>
+              <p className="text-sm font-medium text-ink-600">Plan</p>
+              <p className="mt-0.5 text-xl font-semibold text-ink-900">{isProtected ? planShort : "None yet"}</p>
+              <p className="text-xs text-ink-500">
+                {isProtected
+                  ? inFreeMonth
+                    ? `Free month${renewDate ? ` · ends ${renewDate}` : ""}`
+                    : renewDate
+                      ? `Renews ${renewDate}`
+                      : "No renewal needed"
+                  : "Start your free month →"}
+              </p>
+            </div>
+          </Card>
+        </Link>
+        <Card className="flex h-full items-center gap-4 p-4 sm:p-5">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-700 ring-1 ring-brand-100">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 2.5 4 6v6c0 5.1 3.4 8.9 8 9.5 4.6-.6 8-4.4 8-9.5V6l-8-3.5Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+              <path d="m8.5 12.2 2.4 2.4 4.6-4.9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+          <div>
+            <p className="text-sm font-medium text-ink-600">Status</p>
+            <span
+              className={`mt-1.5 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${
+                isPaid
+                  ? "bg-risk-low-bg text-risk-low ring-risk-low/30"
+                  : inFreeMonth
+                    ? "bg-brand-50 text-brand-700 ring-brand-200"
+                    : "bg-ink-100 text-ink-600 ring-ink-200"
+              }`}
+            >
+              <span aria-hidden="true">◆</span>
+              {isPaid ? "Active" : inFreeMonth ? "Free month" : "Not protected"}
+            </span>
+          </div>
+        </Card>
+      </div>
+
+      {/* Health + checklist progress */}
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <Link href="/portal/accounts" className="group">
+          <Card className="h-full p-5 transition-colors group-hover:border-brand-300">
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="text-sm font-medium text-ink-600">Account health</p>
+              <p className="text-xs text-ink-500">
+                {accounts.length === 0
+                  ? "Run a health check →"
+                  : checklistBoost > 0
                     ? `+${checklistBoost} from your checklist`
                     : "Tick off your checklist to raise it"}
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="mt-2 text-2xl font-semibold text-ink-300">—</p>
-                <p className="mt-1 text-xs font-medium text-brand-600">Run a health check →</p>
-              </>
-            )}
+              </p>
+            </div>
+            <p className={`mt-2 text-3xl font-semibold ${accounts.length ? hc.text : "text-ink-400"}`}>
+              {accounts.length ? averageHealth : "—"}
+              <span className="text-sm font-normal text-ink-400">/100</span>
+            </p>
+            <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-ink-100">
+              <div className={`h-full rounded-full ${hc.bar} transition-all duration-700`} style={{ width: `${accounts.length ? averageHealth : 0}%` }} />
+            </div>
           </Card>
         </Link>
-        {/* Checklist */}
-        <a href="#checklist">
-          <Card className="h-full p-5 transition-colors hover:border-brand-200">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-400">Protection checklist</p>
-            <p className="mt-2 text-2xl font-semibold text-ink-900">
+        <a href="#checklist" className="group">
+          <Card className="h-full p-5 transition-colors group-hover:border-brand-300">
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="text-sm font-medium text-ink-600">Protection checklist</p>
+              <p className="text-xs text-brand-700">
+                {doneCount === CHECKLIST_TOTAL ? "All done — well protected" : "Each step raises your health →"}
+              </p>
+            </div>
+            <p className="mt-2 text-3xl font-semibold text-ink-900">
               {doneCount}
               <span className="text-sm font-normal text-ink-400"> of {CHECKLIST_TOTAL} done</span>
             </p>
-            <div className="mt-3 flex gap-1" aria-hidden="true">
+            <div className="mt-3 flex gap-1.5" aria-hidden="true">
               {CHECKLIST_DO.map((step) => (
                 <span
                   key={step.ig}
-                  className={`h-1.5 flex-1 rounded-full transition-colors duration-500 ${checklistDone.has(step.ig) ? "bg-risk-low" : "bg-ink-100"}`}
+                  className={`h-2 flex-1 rounded-full transition-colors duration-500 ${checklistDone.has(step.ig) ? "bg-risk-low" : "bg-ink-100"}`}
                 />
               ))}
             </div>
-            <p className="mt-2 text-xs font-medium text-brand-600">
-              {doneCount === CHECKLIST_TOTAL ? "All done — well protected" : "Each step raises your health →"}
-            </p>
           </Card>
         </a>
+      </div>
+
+      {/* My Accounts */}
+      <div className="mt-10">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-ink-900">My Accounts</h2>
+          <ButtonLink href="/portal/accounts/new" size="sm">
+            + Add Account
+          </ButtonLink>
+        </div>
+        {accounts.length === 0 ? (
+          <Card className="mt-4 flex flex-col items-center gap-3 py-10 text-center">
+            <p className="text-sm text-ink-500">No accounts added yet.</p>
+            <ButtonLink href="/portal/accounts/new" size="sm">Run an Account Health Check</ButtonLink>
+          </Card>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {accounts.map((account) => {
+              const isCovered = covered.has(account.id);
+              const p = account.platform.toLowerCase();
+              return (
+                <Card key={account.id} className="flex items-center gap-3 px-4 py-4 sm:gap-4 sm:px-5">
+                  <PlatformIcon platform={account.platform} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[15px] font-semibold text-ink-900">
+                      {p.includes("instagram") ? "Instagram" : p.includes("facebook") ? "Facebook" : account.platform}
+                    </p>
+                    <p className="truncate text-sm text-ink-500">{account.handle}</p>
+                  </div>
+                  <span
+                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 max-sm:px-2 max-sm:text-[11px] ${
+                      isCovered ? "bg-risk-low-bg text-risk-low ring-risk-low/30" : "bg-risk-medium-bg text-risk-medium ring-risk-medium/30"
+                    }`}
+                  >
+                    <span aria-hidden="true" className="max-sm:hidden">◆</span>
+                    {isCovered ? "Protected" : "Not covered"}
+                  </span>
+                  <div className="hidden w-40 text-sm md:block">
+                    <p className="font-medium text-ink-800">Health {healthWithChecklist(account.health, doneCount)}/100</p>
+                    {account.createdAt && <p className="text-xs text-ink-500">Last check: {checkedAgo(account.createdAt)}</p>}
+                  </div>
+                  <Link
+                    href={`/portal/accounts/${account.id}`}
+                    className="shrink-0 rounded-xl border border-ink-200 px-3.5 py-2 text-sm font-semibold text-ink-900 sm:px-5 transition-colors hover:border-brand-400 hover:bg-ink-50"
+                  >
+                    View
+                  </Link>
+                </Card>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Need help? */}
@@ -384,8 +473,8 @@ export default function PortalOverviewPage() {
                   aria-pressed={done}
                   className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 ${
                     done
-                      ? "bg-risk-low text-white hover:bg-risk-low/90"
-                      : "bg-ink-900 text-white hover:bg-ink-800"
+                      ? "bg-risk-low text-[#06281a] hover:bg-risk-low/90"
+                      : "bg-brand-600 text-white hover:opacity-90"
                   }`}
                 >
                   {done ? "Done ✓" : "Mark as done"}
@@ -396,83 +485,6 @@ export default function PortalOverviewPage() {
           })}
         </Card>
         {checklistError ? <p className="mt-2 text-sm font-medium text-risk-high">{checklistError}</p> : null}
-      </div>
-
-      {/* Accounts */}
-      <div className="mt-10">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-ink-900">My Accounts</h2>
-          {accounts.length > 0 && (
-            <Link href="/portal/accounts" className="text-sm font-semibold text-brand-700 hover:text-brand-800">
-              View all
-            </Link>
-          )}
-        </div>
-        {accounts.length === 0 ? (
-          <Card className="mt-4 flex flex-col items-center gap-3 py-10 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-ink-100">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className="text-ink-400">
-                <circle cx="12" cy="8" r="3.2" stroke="currentColor" strokeWidth="1.7" />
-                <path d="M5 20c1-3.5 4-5 7-5s6 1.5 7 5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-              </svg>
-            </div>
-            <p className="text-sm text-ink-500">No accounts added yet.</p>
-            <ButtonLink href="/portal/accounts/new" size="sm">Run an Account Health Check</ButtonLink>
-          </Card>
-        ) : (
-          <Card className="mt-4 overflow-hidden p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="border-b border-ink-100 text-xs uppercase tracking-wide text-ink-400">
-                  <tr>
-                    <th className="px-5 py-3 font-medium">Account</th>
-                    <th className="px-5 py-3 font-medium">Health</th>
-                    <th className="px-5 py-3 font-medium">Status</th>
-                    <th className="px-5 py-3 font-medium">Package</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {accounts.map((account) => {
-                    const shownHealth = healthWithChecklist(account.health, doneCount);
-                    const ac = healthColor(shownHealth);
-                    return (
-                      <tr
-                        key={account.id}
-                        onClick={() => router.push(`/portal/accounts/${account.id}`)}
-                        className="cursor-pointer border-b border-ink-100 last:border-b-0 hover:bg-brand-50/40"
-                      >
-                        <td className="px-5 py-3.5">
-                          <div className="flex items-center gap-2">
-                            <PlatformBadge platform={account.platform} />
-                            <span className="font-medium text-ink-800">{account.handle}</span>
-                          </div>
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <div className="flex items-center gap-2">
-                            <div className="h-1.5 w-16 overflow-hidden rounded-full bg-ink-100">
-                              <div className={`h-full rounded-full ${ac.bar} transition-all duration-700`} style={{ width: `${shownHealth}%` }} />
-                            </div>
-                            <span className={`text-xs font-semibold ${ac.text}`}>{shownHealth}</span>
-                          </div>
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <RiskBadge level={account.level} />
-                        </td>
-                        <td className="px-5 py-3.5 text-xs font-semibold">
-                          {covered.has(account.id) ? (
-                            <span className="text-risk-low">Covered</span>
-                          ) : (
-                            <span className="text-risk-medium">Not covered</span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        )}
       </div>
 
       {/* Recovery — handled on WhatsApp */}

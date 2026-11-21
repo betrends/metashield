@@ -309,7 +309,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
 
   if (session === "loading" || session === null) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-ink-50">
+      <div className="portal-dark flex min-h-screen items-center justify-center">
         <BrandLoader size="page" label="Loading your dashboard…" />
       </div>
     );
@@ -326,7 +326,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-ink-50">
+    <div className="portal-dark min-h-screen">
       {/* Desktop top header with email & notification bell */}
       <div className="hidden border-b border-ink-100 bg-white lg:block">
         <style>{`
@@ -494,7 +494,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                   onClick={() => setMobileNavOpen(false)}
                   className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
                     active
-                      ? "bg-brand-50 text-brand-700"
+                      ? "bg-brand-600 text-white shadow-lg shadow-blue-900/40"
                       : "text-ink-600 hover:bg-ink-50 hover:text-ink-900"
                   }`}
                 >

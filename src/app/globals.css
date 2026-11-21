@@ -554,3 +554,107 @@ html {
     color: #8b98a9;
   }
 }
+
+/* ---- Client portal: dark navy theme ------------------------------------
+   Everything inside <div class="portal-dark"> (the signed-in client portal)
+   uses a dark navy palette with a bright blue accent. The colour tokens are
+   swapped here, so every portal page follows without per-page changes:
+   ink (text/borders/backgrounds) is inverted, brand becomes blue, and the
+   status colours are tuned for a dark background. The public website is
+   not affected. */
+.portal-dark {
+  color-scheme: dark;
+  --portal-bg: #070d1f;
+  --portal-surface: #0e1730;
+  --portal-surface-2: #132042;
+
+  --color-ink-50: #0b1430;
+  --color-ink-100: #1a2647;
+  --color-ink-200: #243257;
+  --color-ink-300: #3a4a76;
+  --color-ink-400: #7181a8;
+  --color-ink-500: #94a2c4;
+  --color-ink-600: #b3bedb;
+  --color-ink-700: #cbd4ea;
+  --color-ink-800: #e1e7f5;
+  --color-ink-900: #f2f5fc;
+  --color-ink-950: #ffffff;
+
+  --color-brand-50: #0f1f4a;
+  --color-brand-100: #15295e;
+  --color-brand-200: #1f3d82;
+  --color-brand-300: #3d63bb;
+  --color-brand-400: #5d86f2;
+  --color-brand-500: #3f74f5;
+  --color-brand-600: #2f66f0;
+  --color-brand-700: #7ea3ff;
+  --color-brand-800: #a8c1ff;
+  --color-brand-900: #cfdcff;
+
+  --color-risk-low: #4ade80;
+  --color-risk-low-bg: #0e2a22;
+  --color-risk-medium: #fbbf24;
+  --color-risk-medium-bg: #2c220b;
+  --color-risk-high: #f87171;
+  --color-risk-high-bg: #34161a;
+
+  background-color: var(--portal-bg);
+  color: var(--color-ink-900);
+}
+/* Surfaces that are white on the light site become navy cards here. */
+.portal-dark .bg-white {
+  background-color: var(--portal-surface);
+}
+.portal-dark .bg-white\/80,
+.portal-dark .bg-white\/90,
+.portal-dark .bg-white\/95 {
+  background-color: rgb(14 23 48 / 0.92);
+}
+.portal-dark input,
+.portal-dark textarea,
+.portal-dark select {
+  background-color: var(--portal-surface-2);
+  color: var(--color-ink-900);
+  border-color: var(--color-ink-200);
+}
+.portal-dark input::placeholder,
+.portal-dark textarea::placeholder {
+  color: var(--color-ink-400);
+}
+/* Primary buttons: the bright blue from the design, with white text. */
+.portal-dark .bg-brand-600 {
+  background-image: linear-gradient(180deg, #3b74ff 0%, #2557e6 100%);
+}
+/* A few fixed light greens used for "good" notes and badges. */
+.portal-dark .bg-green-50,
+.portal-dark .bg-emerald-50 {
+  background-color: var(--color-risk-low-bg);
+}
+.portal-dark .border-green-200 {
+  border-color: rgb(74 222 128 / 0.28);
+}
+.portal-dark .ring-emerald-200 {
+  --tw-ring-color: rgb(74 222 128 / 0.3);
+}
+.portal-dark .text-green-800,
+.portal-dark .text-emerald-700 {
+  color: #6ee7a0;
+}
+/* The featured package card is dark on every page, so inside the portal it
+   keeps light text tokens (in blue) and takes the portal's blue gradient. */
+.portal-dark .pkg-featured {
+  --color-brand-50: #eef3ff;
+  --color-brand-100: #e0e8ff;
+  --color-brand-200: #c7d6ff;
+  --color-brand-300: #a8c1ff;
+  --color-brand-400: #7ea3ff;
+  --color-ink-50: #f5f8fb;
+  --color-ink-100: #e7edf3;
+  --color-ink-200: #cbd8e4;
+  --color-ink-300: #a9bcce;
+  --color-ink-400: #c7d2e4;
+  background-image: linear-gradient(180deg, #13245a 0%, #172d70 55%, #1d3a8a 100%);
+}
+.portal-dark .text-emerald-800 {
+  color: #6ee7a0;
+}
