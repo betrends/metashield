@@ -20,6 +20,13 @@ export const contact = {
   address: "Lagos, Nigeria",
 };
 
+// Account recovery is handled on WhatsApp (0816 191 4010) — the website no
+// longer takes recovery cases. `what` goes into the pre-filled message,
+// e.g. "my Instagram account".
+export function recoveryWhatsappUrl(what = "my account"): string {
+  return `${contact.inquiriesWhatsapp}?text=${encodeURIComponent(`Hello MetaShield, I need help recovering ${what}.`)}`;
+}
+
 export type NavLink = {
   label: string;
   href: string;
@@ -30,7 +37,7 @@ export const servicesNav: NavLink[] = [
   {
     label: "Account Recovery",
     href: "/account-recovery",
-    description: "Disabled, suspended, restricted or hacked accounts.",
+    description: "Disabled, suspended, restricted or hacked accounts — handled on WhatsApp.",
   },
   {
     label: "Account Protection",
@@ -65,7 +72,7 @@ export const footerNav = {
   ],
   tools: [
     { label: "Check My Account", href: "/check-my-account" },
-    { label: "Recovery Eligibility Checker", href: "/recovery-eligibility" },
+    { label: "Start recovery", href: recoveryWhatsappUrl() },
     { label: "Client Portal", href: "/portal" },
     { label: "Pricing", href: "/pricing" },
   ],

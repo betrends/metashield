@@ -31,14 +31,15 @@ function markNotificationsSeen(userId: string) {
   }
 }
 
+// Protection first. Recovery is handled on WhatsApp, so old recovery cases
+// sit under "Past cases" (read-only); their documents open from each case.
 const navItems = [
   { label: "Overview", href: "/portal", icon: "grid" },
-  { label: "AI Assistant", href: "/portal/assistant", icon: "sparkles" },
   { label: "My Accounts", href: "/portal/accounts", icon: "user" },
-  { label: "Cases", href: "/portal/cases", icon: "folder" },
   { label: "Messages", href: "/portal/messages", icon: "chat" },
-  { label: "Documents", href: "/portal/documents", icon: "doc" },
   { label: "Packages", href: "/portal/billing", icon: "card" },
+  { label: "AI Assistant", href: "/portal/assistant", icon: "sparkles" },
+  { label: "Past cases", href: "/portal/cases", icon: "folder" },
 ];
 
 function NavIcon({ name }: { name: string }) {
@@ -415,7 +416,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
       {/* Mobile top bar */}
       <div className="flex items-center justify-between border-b border-ink-100 bg-white px-4 py-3 lg:hidden">
         <Link href="/portal" className="flex items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white">
+          <span className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-ink-900 text-white">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <path
                 d="M12 2.5 4 6v6c0 5.1 3.4 8.9 8 9.5 4.6-.6 8-4.4 8-9.5V6l-8-3.5Z"
@@ -430,7 +431,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
               />
             </svg>
           </span>
-          <span className="text-sm font-semibold text-ink-900">{brandName} Portal</span>
+          <span className="font-serif text-lg font-medium text-ink-900">{brandName} <span className="font-sans text-sm font-normal text-ink-500">Portal</span></span>
         </Link>
         <button
           onClick={() => setMobileNavOpen((v) => !v)}
@@ -465,7 +466,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
           } lg:block`}
         >
           <Link href="/portal" className="hidden items-center gap-2 px-2 lg:flex">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white">
+            <span className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-ink-900 text-white">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path
                   d="M12 2.5 4 6v6c0 5.1 3.4 8.9 8 9.5 4.6-.6 8-4.4 8-9.5V6l-8-3.5Z"
@@ -480,7 +481,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                 />
               </svg>
             </span>
-            <span className="text-sm font-semibold text-ink-900">{brandName} Portal</span>
+            <span className="font-serif text-lg font-medium text-ink-900">{brandName} <span className="font-sans text-sm font-normal text-ink-500">Portal</span></span>
           </Link>
 
           <nav className="mt-2 space-y-1 lg:mt-8">
@@ -491,9 +492,9 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                   key={item.href}
                   href={item.href}
                   onClick={() => setMobileNavOpen(false)}
-                  className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14.5px] transition-colors ${
                     active
-                      ? "bg-brand-50 text-brand-700"
+                      ? "bg-ink-100 font-semibold text-ink-900"
                       : "text-ink-600 hover:bg-ink-50 hover:text-ink-900"
                   }`}
                 >

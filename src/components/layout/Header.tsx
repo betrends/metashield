@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { brandName, servicesNav } from "@/lib/site-config";
+import { brandName, servicesNav, recoveryWhatsappUrl } from "@/lib/site-config";
 import { ButtonLink } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { useT } from "@/lib/i18n/client";
@@ -27,7 +27,7 @@ function Logo() {
   const t = useT();
   return (
     <Link href="/" className="flex items-center gap-2 shrink-0">
-      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-white shadow-sm shadow-brand-900/20">
+      <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-ink-900 text-white">
         <svg
           width="18"
           height="18"
@@ -56,7 +56,7 @@ function Logo() {
         </svg>
       </span>
       <span className="flex flex-col leading-none">
-        <span className="text-lg font-semibold tracking-tight text-ink-900">{brandName}</span>
+        <span className="font-serif text-[1.3rem] font-medium tracking-[-0.01em] text-ink-900">{brandName}</span>
         <span className="text-[10px] font-medium tracking-wide text-ink-400">{t("by BetheTrendsNG")}</span>
       </span>
     </Link>
@@ -89,8 +89,8 @@ export function Header() {
   }, [mobileOpen]);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-ink-100 bg-white/90 backdrop-blur">
-      <Container className="flex h-16 items-center justify-between gap-3">
+    <header className="sticky top-0 z-50 border-b border-ink-100 bg-white/85 backdrop-blur-md">
+      <Container className="flex h-[68px] items-center justify-between gap-3">
         <Logo />
 
         {/* Desktop nav — services shown directly, no dropdown. Centered in
@@ -104,23 +104,23 @@ export function Header() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`rounded-full px-2.5 py-2 text-sm font-medium transition-colors ${
-                  active ? "text-brand-700" : "text-ink-700 hover:text-brand-700"
+                className={`rounded-lg px-2.5 py-2 text-[14.5px] transition-colors ${
+                  active ? "text-ink-900 font-semibold" : "text-ink-600 hover:text-ink-900"
                 }`}
               >
                 {t(item.label)}
               </Link>
             );
           })}
-          <span className="mx-1 h-4 w-px bg-ink-100" />
+          <span className="mx-2 h-4 w-px bg-ink-200" />
           {headerSecondaryNav.map((item) => {
             const active = pathname === item.href;
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`rounded-full px-2.5 py-2 text-sm font-medium transition-colors ${
-                  active ? "text-brand-700" : "text-ink-700 hover:text-brand-700"
+                className={`rounded-lg px-2.5 py-2 text-[14.5px] transition-colors ${
+                  active ? "text-ink-900 font-semibold" : "text-ink-600 hover:text-ink-900"
                 }`}
               >
                 {t(item.label)}
@@ -133,8 +133,8 @@ export function Header() {
           <ButtonLink href="/portal/login" variant="ghost" size="sm">
             {t("Log In")}
           </ButtonLink>
-          <ButtonLink href="/portal/login?mode=sign-up" size="sm">
-            {t("Sign Up")}
+          <ButtonLink href="/pricing#packages" size="sm">
+            {t("Start free month")}
           </ButtonLink>
         </div>
 
@@ -215,11 +215,11 @@ export function Header() {
                 {t("Log In")}
               </ButtonLink>
               <ButtonLink
-                href="/recovery-eligibility"
+                href={recoveryWhatsappUrl()} target="_blank"
                 variant="ghost"
                 className="w-full"
               >
-                {t("Start Your Recovery")}
+                {t("Start recovery")}
               </ButtonLink>
             </div>
           </Container>

@@ -3,11 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { contact } from "@/lib/site-config";
 
-const channels = [
+// Also shown on the client dashboard's "Need help?" card.
+export const supportChannels = [
   {
     label: "WhatsApp",
-    description: "Chat with our team",
-    href: contact.whatsapp,
+    description: contact.inquiriesWhatsappDisplay,
+    href: contact.inquiriesWhatsapp,
     external: true,
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -99,7 +100,7 @@ export function ContactSupportMenu() {
           <p className="px-3 pt-1.5 pb-1 text-xs font-semibold uppercase tracking-wide text-ink-400">
             Chat with us
           </p>
-          {channels.map((channel) => (
+          {supportChannels.map((channel) => (
             <a
               key={channel.label}
               href={channel.href}

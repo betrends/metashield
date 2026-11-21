@@ -14,18 +14,18 @@ export function AskAIBar() {
   }
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-brand-900/30 bg-brand-700/95 backdrop-blur-md">
+    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-ink-200/70 bg-white/90 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-8">
         {/* Icon + label */}
         <div className="hidden items-center gap-2 sm:flex">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15 text-[11px] font-extrabold tracking-widest text-white">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-[11px] font-bold text-brand-700">
             AI
           </span>
-          <p className="whitespace-nowrap text-xs font-semibold text-brand-100">Ask the AI</p>
+          <p className="whitespace-nowrap text-sm font-medium text-ink-700">Ask the AI</p>
         </div>
 
         {/* Divider */}
-        <div className="hidden h-5 w-px bg-white/20 sm:block" />
+        <div className="hidden h-5 w-px bg-ink-200 sm:block" />
 
         {/* Input */}
         <form onSubmit={handleSubmit} className="flex flex-1 items-center gap-2">
@@ -34,12 +34,12 @@ export function AskAIBar() {
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Ask about your account health, policies, recovery…"
-            className="h-9 w-full flex-1 rounded-full border border-white/10 bg-white/10 px-4 text-sm text-white placeholder:text-brand-200/70 outline-none focus:border-white/30 focus:bg-white/15"
+            className="h-10 w-full flex-1 rounded-xl border border-ink-200 bg-white px-4 text-sm text-ink-900 placeholder:text-ink-400 outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
           />
           <button
             type="submit"
             aria-label="Ask the AI Assistant"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-brand-700 transition-all hover:scale-105 hover:bg-brand-50 active:scale-95"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-ink-900 text-white transition-colors hover:bg-ink-800"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
               <path

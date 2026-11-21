@@ -5,7 +5,7 @@ import { Section, Eyebrow } from "@/components/ui/Section";
 import { Container } from "@/components/ui/Container";
 import dynamic from "next/dynamic";
 const ContactForm = dynamic(() => import("@/components/ContactForm").then(m => m.ContactForm));
-import { contact } from "@/lib/site-config";
+import { contact, recoveryWhatsappUrl } from "@/lib/site-config";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getT();
@@ -30,8 +30,8 @@ export default async function ContactPage() {
           <div className="max-w-2xl">
             <Eyebrow>{t("Contact")}</Eyebrow>
             <h1 className="mt-4 text-4xl font-semibold tracking-tight text-ink-900 sm:text-5xl text-balance">{t("Tell us what's going on — we'll take it from there.")}</h1>
-            <p className="mt-5 text-lg text-ink-600 text-balance">{t("For a faster path, try the")}{" "}
-              <Link href="/recovery-eligibility" className="font-semibold text-brand-700 hover:text-brand-800">{t("Recovery Eligibility Checker")}</Link>{" "}{t("or")}{" "}
+            <p className="mt-5 text-lg text-ink-600 text-balance">{t("Need an account recovered? The fastest way is")}{" "}
+              <a href={recoveryWhatsappUrl()} target="_blank" rel="noopener noreferrer" className="font-semibold text-brand-700 hover:text-brand-800">{t("WhatsApp")}</a>{t(". To check how safe your account is, try the")}{" "}
               <Link href="/check-my-account" className="font-semibold text-brand-700 hover:text-brand-800">{t("Account Health Check")}</Link>{t(". Otherwise, send us a message below.")}</p>
           </div>
         </Container>

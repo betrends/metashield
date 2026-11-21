@@ -7,9 +7,10 @@ import { Container } from "@/components/ui/Container";
 import { RiskBadge } from "@/components/ui/RiskBadge";
 import { recoveryPlatforms } from "@/lib/content/recovery";
 import { caseStudies } from "@/lib/content/case-studies";
-import { servicesNav } from "@/lib/site-config";
+import { servicesNav, recoveryWhatsappUrl } from "@/lib/site-config";
 import dynamic from "next/dynamic";
 import { NoExtraCostBanner } from "@/components/NoExtraCostBanner";
+import { HeroProtectionPanel } from "@/components/HeroProtectionPanel";
 
 const Testimonials = dynamic(() => import("@/components/Testimonials").then(m => m.Testimonials));
 const CountUp = dynamic(() => import("@/components/CountUp").then(m => m.CountUp));
@@ -320,129 +321,68 @@ function Icon({ name, className = "" }: { name: string; className?: string }) {
   }
 }
 
-function HeroGraphic() {
-  return (
-    <div className="relative mx-auto aspect-square w-full max-w-md">
-      <svg
-        viewBox="0 0 448 448"
-        className="absolute inset-0 h-full w-full text-brand-200"
-        fill="none"
-      >
-        <circle cx="224" cy="224" r="150" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 6" />
-        <line x1="224" y1="224" x2="75" y2="95" stroke="currentColor" strokeWidth="1.5" className="animate-dash-flow" strokeDasharray="6 6" />
-        <line x1="224" y1="224" x2="380" y2="80" stroke="currentColor" strokeWidth="1.5" className="animate-dash-flow" strokeDasharray="6 6" />
-        <line x1="224" y1="224" x2="65" y2="355" stroke="currentColor" strokeWidth="1.5" className="animate-dash-flow" strokeDasharray="6 6" />
-        <line x1="224" y1="224" x2="385" y2="365" stroke="currentColor" strokeWidth="1.5" className="animate-dash-flow" strokeDasharray="6 6" />
-      </svg>
-
-      {/* Center shield */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-        <span className="absolute inset-0 animate-pulse-ring rounded-full bg-brand-400" />
-        <span className="relative flex h-36 w-36 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 shadow-xl shadow-brand-900/20 sm:h-40 sm:w-40">
-          <svg width="60" height="60" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M12 2.5 4 6v6c0 5.1 3.4 8.9 8 9.5 4.6-.6 8-4.4 8-9.5V6l-8-3.5Z"
-              fill="white"
-              fillOpacity="0.15"
-            />
-            <path
-              d="M12 2.5 4 6v6c0 5.1 3.4 8.9 8 9.5 4.6-.6 8-4.4 8-9.5V6l-8-3.5Z"
-              stroke="white"
-              strokeWidth="1.6"
-              strokeLinejoin="round"
-            />
-            <path
-              d="m8.3 12.2 2.4 2.4 4.8-5.1"
-              stroke="white"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </span>
-      </div>
-
-      {/* Orbiting platform bubbles */}
-      <div className="animate-float absolute left-[10%] top-[15%]">
-        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-lg ring-1 ring-ink-100">
-          {supportedPlatforms[0].icon}
-        </span>
-      </div>
-      <div className="animate-float-delayed absolute right-[3%] top-[8%]">
-        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-lg ring-1 ring-ink-100">
-          {supportedPlatforms[1].icon}
-        </span>
-      </div>
-      <div className="animate-float-delayed absolute bottom-[10%] left-[2%]">
-        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-lg ring-1 ring-ink-100">
-          {supportedPlatforms[3].icon}
-        </span>
-      </div>
-      <div className="animate-float absolute bottom-[6%] right-[8%]">
-        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-lg ring-1 ring-ink-100">
-          {supportedPlatforms[5].icon}
-        </span>
-      </div>
-    </div>
-  );
-}
-
 export default async function Home() {
   const t = await getT();
   return (
     <>
-      {/* Hero */}
+      {/* Hero — protection first; the panel on the right is the one moment of motion */}
       <section className="relative overflow-hidden bg-brand-glow">
-        <Container className="relative py-16 sm:py-24">
-          <div className="grid items-center gap-12 lg:grid-cols-2">
-            <div className="animate-fade-in-up">
+        <Container className="relative py-16 sm:py-24 lg:py-28">
+          <div className="grid items-center gap-14 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
+            <div>
               <Link
                 href="/pricing#packages"
-                className="group mb-5 inline-flex items-center gap-2 rounded-full bg-white/80 py-1 pl-1 pr-3.5 text-xs font-semibold text-ink-700 shadow-sm ring-1 ring-brand-200 backdrop-blur transition hover:ring-brand-400 sm:text-sm"
+                className="inline-flex items-center gap-2 rounded-full border border-ink-200 bg-white px-3.5 py-1.5 text-sm text-ink-700 transition-colors hover:border-ink-300"
               >
-                <span className="rounded-full bg-emerald-500 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white">{t("New")}</span>
-                {t("Account recovery at no extra cost with any package")}
-                <span aria-hidden="true" className="text-brand-600 transition-transform group-hover:translate-x-0.5">→</span>
+                <span className="h-1.5 w-1.5 rounded-full bg-risk-low" aria-hidden="true" />
+                {t("Your first month is free on Watch, Elite and Business")}
               </Link>
-              <h1 className="text-4xl font-semibold tracking-tight text-ink-900 text-balance sm:text-6xl">{t("Advanced Protection &")}{" "}<span className="text-brand-600">{t("Account Recovery.")}</span>
+              <h1 className="mt-7 max-w-[15ch] text-[2.75rem] text-ink-900 sm:text-[3.7rem]">
+                {t("The accounts your business runs on, protected.")}
               </h1>
-              <p className="mt-6 max-w-xl text-lg text-ink-600 text-balance">{t("Professional account recovery and protection services for businesses and creators. We recover disabled accounts, prevent future issues, and keep your digital presence safe and always accessible.")}</p>
+              <p className="mt-6 max-w-[34rem] text-lg leading-relaxed text-ink-600">
+                {t("MetaShield checks your Instagram, Facebook and ad accounts, shows you how to close the gaps — and if anything is ever suspended or disabled, we recover it at no extra cost.")}
+              </p>
               <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
-                <ButtonLink
-                  href="/check-my-account"
-                  size="lg"
-                  className="w-full sm:w-auto !font-extrabold shadow-lg shadow-brand-600/30 ring-2 ring-brand-200 hover:!scale-[1.05]"
-                >{t("Check My Account Health")}<svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M5 12h14m-6-6 6 6-6 6"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+                <ButtonLink href="/pricing#packages" size="lg" className="w-full sm:w-auto">
+                  {t("Start your free month")}
                 </ButtonLink>
-                <ButtonLink href="/recovery-eligibility" variant="outline" size="lg" className="w-full sm:w-auto">{t("Start Your Recovery")}</ButtonLink>
+                <ButtonLink href="/check-my-account" variant="outline" size="lg" className="w-full sm:w-auto">
+                  {t("Check my account health")}
+                </ButtonLink>
               </div>
-
-              <div className="mt-12">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">{t("Supported Platforms")}</p>
-                </div>
-                <div className="mt-3 -mx-1 flex items-end gap-3 overflow-x-auto px-1 pb-1 scrollbar-none">
-                  {supportedPlatforms.map((p) => (
-                    <div key={p.name} className="flex shrink-0 flex-col items-center gap-1.5">
-                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-sm shadow-ink-900/10 ring-1 ring-ink-100">
-                        {p.icon}
-                      </div>
-                      <span className="text-[11px] font-medium text-ink-500">{t(p.name)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <ul className="mt-10 grid gap-3 text-sm text-ink-600 sm:grid-cols-3 sm:gap-6">
+                {[
+                  t("No card needed to start"),
+                  t("Recovery included in every package"),
+                  t("We never ask for your password"),
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="mt-0.5 shrink-0 text-risk-low" aria-hidden="true">
+                      <path d="M20 6 9 17l-5-5" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    {item}
+                  </li>
+                ))}
+              </ul>
             </div>
 
-            <HeroGraphic />
+            <HeroProtectionPanel />
+          </div>
+        </Container>
+      </section>
+
+      {/* Works with */}
+      <section className="border-y border-ink-100 bg-white">
+        <Container className="flex flex-col items-center gap-5 py-8 sm:flex-row sm:justify-between">
+          <p className="text-sm text-ink-500">{t("Protection and recovery for")}</p>
+          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-4">
+            {supportedPlatforms.map((p) => (
+              <span key={p.name} className="flex items-center gap-2 text-sm font-medium text-ink-700">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-ink-50">{p.icon}</span>
+                {t(p.name)}
+              </span>
+            ))}
           </div>
         </Container>
       </section>
@@ -759,21 +699,22 @@ export default async function Home() {
 
       {/* Final CTA */}
       <Section className="pb-24">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-600 to-brand-800 px-8 py-14 text-center sm:px-16">
-          <h2 className="text-3xl font-semibold text-white text-balance sm:text-4xl">{t("Ready to secure your digital presence?")}</h2>
-          <p className="mx-auto mt-4 max-w-xl text-brand-100 text-balance">{t("Answer a few questions and we'll tell you whether your case is a good fit for professional recovery support.")}</p>
-          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+        <div className="rounded-[28px] bg-brand-700 px-8 py-14 text-center sm:px-16 sm:py-20">
+          <h2 className="mx-auto max-w-[20ch] text-[2.1rem] text-white text-balance sm:text-[3rem]">{t("Protect your accounts before anything goes wrong.")}</h2>
+          <p className="mx-auto mt-5 max-w-xl text-lg text-brand-100 text-balance">{t("Start with a free month. Already locked out? Message us on WhatsApp and we'll handle your recovery.")}</p>
+          <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <ButtonLink href="/pricing#packages" size="lg" className="!bg-white !text-ink-900 hover:!bg-ink-100">
+              {t("Start your free month")}
+            </ButtonLink>
             <ButtonLink
-              href="/recovery-eligibility"
-              size="lg"
-              className="!bg-white !text-brand-700 hover:!bg-brand-50"
-            >{t("Check Recovery Eligibility")}</ButtonLink>
-            <ButtonLink
-              href="/contact"
+              href={recoveryWhatsappUrl()}
+              target="_blank"
               variant="outline"
               size="lg"
-              className="!border-white/40 !text-white hover:!bg-white/10"
-            >{t("Talk to Our Team")}</ButtonLink>
+              className="!border-white/40 !bg-transparent !text-white hover:!bg-white/10"
+            >
+              {t("Start recovery")}
+            </ButtonLink>
           </div>
         </div>
       </Section>
