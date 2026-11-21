@@ -21,6 +21,7 @@ import { BrandLoader } from "@/components/BrandLoader";
 import { recoveryWhatsappUrl } from "@/lib/site-config";
 import { getPlan } from "@/lib/portal/billing";
 import { CHECKLIST_DO } from "@/lib/protection-steps";
+import { coveredAccountIds } from "@/lib/portal/account-limits";
 
 function greeting() {
   const h = new Date().getHours();
@@ -113,6 +114,7 @@ export default function PortalOverviewPage() {
       ? Math.round(accounts.reduce((sum, a) => sum + a.health, 0) / accounts.length)
       : 0;
   const hc = healthColor(averageHealth);
+  const covered = coveredAccountIds(accounts, subscription);
 
   return (
     <div>
@@ -342,6 +344,7 @@ export default function PortalOverviewPage() {
                     <th className="px-5 py-3 font-medium">Account</th>
                     <th className="px-5 py-3 font-medium">Health</th>
                     <th className="px-5 py-3 font-medium">Status</th>
+                    <th className="px-5 py-3 font-medium">Package</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -369,6 +372,13 @@ export default function PortalOverviewPage() {
                         </td>
                         <td className="px-5 py-3.5">
                           <RiskBadge level={account.level} />
+                        </td>
+                        <td className="px-5 py-3.5 text-xs font-semibold">
+                          {covered.has(account.id) ? (
+                            <span className="text-risk-low">Covered</span>
+                          ) : (
+                            <span className="text-risk-medium">Not covered</span>
+                          )}
                         </td>
                       </tr>
                     );
