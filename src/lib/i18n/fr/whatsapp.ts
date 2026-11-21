@@ -1,15 +1,15 @@
 // Recovery on WhatsApp: buttons, How It Works, the recovery page and the
 // "Recovery happens on WhatsApp" card.
 export const whatsapp: Record<string, string> = {
-  "Start recovery on WhatsApp": "Démarrer la récupération sur WhatsApp",
-  "Start this recovery on WhatsApp →": "Démarrer cette récupération sur WhatsApp →",
-  "Recover on WhatsApp": "Récupération sur WhatsApp",
+  "Start recovery": "Démarrer la récupération",
+  "Start this recovery →": "Démarrer cette récupération →",
+  "Start recovery →": "Démarrer la récupération →",
   "Recovery is handled on WhatsApp — message us and we'll take it from there.":
     "La récupération se fait sur WhatsApp — écrivez-nous et nous prenons le relais.",
   "Need an account recovered? The fastest way is": "Besoin de récupérer un compte ? Le plus rapide, c'est",
   "WhatsApp": "WhatsApp",
   ". To check how safe your account is, try the": ". Pour vérifier la sécurité de votre compte, essayez le",
-  "Already restricted? Recover it on WhatsApp": "Déjà restreint ? Récupérez-le sur WhatsApp",
+  "Already restricted? Start recovery": "Déjà restreint ? Démarrer la récupération",
   "Protect your accounts before anything goes wrong. Already locked out? Message us on WhatsApp and we'll handle your recovery.":
     "Protégez vos comptes avant qu'un problème n'arrive. Déjà bloqué ? Écrivez-nous sur WhatsApp et nous nous occupons de la récupération.",
   "Recovery is handled on WhatsApp. Send us your account details and we'll confirm the fee before we start.":

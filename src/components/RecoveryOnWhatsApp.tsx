@@ -53,7 +53,7 @@ export function RecoveryOnWhatsApp({ hasPackage = false }: { hasPackage?: boolea
         rel="noopener noreferrer"
         className="mt-7 flex w-full items-center justify-center gap-2 rounded-full bg-[#25D366] px-5 py-3.5 text-base font-bold text-white shadow-md shadow-green-600/25 transition hover:bg-[#1fb957]"
       >
-        {t("Start recovery on WhatsApp")} →
+        {t("Start recovery")} →
       </a>
       <p className="mt-3 text-center text-xs text-ink-500">
         {t("WhatsApp")} {contact.inquiriesWhatsappDisplay} · {t("We will never ask for your password.")}

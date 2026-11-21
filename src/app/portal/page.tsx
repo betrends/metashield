@@ -301,7 +301,7 @@ export default function PortalOverviewPage() {
               </svg>
             </div>
             <p className="text-sm text-ink-500">Need an account recovered? Recovery is handled on WhatsApp.</p>
-            <ButtonLink href={recoveryWhatsappUrl()} target="_blank" size="sm" variant="outline">Start recovery on WhatsApp</ButtonLink>
+            <ButtonLink href={recoveryWhatsappUrl()} target="_blank" size="sm" variant="outline">Start recovery</ButtonLink>
           </Card>
         ) : (
           <div className="mt-4 grid gap-4 sm:grid-cols-2">

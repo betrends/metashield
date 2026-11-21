@@ -99,7 +99,7 @@ export default async function CaseStudiesPage() {
           <h2 className="text-3xl font-semibold text-white text-balance sm:text-4xl">{t("Think your case could be next?")}</h2>
           <p className="mx-auto mt-4 max-w-xl text-ink-300 text-balance">{t("Run a quick eligibility check to see if your situation is a good fit for professional recovery support.")}</p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <ButtonLink href={recoveryWhatsappUrl()} target="_blank" size="lg">{t("Start recovery on WhatsApp")}</ButtonLink>
+            <ButtonLink href={recoveryWhatsappUrl()} target="_blank" size="lg">{t("Start recovery")}</ButtonLink>
           </div>
         </div>
       </Section>

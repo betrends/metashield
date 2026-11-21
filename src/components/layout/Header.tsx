@@ -219,7 +219,7 @@ export function Header() {
                 variant="ghost"
                 className="w-full"
               >
-                {t("Start recovery on WhatsApp")}
+                {t("Start recovery")}
               </ButtonLink>
             </div>
           </Container>
