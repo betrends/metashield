@@ -31,14 +31,15 @@ function markNotificationsSeen(userId: string) {
   }
 }
 
+// Protection first. Recovery is handled on WhatsApp, so old recovery cases
+// sit under "Past cases" (read-only); their documents open from each case.
 const navItems = [
   { label: "Overview", href: "/portal", icon: "grid" },
-  { label: "AI Assistant", href: "/portal/assistant", icon: "sparkles" },
   { label: "My Accounts", href: "/portal/accounts", icon: "user" },
-  { label: "Cases", href: "/portal/cases", icon: "folder" },
   { label: "Messages", href: "/portal/messages", icon: "chat" },
-  { label: "Documents", href: "/portal/documents", icon: "doc" },
   { label: "Packages", href: "/portal/billing", icon: "card" },
+  { label: "AI Assistant", href: "/portal/assistant", icon: "sparkles" },
+  { label: "Past cases", href: "/portal/cases", icon: "folder" },
 ];
 
 function NavIcon({ name }: { name: string }) {

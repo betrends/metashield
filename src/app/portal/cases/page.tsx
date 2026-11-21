@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
-import { ButtonLink } from "@/components/ui/Button";
 import { PaymentStatusBadge } from "@/components/portal/PaymentStatusBadge";
 import { fetchCases, migratePendingLocalRecords, type PortalCase } from "@/lib/portal/data";
 import { BrandLoader } from "@/components/BrandLoader";
@@ -27,9 +26,12 @@ export default function PortalCasesPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-ink-900">Cases</h1>
+      <h1 className="text-2xl font-semibold text-ink-900">Past cases</h1>
       <p className="mt-1 text-sm text-ink-500">
-        Your recovery cases from before, kept for your records.
+        Your recovery cases from before, kept for your records.{" "}
+        <Link href="/portal/documents" className="font-semibold text-brand-700 hover:text-brand-800">
+          Your documents →
+        </Link>
       </p>
       <div className="mt-5 flex flex-col gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
         <p className="text-ink-700">
