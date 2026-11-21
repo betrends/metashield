@@ -555,106 +555,81 @@ html {
   }
 }
 
-/* ---- Client portal: dark navy theme ------------------------------------
-   Everything inside <div class="portal-dark"> (the signed-in client portal)
-   uses a dark navy palette with a bright blue accent. The colour tokens are
-   swapped here, so every portal page follows without per-page changes:
-   ink (text/borders/backgrounds) is inverted, brand becomes blue, and the
-   status colours are tuned for a dark background. The public website is
-   not affected. */
-.portal-dark {
-  color-scheme: dark;
-  --portal-bg: #1a2a57;
-  --portal-surface: #22356b;
-  --portal-surface-2: #2a3f7c;
+/* ---- Client portal: white and navy blue --------------------------------
+   Inside <div class="portal-theme"> (the signed-in client portal) pages are
+   white with navy text and navy buttons; the sidebar and the AI bar are
+   solid navy (.portal-nav). The colour tokens are swapped here, so every
+   portal page follows without per-page changes. The public website is not
+   affected. */
+.portal-theme {
+  --color-ink-50: #f3f5fb;
+  --color-ink-100: #e3e8f3;
+  --color-ink-200: #cbd3e7;
+  --color-ink-300: #a5b0cc;
+  --color-ink-400: #7a86a6;
+  --color-ink-500: #56627f;
+  --color-ink-600: #3d4866;
+  --color-ink-700: #2a3454;
+  --color-ink-800: #1a2447;
+  --color-ink-900: #0f1b42;
+  --color-ink-950: #0a1433;
 
-  --color-ink-50: #263b78;
-  --color-ink-100: #314888;
-  --color-ink-200: #3e5699;
-  --color-ink-300: #5770b0;
-  --color-ink-400: #9aaad3;
-  --color-ink-500: #b4c1e2;
-  --color-ink-600: #cad4ee;
-  --color-ink-700: #cbd4ea;
-  --color-ink-800: #e1e7f5;
-  --color-ink-900: #f2f5fc;
-  --color-ink-950: #ffffff;
+  --color-brand-50: #eef2fb;
+  --color-brand-100: #dde5f7;
+  --color-brand-200: #bccbee;
+  --color-brand-300: #8fa6dd;
+  --color-brand-400: #5b7cc8;
+  --color-brand-500: #2f55b0;
+  --color-brand-600: #1b3a8c;
+  --color-brand-700: #1d3f99;
+  --color-brand-800: #142c6b;
+  --color-brand-900: #0f2152;
 
-  --color-brand-50: #2c4a9a;
-  --color-brand-100: #3656ad;
-  --color-brand-200: #4466c2;
-  --color-brand-300: #3d63bb;
-  --color-brand-400: #5d86f2;
-  --color-brand-500: #3f74f5;
-  --color-brand-600: #2f66f0;
-  --color-brand-700: #7ea3ff;
-  --color-brand-800: #a8c1ff;
-  --color-brand-900: #cfdcff;
-
-  --color-risk-low: #4ade80;
-  --color-risk-low-bg: #1d4a4a;
-  --color-risk-medium: #fbbf24;
-  --color-risk-medium-bg: #4a3f2a;
-  --color-risk-high: #f87171;
-  --color-risk-high-bg: #4d2a3a;
-
-  background-color: var(--portal-bg);
+  background-color: #f3f5fb;
   color: var(--color-ink-900);
 }
-/* Surfaces that are white on the light site become navy cards here. */
-.portal-dark .bg-white {
-  background-color: var(--portal-surface);
+/* Primary buttons: navy. */
+.portal-theme .bg-brand-600 {
+  background-image: linear-gradient(180deg, #23449c 0%, #16307a 100%);
 }
-.portal-dark .bg-white\/80,
-.portal-dark .bg-white\/90,
-.portal-dark .bg-white\/95 {
-  background-color: rgb(34 53 107 / 0.94);
+
+/* Navy sidebar and AI bar: light text on navy. */
+.portal-theme .portal-nav {
+  --color-ink-50: #22397a;
+  --color-ink-100: #2b4386;
+  --color-ink-200: #385196;
+  --color-ink-300: #5068ac;
+  --color-ink-400: #8d9cc8;
+  --color-ink-500: #a9b6dc;
+  --color-ink-600: #c3cdea;
+  --color-ink-700: #d9e0f3;
+  --color-ink-800: #e9edf8;
+  --color-ink-900: #ffffff;
+  --color-brand-50: #24408a;
+  --color-brand-100: #2c4b9c;
+  --color-brand-600: #3b6cf0;
+  --color-brand-700: #a9c0ff;
+  background-color: #14275f;
+  color: #ffffff;
 }
-.portal-dark input,
-.portal-dark textarea,
-.portal-dark select {
-  background-color: var(--portal-surface-2);
-  color: var(--color-ink-900);
-  border-color: var(--color-ink-200);
+.portal-theme .portal-nav .bg-brand-600 {
+  background-image: linear-gradient(180deg, #4a7bff 0%, #2f5fe0 100%);
 }
-.portal-dark input::placeholder,
-.portal-dark textarea::placeholder {
-  color: var(--color-ink-400);
+.portal-theme .portal-nav input {
+  background-color: #1f3574;
+  color: #ffffff;
 }
-/* Primary buttons: the bright blue from the design, with white text. */
-.portal-dark .bg-brand-600 {
-  background-image: linear-gradient(180deg, #3b74ff 0%, #2557e6 100%);
+.portal-theme .portal-nav input::placeholder {
+  color: #a9b6dc;
 }
-/* A few fixed light greens used for "good" notes and badges. */
-.portal-dark .bg-green-50,
-.portal-dark .bg-emerald-50 {
-  background-color: var(--color-risk-low-bg);
-}
-.portal-dark .border-green-200 {
-  border-color: rgb(74 222 128 / 0.28);
-}
-.portal-dark .ring-emerald-200 {
-  --tw-ring-color: rgb(74 222 128 / 0.3);
-}
-.portal-dark .text-green-800,
-.portal-dark .text-emerald-700 {
-  color: #6ee7a0;
-}
-/* The featured package card is dark on every page, so inside the portal it
-   keeps light text tokens (in blue) and takes the portal's blue gradient. */
-.portal-dark .pkg-featured {
+
+/* The featured package card is dark on every page: in the portal it takes
+   the navy gradient and keeps light text tokens. */
+.portal-theme .pkg-featured {
   --color-brand-50: #eef3ff;
   --color-brand-100: #e0e8ff;
   --color-brand-200: #c7d6ff;
   --color-brand-300: #a8c1ff;
   --color-brand-400: #7ea3ff;
-  --color-ink-50: #f5f8fb;
-  --color-ink-100: #e7edf3;
-  --color-ink-200: #cbd8e4;
-  --color-ink-300: #a9bcce;
-  --color-ink-400: #c7d2e4;
-  background-image: linear-gradient(180deg, #13245a 0%, #172d70 55%, #1d3a8a 100%);
-}
-.portal-dark .text-emerald-800 {
-  color: #6ee7a0;
+  background-image: linear-gradient(180deg, #14275f 0%, #1b3478 55%, #22408f 100%);
 }

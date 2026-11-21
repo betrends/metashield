@@ -473,7 +473,7 @@ export default function PortalOverviewPage() {
                   aria-pressed={done}
                   className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 ${
                     done
-                      ? "bg-risk-low text-[#06281a] hover:bg-risk-low/90"
+                      ? "bg-risk-low text-white hover:bg-risk-low/90"
                       : "bg-brand-600 text-white hover:opacity-90"
                   }`}
                 >
