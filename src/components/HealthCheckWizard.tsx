@@ -2,6 +2,7 @@
 
 import { useT } from "@/lib/i18n/client";
 import { ChangeEvent, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { recoveryWhatsappUrl } from "@/lib/site-config";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
