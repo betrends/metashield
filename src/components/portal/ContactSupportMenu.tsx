@@ -7,7 +7,7 @@ import { contact } from "@/lib/site-config";
 export const supportChannels = [
   {
     label: "WhatsApp",
-    description: `Chat with our team · ${contact.inquiriesWhatsappDisplay}`,
+    description: contact.inquiriesWhatsappDisplay,
     href: contact.inquiriesWhatsapp,
     external: true,
     icon: (
