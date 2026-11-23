@@ -28,7 +28,7 @@ For questions about this policy, contact our Data Protection Officer at {email}.
 • Your name, email address, and phone number when you register or contact us
 • Account handles, platform names, and follower/audience details relevant to your case
 • Documents, screenshots, and identification you upload as evidence for a recovery case
-• Payment information (processed securely by Korapay — we do not store card details)
+• Payment information (processed securely by Paystack and Korapay — we do not store card details)
 • Messages, notes, and attachments sent through your client portal
 • IP address, browser type, and session data collected automatically when you use our site`,
   },
@@ -42,7 +42,7 @@ For questions about this policy, contact our Data Protection Officer at {email}.
 
 • Assess your case and provide account recovery or protection services
 • Communicate with you about the status of your case and your account
-• Process payments for our services through Korapay
+• Process payments for our services through Paystack and Korapay
 • Send you security alerts, monthly reports, and service updates (where you have subscribed)
 • Comply with our legal obligations under Nigerian law
 • Improve our services and protect against fraud or misuse`,
@@ -60,7 +60,7 @@ For questions about this policy, contact our Data Protection Officer at {email}.
     heading: "6. Who we share your information with",
     body: `We do not sell your personal information. We may share it only with:
 
-• Trusted service providers operating on our behalf (Supabase for secure data storage, Korapay for payment processing, Resend for transactional email) — each under a data processing agreement
+• Trusted service providers operating on our behalf (Supabase for secure data storage, Paystack and Korapay for payment processing, Resend for transactional email) — each under a data processing agreement
 • Our assigned agents and case handlers who need access to work your case
 • Law enforcement or regulatory authorities where required by Nigerian law
 • A successor entity if {brand} is ever acquired or merged — you will be notified`,

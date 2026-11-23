@@ -20,6 +20,27 @@ function formatNaira(kobo: number) {
   return `₦${(kobo / 100).toLocaleString("en-NG")}`;
 }
 
+type Autopay = {
+  available: boolean; // card payments renew automatically (Paystack set up)
+  autoRenew: boolean;
+  card: string | null; // e.g. "Visa •••• 4081"
+  nextChargeOn: string | null;
+  failed: boolean;
+};
+
+async function fetchAutopay(): Promise<Autopay | null> {
+  try {
+    const res = await fetch("/api/subscribe/autopay", { cache: "no-store" });
+    return res.ok ? ((await res.json()) as Autopay) : null;
+  } catch {
+    return null;
+  }
+}
+
+function longDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+}
+
 export default function BillingPage() {
   const [subscription, setSubscriptionState] = useState<ClientSubscription | null | "loading">("loading");
   const [invoices, setInvoices] = useState<ClientInvoice[]>([]);
@@ -27,13 +48,15 @@ export default function BillingPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [freeMonthUsed, setFreeMonthUsed] = useState(false);
+  const [autopay, setAutopay] = useState<Autopay | null>(null);
   const searchParams = useSearchParams();
   const router = useRouter();
 
   async function load() {
-    const [sub, inv] = await Promise.all([fetchSubscription(), fetchInvoices()]);
+    const [sub, inv, ap] = await Promise.all([fetchSubscription(), fetchInvoices(), fetchAutopay()]);
     setSubscriptionState(sub);
     setInvoices(inv);
+    setAutopay(ap);
   }
 
   useEffect(() => {
@@ -114,6 +137,46 @@ export default function BillingPage() {
     // Otherwise the page is moving on to Korapay (or WhatsApp).
   }
 
+  async function handleUpdateCard() {
+    setError(null);
+    setBusy(true);
+    try {
+      const res = await fetch("/api/subscribe/autopay", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "update_card" }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { url?: string };
+      if (res.ok && data.url) {
+        window.location.href = data.url;
+        return;
+      }
+      setError("We couldn't open the card page. Please try again in a moment.");
+    } catch {
+      setError("We couldn't open the card page. Check your internet connection and try again.");
+    }
+    setBusy(false);
+  }
+
+  async function handleStopAutopay() {
+    setError(null);
+    setBusy(true);
+    try {
+      const res = await fetch("/api/subscribe/autopay", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "stop" }),
+      });
+      if (!res.ok) throw new Error();
+      await load();
+      setConfirmation("Automatic payment is off. Your package stays on until its end date, and your card won't be charged again.");
+    } catch {
+      setError("We couldn't turn off automatic payment. Please try again, or message us on WhatsApp.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function handleCancel() {
     setError(null);
     setBusy(true);
@@ -180,7 +243,7 @@ export default function BillingPage() {
             <p className="mt-0.5 text-sm text-ink-600">
               {canStartFree
                 ? `First month free — no card needed. Then ${picked.price}${picked.priceSuffix ?? ""}.`
-                : `${picked.price} ${picked.period === "lifetime" ? "one-time payment" : (picked.priceSuffix ?? "")} · paid securely by card through Korapay`}
+                : `${picked.price} ${picked.period === "lifetime" ? "one-time payment" : (picked.priceSuffix ?? "")} · paid securely by card`}
             </p>
           </div>
           <Button onClick={() => handleChoosePlan(picked.id as PlanId, !canStartFree)} disabled={busy} className="shrink-0">
@@ -219,6 +282,9 @@ export default function BillingPage() {
                 <p className="mt-1 text-sm text-ink-600">
                   Pay {activePlan.price} before then to keep your protection. Account recovery at no extra cost starts with your first
                   payment. Your paid month starts when the free one ends — you don&apos;t lose any days.
+                  {autopay?.available
+                    ? ` After that, your card is charged ${activePlan.price} automatically each month until you cancel.`
+                    : ""}
                 </p>
                 <Button onClick={() => handleChoosePlan(activePlan.id as PlanId, true)} disabled={busy} size="sm" className="mt-3">
                   {busy ? "Opening payment…" : `Pay ${activePlan.price} now`}
@@ -242,6 +308,45 @@ export default function BillingPage() {
                   ? "Lifetime package — no renewal fees."
                   : null}
             </p>
+            {!inFreeMonth && activePlan.period !== "lifetime" && autopay?.available ? (
+              autopay.autoRenew ? (
+                <div className="mt-4 rounded-xl bg-ink-50 p-4 ring-1 ring-ink-100">
+                  <p className="text-sm font-semibold text-ink-900">
+                    Automatic payment is on{autopay.card ? ` · ${autopay.card}` : ""}
+                  </p>
+                  <p className="mt-1 text-sm text-ink-600">
+                    {autopay.nextChargeOn
+                      ? `Next payment: ${activePlan.price} on ${longDate(autopay.nextChargeOn)}. `
+                      : ""}
+                    You don&apos;t need to do anything to keep your protection. Turn it off any time.
+                  </p>
+                  {autopay.failed ? (
+                    <p className="mt-2 text-sm font-medium text-risk-high">
+                      Your last automatic payment didn&apos;t go through. Update your card so your protection doesn&apos;t stop.
+                    </p>
+                  ) : null}
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button size="sm" onClick={handleUpdateCard} disabled={busy}>
+                      Change card
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={handleStopAutopay} disabled={busy}>
+                      Turn off automatic payment
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-4 rounded-xl bg-ink-50 p-4 ring-1 ring-ink-100">
+                  <p className="text-sm font-semibold text-ink-900">Automatic payment is off</p>
+                  <p className="mt-1 text-sm text-ink-600">
+                    {subscription.renewsOn ? `Your package ends on ${longDate(subscription.renewsOn)}. ` : ""}
+                    Renew by card and it will renew automatically after that, so your protection never stops.
+                  </p>
+                  <Button size="sm" className="mt-3" onClick={() => handleChoosePlan(activePlan.id as PlanId, true)} disabled={busy}>
+                    {busy ? "Opening payment…" : `Renew for ${activePlan.price}`}
+                  </Button>
+                </div>
+              )
+            ) : null}
             {activePlan.period !== "lifetime" ? (
               <div className="mt-5 flex flex-wrap gap-3">
                 <Button variant="outline" size="sm" onClick={handleCancel} disabled={busy}>

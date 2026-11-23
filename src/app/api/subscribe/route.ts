@@ -1,6 +1,8 @@
-// Starts a Korapay checkout for the chosen package. The client is sent to
-// Korapay, pays, and comes back to /portal/billing?kpref=<reference> — the
-// Packages page then calls /api/subscribe/verify to confirm and activate it.
+// Starts a card checkout for the chosen package: Paystack when its key is
+// set (monthly and yearly packages then renew automatically — see
+// lib/server/paystack.ts), otherwise Korapay. The client pays and comes
+// back to /portal/billing?kpref=<reference> — the Packages page then calls
+// /api/subscribe/verify to confirm and activate it.
 //
 // Answers, in order: 400 unknown package · 503 card payment not set up
 // (the page falls back to WhatsApp) · 401 sign in first · 200 checkoutUrl.
@@ -8,6 +10,7 @@
 import { NextResponse } from "next/server";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { cardPaymentsEnabled, getPlan, isPlanId } from "@/lib/portal/billing";
+import { newPaystackReference, paystack, paystackEnabled, paystackInterval } from "@/lib/server/paystack";
 
 function generateRef(): string {
   return `ms-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -28,7 +31,6 @@ export async function POST(request: Request) {
   if (!cardPaymentsEnabled()) {
     return NextResponse.json({ error: "card_payments_disabled" }, { status: 503 });
   }
-  const secretKey = process.env.KORAPAY_SECRET_KEY as string;
 
   const supabase = await createServerClient();
   const {
@@ -40,12 +42,41 @@ export async function POST(request: Request) {
 
   const plan = getPlan(planId);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
+
+  // Paystack (when set up): card only for monthly and yearly packages, so
+  // the card can be charged again automatically each period.
+  if (paystackEnabled()) {
+    if (!user.email) return NextResponse.json({ error: "no_email" }, { status: 400 });
+    const reference = newPaystackReference();
+    const init = await paystack<{ authorization_url?: string }>("/transaction/initialize", {
+      method: "POST",
+      body: {
+        email: user.email,
+        amount: plan.priceKobo,
+        currency: "NGN",
+        reference,
+        callback_url: `${appUrl}/portal/billing?kpref=${encodeURIComponent(reference)}`,
+        ...(paystackInterval(plan) ? { channels: ["card"] } : {}),
+        metadata: {
+          planId: plan.id,
+          userId: user.id,
+          custom_fields: [{ display_name: "Package", variable_name: "package", value: plan.name }],
+        },
+      },
+    });
+    if (!init.status || !init.data?.authorization_url) {
+      console.error("Paystack initialize failed:", init.message);
+      return NextResponse.json({ error: "paystack_error", detail: init.message }, { status: 502 });
+    }
+    return NextResponse.json({ checkoutUrl: init.data.authorization_url, reference });
+  }
+
   const reference = generateRef();
 
   const res = await fetch("https://api.korapay.com/merchant/api/v1/charges/initialize", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${secretKey}`,
+      Authorization: `Bearer ${process.env.KORAPAY_SECRET_KEY}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({

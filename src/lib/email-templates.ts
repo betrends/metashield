@@ -722,7 +722,40 @@ export function packageRenewalEmail(opts: {
     <p style="margin:0 0 20px;color:${TEXT_DARK};font-size:15px;"><strong>${planName}</strong> · ${price}${priceSuffix ? ` ${priceSuffix}` : ""}</p>
     ${ctaButton("Renew now", renewUrl)}
     <p style="margin:16px 0 0;color:${TEXT_LIGHT};font-size:12px;line-height:1.6;">
-      You'll pay securely by card through Korapay. Questions? Reply to this email or contact us at ${PORTAL_URL}/contact.
+      You'll pay securely by card. Questions? Reply to this email or contact us at ${PORTAL_URL}/contact.
+    </p>
+  `);
+}
+
+// An automatic renewal charge on the client's saved card didn't go through.
+export function autopayFailedEmail(opts: {
+  name: string;
+  planName: string;
+  price: string;
+  priceSuffix: string;
+  updateCardUrl: string; // Paystack's page for changing the card
+  packagesUrl: string;
+}) {
+  const { name, planName, price, priceSuffix } = escapeOpts({
+    name: opts.name,
+    planName: opts.planName,
+    price: opts.price,
+    priceSuffix: opts.priceSuffix,
+  });
+  const updateCardUrl = escapeHtml(opts.updateCardUrl);
+  const packagesUrl = escapeHtml(opts.packagesUrl);
+  return wrapper(`
+    <div style="margin-bottom:8px;">${statusBadge("Payment didn't go through", "#b42318", "#fdecea")}</div>
+    <h1 style="margin:16px 0 8px;color:${BRAND_DARK};font-size:22px;font-weight:700;line-height:1.3;">
+      We couldn't renew your ${planName} package
+    </h1>
+    <p style="margin:0 0 16px;color:${TEXT_MID};font-size:15px;line-height:1.7;">
+      Hi ${firstNameOf(name) || "there"}, we tried to charge your card for this month's protection, but the payment didn't go through. This can happen when a card has expired, has a low balance or was blocked by the bank.
+    </p>
+    <p style="margin:0 0 20px;color:${TEXT_DARK};font-size:15px;"><strong>${planName}</strong> · ${price}${priceSuffix ? ` ${priceSuffix}` : ""}</p>
+    ${ctaButton("Update my card", updateCardUrl)}
+    <p style="margin:16px 0 0;color:${TEXT_LIGHT};font-size:12px;line-height:1.6;">
+      You can also pay from your Packages page: ${packagesUrl}. Questions? Reply to this email.
     </p>
   `);
 }
