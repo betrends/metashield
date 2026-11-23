@@ -21,6 +21,7 @@ import { getPlan } from "@/lib/portal/billing";
 import { CHECKLIST_DO } from "@/lib/protection-steps";
 import { coveredAccountIds } from "@/lib/portal/account-limits";
 import { CHECKLIST_TOTAL, fetchChecklistDone, healthWithChecklist, setChecklistStep } from "@/lib/portal/checklist";
+import { dismissNotice, fetchOpenNotices, type ClientNotice } from "@/lib/portal/notices";
 import type { InstagramStep } from "@/lib/instagram-links";
 
 function healthColor(score: number) {
@@ -104,6 +105,8 @@ export default function PortalOverviewPage() {
     }
   }
 
+  const [notices, setNotices] = useState<ClientNotice[]>([]);
+
   useEffect(() => {
     createClient()
       .auth.getUser()
@@ -123,13 +126,15 @@ export default function PortalOverviewPage() {
 
     async function load() {
       await migratePendingLocalRecords();
-      const [accountsResult, casesResult, subscriptionResult, doneResult] = await Promise.all([
+      const [accountsResult, casesResult, subscriptionResult, doneResult, noticesResult] = await Promise.all([
         fetchAccounts(),
         fetchCases(),
         fetchSubscription(),
         fetchChecklistDone(),
+        fetchOpenNotices(),
       ]);
       if (cancelled) return;
+      setNotices(noticesResult);
       setChecklistDone(doneResult);
       setAccounts(accountsResult);
       setCases(casesResult);
@@ -151,6 +156,7 @@ export default function PortalOverviewPage() {
   const isPaid = subscription?.status === "active";
   const inFreeMonth = subscription?.status === "trial";
   const isProtected = isPaid || inFreeMonth;
+  const recoveredNotice = notices.find((n) => n.kind === "recovered") ?? null;
   const planShort = subscription ? getPlan(subscription.planId).name.replace(/^MetaShield\s+/, "") : "";
   const renewDate = subscription?.renewsOn
     ? new Date(subscription.renewsOn).toLocaleDateString("en-US", { month: "short", day: "numeric" })
@@ -177,6 +183,45 @@ export default function PortalOverviewPage() {
           <p className="mt-1 text-sm text-ink-500">Here&apos;s the status of your protected accounts.</p>
         </div>
       </div>
+
+      {/* "Your account is back" — added by the team after a recovery; shown
+          until the client has a package or closes it. */}
+      {recoveredNotice && !isProtected ? (
+        <div className="relative mt-6 overflow-hidden rounded-2xl bg-gradient-to-br from-[#14275f] to-[#22408f] p-6 text-white shadow-lg sm:p-7">
+          <button
+            type="button"
+            aria-label="Close"
+            onClick={() => {
+              setNotices((list) => list.filter((n) => n.id !== recoveredNotice.id));
+              void dismissNotice(recoveredNotice.id);
+            }}
+            className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </button>
+          <p className="text-2xl" aria-hidden="true">🎉</p>
+          <h2 className="mt-2 pr-8 text-xl font-semibold sm:text-2xl">
+            {userName ? `${userName}, your account is back!` : "Your account is back!"}
+          </h2>
+          <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/85">
+            We&apos;ve recovered your account. Now keep it safe: MetaShield protection checks your account every month, and if
+            anything happens again, recovery is included at no extra cost. Your first month is free.
+          </p>
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <Link
+              href="/portal/billing?plan=watch"
+              className="rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-[#14275f] transition-opacity hover:opacity-90"
+            >
+              Protect my account
+            </Link>
+            <Link href="/portal/billing" className="text-sm font-semibold text-white/85 hover:text-white">
+              See all packages
+            </Link>
+          </div>
+        </div>
+      ) : null}
 
       {/* Summary: protected accounts, plan, status */}
       <div className="mt-6 grid gap-4 sm:grid-cols-3">

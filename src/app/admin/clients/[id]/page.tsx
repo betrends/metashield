@@ -122,6 +122,9 @@ export default function AdminClientDetailPage() {
         onChanged={() => setReloadKey((k) => k + 1)}
       />
 
+      {/* "Account recovered" dashboard banner */}
+      <RecoveredBanner userId={client.id} hasPackage={!!subscription} />
+
       {/* Accounts */}
       <div className="mt-8">
         <h2 className="text-lg font-semibold text-ink-900">Accounts ({accounts.length})</h2>
@@ -315,6 +318,91 @@ function PackageManager({
           </p>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+// Shows "Your account is back — now protect it" on the client's dashboard,
+// with a button to start their free month. It disappears by itself once
+// they have a package, or when they close it.
+function RecoveredBanner({ userId, hasPackage }: { userId: string; hasPackage: boolean }) {
+  const [state, setState] = useState<"loading" | "none" | "showing" | "closed" | "missing">("loading");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function load() {
+    try {
+      const res = await fetch(`/api/admin/clients/${userId}/notice`, { cache: "no-store" });
+      const data = await res.json();
+      if (data.missingTable) setState("missing");
+      else if (!data.notice) setState("none");
+      else setState(data.notice.dismissedAt ? "closed" : "showing");
+    } catch {
+      setState("none");
+    }
+  }
+
+  useEffect(() => {
+    const t = setTimeout(load, 0);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
+  async function change(method: "POST" | "DELETE") {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/clients/${userId}/notice`, { method });
+      if (!res.ok) throw new Error();
+      await load();
+    } catch {
+      setError("Couldn't update the banner. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mt-4 rounded-2xl border border-ink-100 bg-white p-6 shadow-sm">
+      <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">Account recovered banner</p>
+      <p className="mt-2 text-sm text-ink-600">
+        After you recover a client&apos;s account, show &ldquo;Your account is back — now protect it&rdquo; on their dashboard
+        with a button to start their free month.
+      </p>
+      {state === "missing" ? (
+        <p className="mt-3 text-sm text-risk-high">Run migration 024 (client_notices) in Supabase first.</p>
+      ) : state === "loading" ? null : (
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          {state === "showing" ? (
+            <>
+              <span className="rounded-full bg-risk-low-bg px-2.5 py-1 text-xs font-semibold text-risk-low">
+                {hasPackage ? "On (hidden while they have a package)" : "Showing on their dashboard"}
+              </span>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => change("DELETE")}
+                className="text-sm font-semibold text-ink-500 hover:text-ink-900"
+              >
+                Remove
+              </button>
+            </>
+          ) : (
+            <>
+              {state === "closed" ? <span className="text-xs text-ink-500">The client closed it.</span> : null}
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => change("POST")}
+                className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+              >
+                {busy ? "Saving…" : state === "closed" ? "Show it again" : "Mark account recovered"}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+      {error ? <p className="mt-2 text-sm text-risk-high">{error}</p> : null}
     </div>
   );
 }
