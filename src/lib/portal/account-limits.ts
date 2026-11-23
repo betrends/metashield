@@ -45,7 +45,7 @@ export function accountKind(platform: string): AccountKind {
   return "other";
 }
 
-// A package counts while it's active or in its free month, and hasn't ended.
+// A package counts while it's active or in its free trial, and hasn't ended.
 export type SubscriptionLike = { planId: string; status: string; renewsOn?: string | null } | null | undefined;
 
 export function limitsFor(sub: SubscriptionLike, now: number = Date.now()): AccountLimits {
@@ -93,7 +93,7 @@ export function canAddAccount(platform: string, accounts: AccountLike[], sub: Su
     return {
       ok: false,
       reason: "no_package",
-      message: "Start a package to keep this score in your portal and have the account monitored.",
+      message: "Your score is saved in your check history. Choose a package to protect this account.",
     };
   }
   const limit = kind === "other" ? 0 : limits[kind];
@@ -101,7 +101,7 @@ export function canAddAccount(platform: string, accounts: AccountLike[], sub: Su
     return {
       ok: false,
       reason: "not_covered",
-      message: `${planName} doesn't cover ${kind === "other" ? "this platform" : `${KIND_LABEL[kind]} accounts`}, so this score isn't saved. Upgrade your package to add it.`,
+      message: `Your score is saved in your check history. ${planName} doesn't cover ${kind === "other" ? "this platform" : `${KIND_LABEL[kind]} accounts`} — upgrade your package to protect it.`,
     };
   }
   const have = accounts.filter((a) => accountKind(a.platform) === kind).length;
@@ -109,7 +109,7 @@ export function canAddAccount(platform: string, accounts: AccountLike[], sub: Su
     return {
       ok: false,
       reason: "limit",
-      message: `${planName} covers ${limit} ${KIND_LABEL[kind]} account${limit > 1 ? "s" : ""}, and you've already added ${have === limit ? (limit > 1 ? "them" : "it") : have}. This score isn't saved — upgrade your package to add more.`,
+      message: `Your score is saved in your check history. ${planName} protects ${limit} ${KIND_LABEL[kind]} account${limit > 1 ? "s" : ""}, and you've already added ${have === limit ? (limit > 1 ? "them" : "it") : have} — upgrade your package to protect more.`,
     };
   }
   return { ok: true };

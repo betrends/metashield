@@ -12,7 +12,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { getAdminRole } from "@/lib/admin/auth";
-import { addOneMonth, getPlan, hasBonusMonth, isPlanId, planEndsOn } from "@/lib/portal/billing";
+import { addFreeTrial, getPlan, hasBonusMonth, isPlanId, planEndsOn } from "@/lib/portal/billing";
 import { subscriptionWelcomeEmail } from "@/lib/email-templates";
 import { sendProtectionChecklist, startsNewProtection } from "@/lib/server/protection-checklist";
 import { senderFrom } from "@/lib/server/sender";
@@ -65,13 +65,13 @@ export async function POST(request: Request) {
   const currentEnd = existing?.renews_on ? new Date(existing.renews_on) : null;
   const extendFrom =
     (existing?.status === "active" && existing.plan_id === plan.id && currentEnd && currentEnd > now) ||
-    // Paying during the free month: the paid period starts when it ends.
+    // Paying during the free trial: the paid period starts when it ends.
     (existing?.status === "trial" && currentEnd && currentEnd > now)
       ? currentEnd
       : now;
   let renewsOn = planEndsOn(plan, extendFrom);
-  // First month free on Annual: a new client's first payment gets 13 months.
-  if (!existing && hasBonusMonth(plan.id) && renewsOn) renewsOn = addOneMonth(renewsOn);
+  // Annual bonus: a new client's first payment gets 2 extra weeks.
+  if (!existing && hasBonusMonth(plan.id) && renewsOn) renewsOn = addFreeTrial(renewsOn);
 
   let subscriptionId: string;
   if (existing) {

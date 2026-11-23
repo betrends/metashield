@@ -16,12 +16,12 @@ export function AccountAllowance({ accounts, subscription }: { accounts: Account
   if (kinds.length === 0) {
     return (
       <div className="rounded-xl border border-ink-200/70 bg-ink-50 px-4 py-3 text-sm text-ink-700">
-        <span className="font-semibold text-ink-900">No package yet.</span> You can run a health check and see the score,
-        but it isn&apos;t saved here.{" "}
+        <span className="font-semibold text-ink-900">No package yet.</span> Your health checks are saved in your check
+        history.{" "}
         <Link href="/portal/billing" className="font-semibold text-brand-700 underline underline-offset-2">
-          Start your free month
+          Choose a package
         </Link>{" "}
-        to keep your accounts monitored.
+        to protect your accounts and unlock your protection checklist.
       </div>
     );
   }

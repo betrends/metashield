@@ -3,7 +3,7 @@ import { INSTAGRAM_STEPS, instagramStepLink } from "@/lib/instagram-links";
 import { contact, recoveryWhatsappUrl } from "@/lib/site-config";
 import { CHECKLIST_DO } from "@/lib/protection-steps";
 
-// "Ada, your free month has ended." — or "Your free month has ended." when
+// "Ada, your free trial has ended." — or "Your free trial has ended." when
 // there's no usable first name.
 function withName(first: string, text: string): string {
   return first ? `${first}, ${text}` : text.charAt(0).toUpperCase() + text.slice(1);
@@ -782,11 +782,11 @@ function freeMonthEndingEmail(opts: {
   const ended = opts.kind === "ended";
   const first = firstNameOf(name);
   return wrapper(`
-    ${preheader(ended ? `Your free month has ended. Pay ${price} to keep your account protected.` : `Your free month ends on ${date}. Pay ${price} to keep your account protected.`)}
+    ${preheader(ended ? `Your free trial has ended. Pay ${price} to keep your account protected.` : `Your free trial ends on ${date}. Pay ${price} to keep your account protected.`)}
     ${urgencyHero(
-      ended ? "Free month ended" : "Free month ending",
+      ended ? "Free trial ended" : "Free trial ending",
       ended ? "#dc2626" : "#7c3aed",
-      ended ? withName(first, `your free month has ended.`) : withName(first, `your free month ends on ${date}.`),
+      ended ? withName(first, `your free trial has ended.`) : withName(first, `your free trial ends on ${date}.`),
       ended
         ? `Your account is no longer protected by ${planName}. Pay to switch your protection back on.`
         : `Pay before <strong style="color:#ffffff;">${date}</strong> to keep your account protected. Your paid month starts when the free one ends — you don't lose any days.`
@@ -1191,10 +1191,10 @@ export function broadcastEmail(opts: {
       c.showPackages
         ? `<p style="margin:0 0 10px;color:${TEXT_DARK};font-size:15px;font-weight:800;">Pick your package:</p>
     <table cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 14px;">
-      ${row("Watch", "₦10,000/mo", "Instagram + Facebook", c.freeMonthTags ? "1st month free" : "")}
-      ${row("Elite", "₦15,000/mo", "2 Instagram + Facebook + Meta ad account", c.freeMonthTags ? "1st month free" : "Recommended")}
-      ${row("Business", "₦25,000/mo", "Up to 3 Instagram + 3 Facebook + 3 Meta ad accounts", c.freeMonthTags ? "1st month free" : "")}
-      ${row("Annual Plan", "₦120,000/yr", "2 Instagram + 2 Facebook", c.freeMonthTags ? "+1 month free" : "")}
+      ${row("Watch", "₦10,000/mo", "Instagram + Facebook", c.freeMonthTags ? "2 weeks free" : "")}
+      ${row("Elite", "₦15,000/mo", "2 Instagram + Facebook + Meta ad account", c.freeMonthTags ? "2 weeks free" : "Recommended")}
+      ${row("Business", "₦25,000/mo", "Up to 3 Instagram + 3 Facebook + 3 Meta ad accounts", c.freeMonthTags ? "2 weeks free" : "")}
+      ${row("Annual Plan", "₦120,000/yr", "2 Instagram + 2 Facebook", c.freeMonthTags ? "+2 weeks free" : "")}
       ${row("Lifetime Plan", "₦500,000 once", "Instagram + Facebook + Meta ad account", "No renewals")}
     </table>`
         : ""
@@ -1232,9 +1232,9 @@ export function broadcastText(opts: { name: string; unsubscribeUrl: string; cont
   if (c.message) parts.push(plain(c.message).replace(/^\{compare\}$/gim, c.showComparison ? compareText : "").replace(/\n{3,}/g, "\n\n").trim());
   if (c.showComparison && !COMPARE_SPOT.test(c.message)) parts.push(compareText);
   if (c.showPackages) {
-    const free = c.freeMonthTags ? " — 1st month free" : "";
+    const free = c.freeMonthTags ? " — 2 weeks free" : "";
     parts.push(
-      `Packages:\n- Watch: ₦10,000/month (Instagram + Facebook)${free}\n- Elite: ₦15,000/month (2 Instagram + Facebook + Meta ad account)${free}\n- Business: ₦25,000/month (up to 3 Instagram + 3 Facebook + 3 Meta ad accounts)${free}\n- Annual Plan: ₦120,000/year (2 Instagram + 2 Facebook)${c.freeMonthTags ? " — +1 month free" : ""}\n- Lifetime Plan: ₦500,000 once (Instagram + Facebook + Meta ad account)`
+      `Packages:\n- Watch: ₦10,000/month (Instagram + Facebook)${free}\n- Elite: ₦15,000/month (2 Instagram + Facebook + Meta ad account)${free}\n- Business: ₦25,000/month (up to 3 Instagram + 3 Facebook + 3 Meta ad accounts)${free}\n- Annual Plan: ₦120,000/year (2 Instagram + 2 Facebook)${c.freeMonthTags ? " — +2 weeks free" : ""}\n- Lifetime Plan: ₦500,000 once (Instagram + Facebook + Meta ad account)`
     );
   }
   if (c.buttonText) parts.push(`${c.buttonText.replace(/\s*→\s*$/, "")}: ${broadcastButtonHref(c, PORTAL_URL)}`);

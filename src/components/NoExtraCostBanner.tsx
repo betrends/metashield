@@ -37,8 +37,7 @@ export function NoExtraCostBanner({
               </h2>
               <p className="mt-4 max-w-xl text-base leading-relaxed text-brand-100 sm:text-lg">
                 Subscribe once. If your Instagram or Facebook is ever hacked, disabled or restricted, our team handles the
-                recovery — with no recovery fee on top. Packages from <strong className="text-white">₦10,000/month</strong>, and your{" "}
-                <strong className="text-white">first month is free</strong>.
+                recovery — with no recovery fee on top. Packages from <strong className="text-white">₦10,000/month</strong>.
               </p>
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
                 <ButtonLink href={packagesHref} size="lg" className="!bg-white !font-bold !text-brand-800 shadow-lg shadow-black/20 hover:!bg-brand-50">

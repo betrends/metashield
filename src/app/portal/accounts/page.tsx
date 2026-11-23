@@ -5,7 +5,8 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { ButtonLink } from "@/components/ui/Button";
 import { RiskBadge } from "@/components/ui/RiskBadge";
-import { fetchAccounts, migratePendingLocalRecords, type PortalAccount } from "@/lib/portal/data";
+import { fetchAccounts, fetchHealthChecks, migratePendingLocalRecords, type PortalAccount, type PortalHealthCheck } from "@/lib/portal/data";
+import { HealthCheckHistory } from "@/components/portal/HealthCheckHistory";
 import { BrandLoader } from "@/components/BrandLoader";
 import { fetchSubscription, type ClientSubscription } from "@/lib/portal/subscriptions";
 import { coveredAccountIds } from "@/lib/portal/account-limits";
@@ -16,27 +17,32 @@ export default function PortalAccountsPage() {
   const [accounts, setAccounts] = useState<PortalAccount[] | "loading">("loading");
   const [subscription, setSubscription] = useState<ClientSubscription | null>(null);
   const [doneCount, setDoneCount] = useState(0);
+  const [checks, setChecks] = useState<PortalHealthCheck[]>([]);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       await migratePendingLocalRecords();
-      const [result, sub, done] = await Promise.all([
+      const [result, sub, done, history] = await Promise.all([
         fetchAccounts(),
         fetchSubscription().catch(() => null),
         fetchChecklistDone(),
+        fetchHealthChecks(),
       ]);
       if (!cancelled) {
         setAccounts(result);
         setSubscription(sub);
-        setDoneCount(done.size);
+        // The checklist (and its health boost) comes with a package.
+        setDoneCount(sub && (sub.status === "active" || sub.status === "trial") ? done.size : 0);
+        setChecks(history);
       }
     }
     load();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadKey]);
 
   return (
     <div>
@@ -44,8 +50,8 @@ export default function PortalAccountsPage() {
         <div>
           <h1 className="text-2xl font-semibold text-ink-900">My Accounts</h1>
           <p className="mt-1 text-sm text-ink-500">
-            Every account you&apos;ve run a health check on or enrolled in
-            protection. Tap an account for its full score breakdown.
+            Your protected accounts, and every health check you&apos;ve run. Tap an account for its full score
+            breakdown.
           </p>
         </div>
         <ButtonLink href="/portal/accounts/new" size="sm">
@@ -63,7 +69,9 @@ export default function PortalAccountsPage() {
         <BrandLoader label="Loading your accounts…" />
       ) : accounts.length === 0 ? (
         <Card className="mt-8 flex flex-col items-center gap-3 py-12 text-center">
-          <p className="text-sm text-ink-500">You haven&apos;t added any accounts yet.</p>
+          <p className="text-sm text-ink-500">
+            {checks.length ? "No protected accounts yet. Add one from your check history below." : "You haven't checked any accounts yet."}
+          </p>
           <ButtonLink href="/portal/accounts/new" size="sm">
             Run an Account Health Check
           </ButtonLink>
@@ -107,6 +115,15 @@ export default function PortalAccountsPage() {
           })()}
         </div>
       )}
+
+      <div id="history" className="mt-10 scroll-mt-20">
+        <HealthCheckHistory
+          checks={checks}
+          accounts={accounts === "loading" ? [] : accounts}
+          hasPackage={!!subscription && (subscription.status === "active" || subscription.status === "trial")}
+          onProtected={() => setReloadKey((k) => k + 1)}
+        />
+      </div>
     </div>
   );
 }

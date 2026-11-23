@@ -5,13 +5,17 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { ButtonLink } from "@/components/ui/Button";
 import { EmergencyModal } from "@/components/portal/EmergencyModal";
+import { HealthCheckHistory } from "@/components/portal/HealthCheckHistory";
 import { supportChannels } from "@/components/portal/ContactSupportMenu";
 import {
+  autoProtectFromHistory,
   fetchAccounts,
   fetchCases,
+  fetchHealthChecks,
   migratePendingLocalRecords,
   type PortalAccount,
   type PortalCase,
+  type PortalHealthCheck,
 } from "@/lib/portal/data";
 import { fetchSubscription, type ClientSubscription } from "@/lib/portal/subscriptions";
 import { createClient } from "@/lib/supabase/client";
@@ -77,6 +81,8 @@ export default function PortalOverviewPage() {
   const [checklistDone, setChecklistDone] = useState<Set<InstagramStep>>(new Set());
   const [savingStep, setSavingStep] = useState<InstagramStep | null>(null);
   const [checklistError, setChecklistError] = useState<string | null>(null);
+  const [healthChecks, setHealthChecks] = useState<PortalHealthCheck[]>([]);
+  const [reloadKey, setReloadKey] = useState(0);
 
   async function toggleStep(step: InstagramStep) {
     const done = !checklistDone.has(step);
@@ -123,13 +129,26 @@ export default function PortalOverviewPage() {
 
     async function load() {
       await migratePendingLocalRecords();
-      const [accountsResult, casesResult, subscriptionResult, doneResult] = await Promise.all([
+      const [accountsResult, casesResult, subscriptionResult, doneResult, checksResult] = await Promise.all([
         fetchAccounts(),
         fetchCases(),
         fetchSubscription(),
         fetchChecklistDone(),
+        fetchHealthChecks(),
       ]);
       if (cancelled) return;
+      setHealthChecks(checksResult);
+      // Has a package but nothing protected yet (e.g. the package was
+      // switched on by the team): protect the accounts they've checked.
+      const hasPackage =
+        !!subscriptionResult && (subscriptionResult.status === "active" || subscriptionResult.status === "trial");
+      if (hasPackage && accountsResult.length === 0 && checksResult.some((c) => !c.accountId) && reloadKey === 0) {
+        const added = await autoProtectFromHistory().catch(() => [] as string[]);
+        if (added.length && !cancelled) {
+          setReloadKey((k) => k + 1);
+          return;
+        }
+      }
       setChecklistDone(doneResult);
       setAccounts(accountsResult);
       setCases(casesResult);
@@ -140,7 +159,7 @@ export default function PortalOverviewPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadKey]);
 
   if (accounts === "loading" || cases === "loading" || subscription === "loading") {
     return <BrandLoader size="page" label="Loading your dashboard…" />;
@@ -155,12 +174,17 @@ export default function PortalOverviewPage() {
   const renewDate = subscription?.renewsOn
     ? new Date(subscription.renewsOn).toLocaleDateString("en-US", { month: "short", day: "numeric" })
     : "";
-  // Health goes up as checklist steps are ticked (lib/portal/checklist.ts).
-  const doneCount = checklistDone.size;
-  const baseHealth =
-    accounts.length > 0
-      ? Math.round(accounts.reduce((sum, a) => sum + a.health, 0) / accounts.length)
-      : 0;
+  // Health goes up as checklist steps are ticked (lib/portal/checklist.ts)
+  // — the checklist comes with a package, so only then.
+  const doneCount = isProtected ? checklistDone.size : 0;
+  // Protected accounts if there are any; otherwise the latest check of each
+  // account in their check history.
+  const latestChecks = healthChecks.filter(
+    (c, i) => healthChecks.findIndex((d) => d.handle === c.handle && d.platform === c.platform) === i,
+  );
+  const scored: { health: number }[] = accounts.length > 0 ? accounts : latestChecks;
+  const hasScore = scored.length > 0;
+  const baseHealth = hasScore ? Math.round(scored.reduce((sum, a) => sum + a.health, 0) / scored.length) : 0;
   const averageHealth = healthWithChecklist(baseHealth, doneCount);
   const checklistBoost = averageHealth - baseHealth;
   const hc = healthColor(averageHealth);
@@ -208,11 +232,11 @@ export default function PortalOverviewPage() {
               <p className="text-xs text-ink-500">
                 {isProtected
                   ? inFreeMonth
-                    ? `Free month${renewDate ? ` · ends ${renewDate}` : ""}`
+                    ? `Free trial${renewDate ? ` · ends ${renewDate}` : ""}`
                     : renewDate
                       ? `Renews ${renewDate}`
                       : "No renewal needed"
-                  : "Start your free month →"}
+                  : "Choose a package →"}
               </p>
             </div>
           </Card>
@@ -236,7 +260,7 @@ export default function PortalOverviewPage() {
               }`}
             >
               <span aria-hidden="true">◆</span>
-              {isPaid ? "Active" : inFreeMonth ? "Free month" : "Not protected"}
+              {isPaid ? "Active" : inFreeMonth ? "Free trial" : "Not protected"}
             </span>
           </div>
         </Card>
@@ -249,22 +273,38 @@ export default function PortalOverviewPage() {
             <div className="flex items-baseline justify-between gap-3">
               <p className="text-sm font-medium text-ink-600">Account health</p>
               <p className="text-xs text-ink-500">
-                {accounts.length === 0
+                {!hasScore
                   ? "Run a health check →"
-                  : checklistBoost > 0
-                    ? `+${checklistBoost} from your checklist`
-                    : "Tick off your checklist to raise it"}
+                  : !isProtected
+                    ? "From your latest health check"
+                    : checklistBoost > 0
+                      ? `+${checklistBoost} from your checklist`
+                      : "Tick off your checklist to raise it"}
               </p>
             </div>
-            <p className={`mt-2 text-3xl font-semibold ${accounts.length ? hc.text : "text-ink-400"}`}>
-              {accounts.length ? averageHealth : "—"}
+            <p className={`mt-2 text-3xl font-semibold ${hasScore ? hc.text : "text-ink-400"}`}>
+              {hasScore ? averageHealth : "—"}
               <span className="text-sm font-normal text-ink-400">/100</span>
             </p>
             <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-ink-100">
-              <div className={`h-full rounded-full ${hc.bar} transition-all duration-700`} style={{ width: `${accounts.length ? averageHealth : 0}%` }} />
+              <div className={`h-full rounded-full ${hc.bar} transition-all duration-700`} style={{ width: `${hasScore ? averageHealth : 0}%` }} />
             </div>
           </Card>
         </Link>
+        {!isProtected ? (
+          <Link href="/portal/billing" className="group">
+            <Card className="h-full border-brand-200 bg-brand-50 p-5 transition-colors group-hover:border-brand-400">
+              <p className="text-sm font-semibold text-ink-900">Protect your accounts</p>
+              <p className="mt-1 text-sm text-ink-600">
+                Monthly checks, your protection checklist, and account recovery at no extra cost if anything happens.
+                From ₦10,000/month.
+              </p>
+              <span className="mt-3 inline-flex rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white">
+                Choose a package
+              </span>
+            </Card>
+          </Link>
+        ) : (
         <a href="#checklist" className="group">
           <Card className="h-full p-5 transition-colors group-hover:border-brand-300">
             <div className="flex items-baseline justify-between gap-3">
@@ -287,6 +327,7 @@ export default function PortalOverviewPage() {
             </div>
           </Card>
         </a>
+        )}
       </div>
 
       {/* My Accounts */}
@@ -299,8 +340,20 @@ export default function PortalOverviewPage() {
         </div>
         {accounts.length === 0 ? (
           <Card className="mt-4 flex flex-col items-center gap-3 py-10 text-center">
-            <p className="text-sm text-ink-500">No accounts added yet.</p>
-            <ButtonLink href="/portal/accounts/new" size="sm">Run an Account Health Check</ButtonLink>
+            <p className="text-sm text-ink-500">
+              {!isProtected
+                ? healthChecks.length
+                  ? "No protected accounts yet. Choose a package, then add accounts from your check history below."
+                  : "No protected accounts yet. Run a health check to see how safe your account is."
+                : healthChecks.length
+                  ? "No protected accounts yet. Add one from your check history below."
+                  : "No accounts added yet."}
+            </p>
+            {!isProtected && healthChecks.length ? (
+              <ButtonLink href="/portal/billing" size="sm">Choose a package</ButtonLink>
+            ) : (
+              <ButtonLink href="/portal/accounts/new" size="sm">Run an Account Health Check</ButtonLink>
+            )}
           </Card>
         ) : (
           <div className="mt-4 space-y-3">
@@ -340,6 +393,19 @@ export default function PortalOverviewPage() {
           </div>
         )}
       </div>
+
+      {/* Health check history */}
+      {healthChecks.length ? (
+        <div className="mt-10">
+          <HealthCheckHistory
+            checks={healthChecks}
+            accounts={accounts}
+            hasPackage={isProtected}
+            onProtected={() => setReloadKey((k) => k + 1)}
+            limit={5}
+          />
+        </div>
+      ) : null}
 
       {/* Need help? */}
       <div className="mt-8">
@@ -423,7 +489,8 @@ export default function PortalOverviewPage() {
         </div>
       </div>
 
-      {/* Protection checklist */}
+      {/* Protection checklist — comes with a package */}
+      {isProtected ? (
       <div id="checklist" className="mt-10 scroll-mt-20">
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
@@ -486,6 +553,7 @@ export default function PortalOverviewPage() {
         </Card>
         {checklistError ? <p className="mt-2 text-sm font-medium text-risk-high">{checklistError}</p> : null}
       </div>
+      ) : null}
 
       {/* Recovery — handled on WhatsApp */}
       <div className="mt-10 flex flex-col gap-3 rounded-2xl border border-green-200 bg-green-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">

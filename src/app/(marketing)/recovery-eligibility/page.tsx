@@ -43,7 +43,7 @@ export default async function RecoveryEligibilityPage() {
           <div className="mt-8 rounded-2xl bg-brand-50 px-5 py-4 text-center">
             <p className="text-sm font-semibold text-ink-900">{t("Not locked out yet?")}</p>
             <p className="mt-1 text-sm text-ink-600">
-              {t("Protect your account now — your first month is free, and recovery is included if anything happens.")}
+              {t("Protect your account now — packages from ₦10,000/month, and recovery is included if anything happens.")}
             </p>
             <ButtonLink href="/pricing#packages" size="sm" className="mt-3">
               {t("See protection packages")}

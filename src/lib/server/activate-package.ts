@@ -5,7 +5,7 @@
 // same rules and a payment is never counted twice.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { addOneMonth, hasBonusMonth, planEndsOn, type Plan } from "@/lib/portal/billing";
+import { addFreeTrial, hasBonusMonth, planEndsOn, type Plan } from "@/lib/portal/billing";
 import { subscriptionWelcomeEmail } from "@/lib/email-templates";
 import { sendProtectionChecklist, startsNewProtection } from "@/lib/server/protection-checklist";
 import { withSenderName } from "@/lib/server/sender";
@@ -66,13 +66,13 @@ export async function activatePaidPackage(
   const currentEnd = existing?.renews_on ? new Date(existing.renews_on) : null;
   const extendFrom =
     (existing?.status === "active" && existing.plan_id === plan.id && currentEnd && currentEnd > now) ||
-    // Paying during the free month: the paid period starts when it ends.
+    // Paying during the free trial: the paid period starts when it ends.
     (existing?.status === "trial" && currentEnd && currentEnd > now)
       ? (currentEnd as Date)
       : now;
   let renewsOn = planEndsOn(plan, extendFrom);
-  // First month free on Annual: a new client's first payment gets 13 months.
-  if (!existing && hasBonusMonth(plan.id) && renewsOn) renewsOn = addOneMonth(renewsOn);
+  // Annual bonus: a new client's first payment gets 2 extra weeks.
+  if (!existing && hasBonusMonth(plan.id) && renewsOn) renewsOn = addFreeTrial(renewsOn);
 
   let subscriptionId: string;
   if (existing) {

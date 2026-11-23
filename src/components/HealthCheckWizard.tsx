@@ -16,7 +16,7 @@ import {
 } from "@/lib/health-check-score";
 import { setLocalAccount } from "@/lib/portal/local-records";
 import { createClient } from "@/lib/supabase/client";
-import { createAccount, fetchAccounts } from "@/lib/portal/data";
+import { fetchAccounts, protectHealthCheck, saveHealthCheck } from "@/lib/portal/data";
 import { fetchSubscription } from "@/lib/portal/subscriptions";
 import { canAddAccount } from "@/lib/portal/account-limits";
 import { getPlan } from "@/lib/portal/billing";
@@ -218,22 +218,25 @@ export function HealthCheckWizard() {
         } = await createClient().auth.getUser();
         if (user) {
           isSignedIn = true;
-          // Only saved when their package covers one more account of this
-          // kind (lib/portal/account-limits.ts); otherwise it's shown once.
+          // Always kept in their check history; it also becomes a protected
+          // account when their package covers one more of this kind
+          // (lib/portal/account-limits.ts).
+          const checkInput = {
+            handle: accountUsername || "Your account",
+            platform: platformLabel,
+            health: computed.overall,
+            level: computed.overallLevel,
+            categories,
+          };
+          const saved = await saveHealthCheck(checkInput);
           const [sub, existing] = await Promise.all([fetchSubscription(), fetchAccounts()]);
           const check = canAddAccount(platformLabel, existing, sub, sub ? getPlan(sub.planId).name : undefined);
           if (check.ok) {
-            const created = await createAccount({
-              handle: accountUsername || "Your account",
-              platform: platformLabel,
-              health: computed.overall,
-              level: computed.overallLevel,
-              protectionActive: false,
-              categories,
-            });
-            signedInAccountId = created.id;
+            const protectedResult = await protectHealthCheck({ ...checkInput, id: saved?.id ?? null });
+            if (protectedResult.ok) signedInAccountId = protectedResult.accountId;
+            else setNotSavedNote(protectedResult.message);
           } else {
-            setNotSavedNote(check.message);
+            setNotSavedNote(saved ? check.message : "This score couldn't be saved to your portal.");
           }
         }
       } catch (err) {
@@ -574,7 +577,7 @@ export function HealthCheckWizard() {
           ) : null}
           {createdAccountId ? (
             <p className="mx-auto mt-6 max-w-sm rounded-xl border border-risk-low/30 bg-risk-low-bg px-4 py-3 text-center text-sm text-ink-800">
-              {t("Saved to My Accounts.")}{" "}
+              {t("Saved and protected in My Accounts.")}{" "}
               <Link href={`/portal/accounts/${createdAccountId}`} className="font-semibold text-risk-low underline underline-offset-2">
                 {t("View this account")}
               </Link>
@@ -607,7 +610,7 @@ export function HealthCheckWizard() {
                   className="mt-4 w-full"
                 >{t("Get Account Protection Now")}</ButtonLink>
               )}
-              <p className="mt-2 text-xs text-ink-400">{t("First month free · then from ₦10,000/month")}</p>
+              <p className="mt-2 text-xs text-ink-400">{t("From ₦10,000/month · recovery included")}</p>
             </div>
           ) : (
             <div className="mx-auto mt-6 max-w-sm overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 p-6 text-center shadow-lg">
