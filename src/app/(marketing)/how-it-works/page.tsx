@@ -21,7 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
 const protectionSteps = [
   {
     title: "Pick a package",
-    description: "Watch, Elite or Business. Your first month is free — no card needed.",
+    description: "Watch, Elite or Business, from ₦10,000/month. Account recovery is included.",
     icon: "📦",
     color: "bg-blue-100 text-blue-700",
   },
@@ -129,8 +129,8 @@ export default async function HowItWorksPage() {
                 </div>
               </Card>
               <div className="absolute -bottom-5 -left-4 rounded-xl border border-green-100 bg-white px-4 py-2.5 shadow-lg">
-                <p className="text-xs font-semibold text-green-600">{t("🎁 First month")}</p>
-                <p className="text-sm font-bold text-ink-900">{t("Free")}</p>
+                <p className="text-xs font-semibold text-green-600">{t("🛡️ Recovery")}</p>
+                <p className="text-sm font-bold text-ink-900">{t("Included")}</p>
               </div>
             </div>
           </div>
@@ -162,7 +162,7 @@ export default async function HowItWorksPage() {
           ))}
         </div>
         <div className="mt-10 flex justify-center">
-          <ButtonLink href="/pricing#packages" size="lg">{t("Start my free month")}</ButtonLink>
+          <ButtonLink href="/pricing#packages" size="lg">{t("See the packages")}</ButtonLink>
         </div>
       </Section>
 
@@ -229,7 +229,7 @@ export default async function HowItWorksPage() {
         <div className="rounded-3xl bg-brand-600 px-8 py-14 text-center sm:px-16">
           <h2 className="text-balance text-3xl font-bold text-white sm:text-4xl">{t("Ready to get started?")}</h2>
           <p className="mx-auto mt-4 max-w-xl text-balance text-brand-100">
-            {t("Start with a free month of protection — or message us on WhatsApp if your account is already locked.")}
+            {t("Start your protection today — or message us on WhatsApp if your account is already locked.")}
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <ButtonLink href="/pricing#packages" size="lg" className="!bg-white !text-brand-700 hover:!bg-brand-50">

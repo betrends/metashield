@@ -64,7 +64,7 @@ export default function AdminSubscriptionsPage() {
         <div className="rounded-2xl border border-ink-100 bg-white p-5 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">Active Packages</p>
           <p className="mt-2 text-2xl font-semibold text-ink-900">{active.length}</p>
-          {trials.length ? <p className="mt-1 text-xs text-emerald-700">+ {trials.length} on a free month (not paid yet)</p> : null}
+          {trials.length ? <p className="mt-1 text-xs text-emerald-700">+ {trials.length} on a free trial (not paid yet)</p> : null}
         </div>
         <div className="rounded-2xl border border-ink-100 bg-white p-5 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">Monthly Recurring Revenue</p>
@@ -143,7 +143,7 @@ export default function AdminSubscriptionsPage() {
                               : "bg-ink-100 text-ink-500"
                         }`}
                       >
-                        {s.status === "active" ? "Active" : s.status === "trial" ? "Free month" : "Cancelled"}
+                        {s.status === "active" ? "Active" : s.status === "trial" ? "Free trial" : "Cancelled"}
                       </span>
                     </td>
                     <td className="px-5 py-3.5 text-ink-600">

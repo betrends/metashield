@@ -293,8 +293,8 @@ export async function GET(request: Request) {
         to: user.email,
         subject: freeMonth
           ? kind === "ended"
-            ? `Your free month of ${plan.name} has ended — keep your protection`
-            : `Your free month of ${plan.name} ends in 3 days`
+            ? `Your free trial of ${plan.name} has ended — keep your protection`
+            : `Your free trial of ${plan.name} ends in 3 days`
           : kind === "ended"
             ? `Your ${plan.name} package has ended — renew now`
             : `Your ${plan.name} package ends soon`,

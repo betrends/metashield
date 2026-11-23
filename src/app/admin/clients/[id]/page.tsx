@@ -236,7 +236,7 @@ function PackageManager({
             <p className="text-lg font-semibold text-ink-900">{current.name}</p>
             <p className="mt-0.5 text-xs text-ink-500">
               {subscription.renewsOn
-                ? `${expired ? "Ended" : freeMonth ? "Free month until" : "Active until"} ${new Date(subscription.renewsOn).toLocaleDateString("en-GB", {
+                ? `${expired ? "Ended" : freeMonth ? "Free trial until" : "Active until"} ${new Date(subscription.renewsOn).toLocaleDateString("en-GB", {
                     day: "numeric",
                     month: "short",
                     year: "numeric",
@@ -252,7 +252,7 @@ function PackageManager({
                 expired ? "bg-ink-100 text-ink-500" : freeMonth ? "bg-emerald-50 text-emerald-700" : "bg-risk-low-bg text-risk-low"
               }`}
             >
-              {expired ? "Ended" : freeMonth ? "Free month" : "Active"}
+              {expired ? "Ended" : freeMonth ? "Free trial" : "Active"}
             </span>
             <button
               type="button"

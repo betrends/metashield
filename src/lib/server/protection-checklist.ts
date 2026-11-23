@@ -17,7 +17,7 @@ type ExistingSubscription = { plan_id: string; status: string; renews_on: string
 // (none at all, switched off, an old plan, or ended more than a day ago).
 export function startsNewProtection(existing: ExistingSubscription, now: Date = new Date()): boolean {
   if (!existing || !isPlanId(existing.plan_id)) return true;
-  // In a free month: the checklist went out when it started.
+  // In a free trial: the checklist went out when it started.
   if (existing.status === "trial") return !!existing.renews_on && new Date(existing.renews_on).getTime() < now.getTime() - DAY;
   if (existing.status !== "active") return true;
   if (!existing.renews_on) return false; // Lifetime, still active

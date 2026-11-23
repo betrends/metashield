@@ -37,6 +37,9 @@ export async function generateMetadata(): Promise<Metadata> {
   description: t(
     "Professional support for disabled, restricted, suspended and compromised social media and advertising accounts — with proactive account health assessments to identify risks before they become major problems.",
   ),
+  // Links shared on WhatsApp and social media show metashield.online.
+  metadataBase: new URL("https://metashield.online"),
+  openGraph: { siteName: brandName, url: "https://metashield.online", type: "website" },
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,

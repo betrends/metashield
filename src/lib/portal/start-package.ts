@@ -1,6 +1,6 @@
 "use client";
 
-// "Start free month" (Watch, Elite — new clients): starts the free first
+// "Start free trial" (Watch, Elite — new clients): starts the free first
 // month, no card (startPackage → /api/subscribe/trial).
 // "Get this package": takes the client to Korapay's payment page.
 //   - signed in            → straight to Korapay
@@ -18,9 +18,9 @@ export function packageWhatsAppUrl(plan: Plan): string {
   return `${contact.inquiriesWhatsapp}?text=${encodeURIComponent(packageWhatsAppText(plan))}`;
 }
 
-// Shown when someone who has had a package before taps "Start my free month".
+// Shown when someone who has had a package before taps "Start my free trial".
 export const FREE_MONTH_USED_MESSAGE =
-  "This account has had a MetaShield package before, so the free month isn't available. Tap “Get this package” to pay.";
+  "This account has had a MetaShield package before, so the free trial isn't available. Tap “Get this package” to pay.";
 
 export function payAfterSignInPath(planId: string): string {
   return `/portal/billing?plan=${encodeURIComponent(planId)}&pay=1`;
@@ -103,7 +103,7 @@ export async function startPackage(plan: Plan): Promise<string | "free_month_use
       body: JSON.stringify({ planId: plan.id }),
     });
   } catch {
-    return "We couldn't start your free month. Check your internet connection and try again.";
+    return "We couldn't start your free trial. Check your internet connection and try again.";
   }
   if (res.ok) {
     forgetPendingPackage();
@@ -116,5 +116,5 @@ export async function startPackage(plan: Plan): Promise<string | "free_month_use
     return null;
   }
   if (res.status === 409) return "free_month_used";
-  return "We couldn't start your free month. Please try again in a moment, or message us on WhatsApp.";
+  return "We couldn't start your free trial. Please try again in a moment, or message us on WhatsApp.";
 }

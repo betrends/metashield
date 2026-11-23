@@ -20,7 +20,8 @@ import type { FollowerRange } from "@/lib/portal/case-fees";
 import { pickDefaultCaseId, safeStorageName } from "@/lib/portal/case-rules";
 import { pickPaymentRecord, type PaymentKind, type PaymentRecord } from "@/lib/portal/payments";
 import { fetchSubscription } from "@/lib/portal/subscriptions";
-import { canAddAccount } from "@/lib/portal/account-limits";
+import { canAddAccount, type AddCheck } from "@/lib/portal/account-limits";
+import { getPlan } from "@/lib/portal/billing";
 
 export type PortalAccount = {
   id: string;
@@ -188,6 +189,131 @@ export async function createAccount(input: {
     .single();
   if (error) throw error;
   return mapAccount(data as AccountRow);
+}
+
+// ── Health check history ──────────────────────────────────────────────
+// Every check is kept (table health_checks), package or not. "Add for
+// protection" turns a check into a protected account when the package
+// covers it (lib/portal/account-limits.ts).
+
+export type PortalHealthCheck = {
+  id: string;
+  handle: string;
+  platform: string;
+  health: number;
+  level: RiskLevel;
+  categories?: { label: string; level: RiskLevel }[];
+  accountId: string | null;
+  createdAt: string;
+};
+
+type HealthCheckRow = {
+  id: string;
+  handle: string;
+  platform: string;
+  health: number;
+  level: RiskLevel;
+  categories: { label: string; level: RiskLevel }[] | null;
+  account_id: string | null;
+  created_at: string;
+};
+
+function mapHealthCheck(row: HealthCheckRow): PortalHealthCheck {
+  return {
+    id: row.id,
+    handle: row.handle,
+    platform: row.platform,
+    health: row.health,
+    level: row.level,
+    categories: row.categories ?? undefined,
+    accountId: row.account_id,
+    createdAt: row.created_at,
+  };
+}
+
+export async function fetchHealthChecks(): Promise<PortalHealthCheck[]> {
+  const { data, error } = await createClient()
+    .from("health_checks")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) return []; // table not created yet → empty history
+  return (data as HealthCheckRow[]).map(mapHealthCheck);
+}
+
+export async function saveHealthCheck(input: {
+  handle: string;
+  platform: string;
+  health: number;
+  level: RiskLevel;
+  categories?: { label: string; level: RiskLevel }[];
+}): Promise<PortalHealthCheck | null> {
+  const supabase = createClient();
+  const user = await requireUser(supabase);
+  const { data, error } = await supabase
+    .from("health_checks")
+    .insert({
+      user_id: user.id,
+      handle: input.handle,
+      platform: input.platform,
+      health: input.health,
+      level: input.level,
+      categories: input.categories ?? null,
+    })
+    .select()
+    .single();
+  if (error) {
+    console.error("Failed to save health check:", error);
+    return null;
+  }
+  return mapHealthCheck(data as HealthCheckRow);
+}
+
+const sameAccount = (a: { handle: string; platform: string }, b: { handle: string; platform: string }) =>
+  a.handle.trim().replace(/^@/, "").toLowerCase() === b.handle.trim().replace(/^@/, "").toLowerCase() &&
+  a.platform.toLowerCase() === b.platform.toLowerCase();
+
+export type ProtectResult =
+  | { ok: true; accountId: string }
+  | { ok: false; reason: Extract<AddCheck, { ok: false }>["reason"] | "error"; message: string };
+
+// "Add for protection": the check becomes a protected account if the
+// package covers it. An account already being protected is linked rather
+// than added twice.
+export async function protectHealthCheck(check: {
+  id?: string | null;
+  handle: string;
+  platform: string;
+  health: number;
+  level: RiskLevel;
+  categories?: { label: string; level: RiskLevel }[];
+}): Promise<ProtectResult> {
+  try {
+    const [sub, existing] = await Promise.all([fetchSubscription(), fetchAccounts()]);
+    const already = existing.find((a) => sameAccount(a, check));
+    let accountId: string;
+    if (already) {
+      accountId = already.id;
+    } else {
+      const allowed = canAddAccount(check.platform, existing, sub, sub ? getPlan(sub.planId).name : undefined);
+      if (!allowed.ok) return { ok: false, reason: allowed.reason, message: allowed.message };
+      const created = await createAccount({
+        handle: check.handle,
+        platform: check.platform,
+        health: check.health,
+        level: check.level,
+        protectionActive: false,
+        categories: check.categories,
+      });
+      accountId = created.id;
+    }
+    if (check.id) {
+      await createClient().from("health_checks").update({ account_id: accountId }).eq("id", check.id);
+    }
+    return { ok: true, accountId };
+  } catch (err) {
+    console.error("Failed to protect account:", err);
+    return { ok: false, reason: "error", message: "That didn't work. Check your connection and try again." };
+  }
 }
 
 // ── Cases ─────────────────────────────────────────────────────────────
@@ -570,7 +696,7 @@ export async function deleteDocument(doc: PortalDocument): Promise<void> {
 // some earlier, unrelated visit rather than "just ran this, then signed
 // up" — it's discarded instead of migrated, so it can't silently resurface
 // and attach itself to a much later, unrelated sign-up.
-const STALE_RECORD_MS = 24 * 60 * 60 * 1000; // 24 hours
+const STALE_RECORD_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 export type MigrationResult = { accountId: string | null; caseId: string | null };
 const NO_MIGRATION: MigrationResult = { accountId: null, caseId: null };
@@ -617,19 +743,20 @@ async function runMigration(): Promise<MigrationResult> {
       clearLocalAccount();
     } else {
       try {
-        // Kept only if their package covers it (account-limits.ts) — a
-        // check done before signing up isn't saved without a package.
+        // A check done just before signing up goes into their check
+        // history; it also becomes a protected account if their package
+        // covers it (account-limits.ts).
+        const saved = await saveHealthCheck({
+          handle: localAccount.handle,
+          platform: localAccount.platform,
+          health: localAccount.health,
+          level: localAccount.level,
+          categories: localAccount.categories,
+        });
         const [sub, existing] = await Promise.all([fetchSubscription(), fetchAccounts()]);
         if (canAddAccount(localAccount.platform, existing, sub).ok) {
-          const created = await createAccount({
-            handle: localAccount.handle,
-            platform: localAccount.platform,
-            health: localAccount.health,
-            level: localAccount.level,
-            protectionActive: localAccount.protectionActive,
-            categories: localAccount.categories,
-          });
-          accountId = created.id;
+          const protectedResult = await protectHealthCheck({ ...localAccount, id: saved?.id ?? null });
+          if (protectedResult.ok) accountId = protectedResult.accountId;
         }
         clearLocalAccount();
       } catch (err) {

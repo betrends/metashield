@@ -63,12 +63,12 @@ export default function BillingPage() {
     load();
   }, []);
 
-  // Just started the free month (?free=watch): say so once.
+  // Just started the free trial (?free=watch): say so once.
   useEffect(() => {
     const freePlan = searchParams.get("free");
     if (!isPlanId(freePlan)) return;
     setConfirmation(
-      `Your free month of ${getPlan(freePlan).name} has started. Check your email for the steps that keep your account protected.`
+      `Your 2-week free trial of ${getPlan(freePlan).name} has started. Next: add your accounts for protection in My Accounts, then do your protection checklist on the dashboard.`
     );
     router.replace("/portal/billing");
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -101,7 +101,7 @@ export default function BillingPage() {
       .then((r) => r.json())
       .then((data) => {
         if (data.ok) {
-          setConfirmation(`Payment received — your ${data.planName} package is active. Welcome!`);
+          setConfirmation(`Payment received — your ${data.planName} package is active. Next: add your accounts for protection in My Accounts.`);
           load();
         } else if (data.error === "payment_not_successful") {
           setError("Your card payment wasn't completed, so nothing was charged. You can try again below.");
@@ -242,12 +242,12 @@ export default function BillingPage() {
             <p className="text-sm font-semibold text-ink-900">You picked {picked.name}</p>
             <p className="mt-0.5 text-sm text-ink-600">
               {canStartFree
-                ? `First month free — no card needed. Then ${picked.price}${picked.priceSuffix ?? ""}.`
+                ? `First 2 weeks free — no card needed. Then ${picked.price}${picked.priceSuffix ?? ""}.`
                 : `${picked.price} ${picked.period === "lifetime" ? "one-time payment" : (picked.priceSuffix ?? "")} · paid securely by card`}
             </p>
           </div>
           <Button onClick={() => handleChoosePlan(picked.id as PlanId, !canStartFree)} disabled={busy} className="shrink-0">
-            {busy ? (canStartFree ? "Starting…" : "Opening payment…") : canStartFree ? "Start my free month" : `Pay ${picked.price}`}
+            {busy ? (canStartFree ? "Starting…" : "Opening payment…") : canStartFree ? "Start my free trial" : `Pay ${picked.price}`}
           </Button>
         </div>
       ) : null}
@@ -265,7 +265,7 @@ export default function BillingPage() {
               </div>
               {inFreeMonth ? (
                 <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
-                  🎁 Free month
+                  🎁 Free trial
                 </span>
               ) : (
                 <span className="rounded-full bg-risk-low-bg px-2.5 py-1 text-xs font-semibold text-risk-low">Active</span>
@@ -277,7 +277,7 @@ export default function BillingPage() {
                   Free until{" "}
                   {subscription.renewsOn
                     ? new Date(subscription.renewsOn).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
-                    : "the end of your free month"}
+                    : "the end of your free trial"}
                 </p>
                 <p className="mt-1 text-sm text-ink-600">
                   Pay {activePlan.price} before then to keep your protection. Account recovery at no extra cost starts with your first
@@ -350,7 +350,7 @@ export default function BillingPage() {
             {activePlan.period !== "lifetime" ? (
               <div className="mt-5 flex flex-wrap gap-3">
                 <Button variant="outline" size="sm" onClick={handleCancel} disabled={busy}>
-                  {busy ? "Please wait…" : inFreeMonth ? "Stop free month" : "Cancel package"}
+                  {busy ? "Please wait…" : inFreeMonth ? "Stop free trial" : "Cancel package"}
                 </Button>
               </div>
             ) : null}

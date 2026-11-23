@@ -170,13 +170,14 @@ export function planEndsOn(plan: Plan, from: Date = new Date()): string | null {
   return d.toISOString();
 }
 
-// ── First month free ────────────────────────────────────────────────────
-// New clients (never had a package) can start Watch, Elite or Business with a free
-// first month — no card. Account recovery at no extra cost starts with
-// their first payment. On Annual, a new client's first payment gets a
-// bonus 13th month instead. Lifetime is unchanged.
-export const FREE_MONTH_PLAN_IDS: string[] = ["watch", "elite", "biz"];
-export const BONUS_MONTH_PLAN_IDS: string[] = ["annual"];
+// ── Free trial: switched off ────────────────────────────────────────────
+// There is no free trial and no Annual bonus: every package starts with a
+// payment. (To bring one back, list the packages here and set the length.)
+// Clients who started a free month earlier keep it until it ends — their
+// subscriptions show as "trial".
+export const FREE_TRIAL_DAYS = 14;
+export const FREE_MONTH_PLAN_IDS: string[] = [];
+export const BONUS_MONTH_PLAN_IDS: string[] = [];
 
 export function hasFreeFirstMonth(id: unknown): boolean {
   return typeof id === "string" && FREE_MONTH_PLAN_IDS.includes(id);
@@ -184,6 +185,11 @@ export function hasFreeFirstMonth(id: unknown): boolean {
 
 export function hasBonusMonth(id: unknown): boolean {
   return typeof id === "string" && BONUS_MONTH_PLAN_IDS.includes(id);
+}
+
+// The free trial's length (also the Annual bonus for new clients).
+export function addFreeTrial(iso: string): string {
+  return new Date(new Date(iso).getTime() + FREE_TRIAL_DAYS * 24 * 60 * 60 * 1000).toISOString();
 }
 
 export function addOneMonth(iso: string): string {

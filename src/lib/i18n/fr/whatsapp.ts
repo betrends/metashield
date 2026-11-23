@@ -32,15 +32,16 @@ export const whatsapp: Record<string, string> = {
   "Two-factor authentication on": "Double authentification activée",
   "🛡️ Locked out later? Message us on WhatsApp — recovery is included in your package.":
     "🛡️ Bloqué plus tard ? Écrivez-nous sur WhatsApp — la récupération est incluse dans votre forfait.",
-  "🎁 First month": "🎁 Premier mois",
-  "Free": "Gratuit",
+  "🛡️ Recovery": "🛡️ Récupération",
+  "Included": "Incluse",
+  "See the packages": "Voir les forfaits",
   "Account protection": "Protection de compte",
   "How MetaShield protects you": "Comment MetaShield vous protège",
   "Four simple steps, so problems are caught early — and handled fast if they happen.":
     "Quatre étapes simples, pour repérer les problèmes tôt — et les régler vite s'ils arrivent.",
   "Pick a package": "Choisissez un forfait",
-  "Watch, Elite or Business. Your first month is free — no card needed.":
-    "Watch, Elite ou Business. Votre premier mois est gratuit — sans carte.",
+  "Watch, Elite or Business, from ₦10,000/month. Account recovery is included.":
+    "Watch, Elite ou Business, à partir de 10 000 ₦/mois. La récupération de compte est incluse.",
   "Do your protection checklist": "Faites votre liste de protection",
   "We email you the must-do steps: selfie verification, the right date of birth, checking logged-in devices and more.":
     "Nous vous envoyons par e-mail les étapes indispensables : vérification par selfie, bonne date de naissance, contrôle des appareils connectés, etc.",
@@ -50,7 +51,7 @@ export const whatsapp: Record<string, string> = {
   "Recovery included": "Récupération incluse",
   "If your account is ever suspended, disabled or restricted, eligible recoveries covered by your plan come at no extra cost.":
     "Si votre compte est un jour suspendu, désactivé ou restreint, les récupérations éligibles couvertes par votre forfait sont sans frais supplémentaires.",
-  "Start my free month": "Commencer mon mois gratuit",
+  "Start my free trial": "Commencer mon essai gratuit",
   "Already locked out?": "Déjà bloqué ?",
   "Recovery happens on WhatsApp": "La récupération se fait sur WhatsApp",
   "Whether you have a package or not, message us on WhatsApp and our team takes it from there.":
@@ -72,8 +73,8 @@ export const whatsapp: Record<string, string> = {
     "Bonjour ! Désolé pour ce souci. Que s'est-il passé, et avez-vous une capture d'écran d'un message d'Instagram ?",
   "We will never ask for your password. Recovery isn't guaranteed — Meta makes the final decision.":
     "Nous ne vous demanderons jamais votre mot de passe. La récupération n'est pas garantie — Meta prend la décision finale.",
-  "Start with a free month of protection — or message us on WhatsApp if your account is already locked.":
-    "Commencez par un mois de protection gratuit — ou écrivez-nous sur WhatsApp si votre compte est déjà bloqué.",
+  "Start your protection today — or message us on WhatsApp if your account is already locked.":
+    "Commencez votre protection dès aujourd'hui — ou écrivez-nous sur WhatsApp si votre compte est déjà bloqué.",
 
   // Recovery page + card
   "Account Recovery on WhatsApp": "Récupération de compte sur WhatsApp",
@@ -83,8 +84,8 @@ export const whatsapp: Record<string, string> = {
   "Message us on WhatsApp with what happened — our team will assess it and handle the recovery with you.":
     "Écrivez-nous sur WhatsApp ce qui s'est passé — notre équipe l'évalue et gère la récupération avec vous.",
   "Not locked out yet?": "Pas encore bloqué ?",
-  "Protect your account now — your first month is free, and recovery is included if anything happens.":
-    "Protégez votre compte dès maintenant — le premier mois est gratuit, et la récupération est incluse en cas de problème.",
+  "Protect your account now — packages from ₦10,000/month, and recovery is included if anything happens.":
+    "Protégez votre compte dès maintenant — forfaits à partir de 10 000 ₦/mois, et la récupération est incluse en cas de problème.",
   "Account recovery": "Récupération de compte",
   "Tell us which account it is and what happened.": "Dites-nous de quel compte il s'agit et ce qui s'est passé.",
   "Send what you have": "Envoyez ce que vous avez",

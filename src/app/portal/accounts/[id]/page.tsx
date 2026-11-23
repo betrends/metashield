@@ -9,6 +9,7 @@ import { RiskBadge } from "@/components/ui/RiskBadge";
 import { fetchAccount, type PortalAccount } from "@/lib/portal/data";
 import { BrandLoader } from "@/components/BrandLoader";
 import { CHECKLIST_TOTAL, fetchChecklistDone, healthWithChecklist } from "@/lib/portal/checklist";
+import { fetchSubscription } from "@/lib/portal/subscriptions";
 
 export default function PortalAccountDetailPage() {
   const params = useParams<{ id: string }>();
@@ -20,8 +21,10 @@ export default function PortalAccountDetailPage() {
     fetchAccount(params.id).then((result) => {
       if (!cancelled) setAccount(result);
     });
-    fetchChecklistDone().then((done) => {
-      if (!cancelled) setDoneCount(done.size);
+    // The checklist (and its health boost) comes with a package.
+    Promise.all([fetchChecklistDone(), fetchSubscription().catch(() => null)]).then(([done, sub]) => {
+      const hasPackage = !!sub && (sub.status === "active" || sub.status === "trial");
+      if (!cancelled) setDoneCount(hasPackage ? done.size : 0);
     });
     return () => {
       cancelled = true;

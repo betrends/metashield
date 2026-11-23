@@ -14,7 +14,7 @@ export type BroadcastContent = {
   showComparison: boolean; // "Without a package / With a package ₦0" boxes
   showIncluded: boolean; // "Every package includes" list
   showPackages: boolean; // the packages and prices
-  freeMonthTags: boolean; // "1st month free" tags on the monthly packages
+  freeMonthTags: boolean; // "2 weeks free" tags on the monthly packages
   lightLook: boolean; // light card + Instagram colours (like the app-opener page)
   buttonText: string;
   buttonLink: BroadcastLink;
@@ -49,24 +49,24 @@ export const DEFAULT_BROADCAST_CONTENT: BroadcastContent = {
   ps: "Accounts get hacked and disabled without warning. Protection only works if it's in place before something goes wrong.",
 };
 
-// Ready-made email: the free first month (Watch, Elite, Business).
-export const FREE_MONTH_SUBJECT = "Is your Instagram protected? Your first month is free";
+// Ready-made email: protect your account (Watch, Elite, Business).
+export const FREE_MONTH_SUBJECT = "Is your Instagram protected?";
 
 export const FREE_MONTH_BROADCAST_CONTENT: BroadcastContent = {
   label: "MetaShield · Account protection",
   headline: "{name}, if your Instagram got suspended tonight, could you get it back?",
   intro: "",
   message:
-    "**MetaShield protects your accounts before something goes wrong.**\n\n{compare}\n\n**🎁 And right now, your first month is free.**\nStart a **Watch, Elite or Business** package and pay **₦0 for the first month**. No card needed. After your free month, packages start from **₦10,000 a month**.",
+    "**MetaShield protects your accounts before something goes wrong.**\n\n{compare}\n\nPackages start from **₦10,000 a month**, and account recovery is included at no extra cost.",
   showComparison: true,
   showIncluded: false,
   showPackages: false,
-  freeMonthTags: true,
+  freeMonthTags: false,
   lightLook: true,
-  buttonText: "Protect my account free →",
+  buttonText: "Protect my account →",
   buttonLink: "packages",
   customLink: "",
-  ps: "Protection only works if it's in place before something goes wrong. The free month is for clients starting their first package; free recovery starts once you make your first payment.",
+  ps: "Protection only works if it's in place before something goes wrong.",
 };
 
 export const BROADCAST_LINKS: { value: BroadcastLink; label: string; path: string }[] = [
@@ -111,7 +111,7 @@ export function parseBroadcastContent(input: unknown): BroadcastContent {
     showComparison: typeof o.showComparison === "boolean" ? o.showComparison : d.showComparison,
     showIncluded: typeof o.showIncluded === "boolean" ? o.showIncluded : d.showIncluded,
     showPackages: typeof o.showPackages === "boolean" ? o.showPackages : d.showPackages,
-    freeMonthTags: typeof o.freeMonthTags === "boolean" ? o.freeMonthTags : d.freeMonthTags,
+    freeMonthTags: false, // free trial removed: never show "free" tags
     lightLook: typeof o.lightLook === "boolean" ? o.lightLook : d.lightLook,
     buttonText: text(o.buttonText, BROADCAST_LIMITS.buttonText, d.buttonText).trim(),
     // A custom link that isn't a proper web address falls back to the packages page.

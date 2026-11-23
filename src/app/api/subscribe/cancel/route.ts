@@ -23,7 +23,7 @@ export async function POST() {
     .from("subscriptions")
     .update({ status: "cancelled", updated_at: new Date().toISOString() })
     .eq("user_id", user.id)
-    .in("status", ["active", "trial"]); // a free month can be stopped too
+    .in("status", ["active", "trial"]); // a free trial can be stopped too
 
   if (error) {
     console.error("Failed to cancel subscription:", error);

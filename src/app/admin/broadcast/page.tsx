@@ -547,7 +547,7 @@ export default function AdminBroadcastPage() {
                 onClick={loadFreeMonthEmail}
                 className="rounded-full bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700"
               >
-                🎁 Use the free month email
+                🛡️ Use the protection email
               </button>
             </div>
             <p className="mt-2 text-xs text-ink-500">
@@ -599,7 +599,6 @@ export default function AdminBroadcastPage() {
                   <Toggle checked={content.showComparison} onChange={(v) => edit("showComparison", v)} label="₦0 recovery fee boxes" />
                   <Toggle checked={content.showIncluded} onChange={(v) => edit("showIncluded", v)} label="What's included list" />
                   <Toggle checked={content.showPackages} onChange={(v) => edit("showPackages", v)} label="Package prices" />
-                  <Toggle checked={content.freeMonthTags} onChange={(v) => edit("freeMonthTags", v)} label="“1st month free” tags" />
                   <Toggle checked={content.lightLook} onChange={(v) => edit("lightLook", v)} label="Light design (Instagram colours)" />
                 </div>
               </div>

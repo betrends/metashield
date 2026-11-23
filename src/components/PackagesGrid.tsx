@@ -15,7 +15,7 @@ import { PACKAGES_DISCLAIMER, hasBonusMonth, hasFreeFirstMonth, plans, type Plan
 import { FREE_MONTH_USED_MESSAGE, packageWhatsAppUrl, startPackage, startPackageCheckout } from "@/lib/portal/start-package";
 
 // currentStatus "trial": the client is in their free first month.
-// freeMonthUsed: the client has already had a package, so no free month.
+// freeMonthUsed: the client has already had a package, so no free trial.
 type Props =
   | { mode: "public" }
   | { mode: "portal"; currentPlanId: string | null; currentStatus?: "active" | "cancelled" | "trial"; freeMonthUsed?: boolean };
@@ -70,7 +70,7 @@ const looks: Record<string, Look> = {
 
 export function PackagesGrid(props: Props) {
   const [busyId, setBusyId] = useState<string | null>(null);
-  // kind "info": a note, not an error (e.g. the free month was already used).
+  // kind "info": a note, not an error (e.g. the free trial was already used).
   const [errorFor, setErrorFor] = useState<{ id: string; message: string; kind?: "info" } | null>(null);
   const [freeMonthUsed, setFreeMonthUsed] = useState(props.mode === "portal" && !!props.freeMonthUsed);
   const rowRef = useRef<HTMLDivElement>(null);
@@ -169,7 +169,7 @@ export function PackagesGrid(props: Props) {
               ) : null}
               {isCurrent ? (
                 <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-brand-600 px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-lg">
-                  {inFreeMonth ? "Your free month" : "Your package"}
+                  {inFreeMonth ? "Your free trial" : "Your package"}
                 </span>
               ) : null}
 
@@ -193,11 +193,11 @@ export function PackagesGrid(props: Props) {
               <h3 className={`mt-4 text-lg font-bold ${dark ? "text-white" : "text-ink-900"}`}>{plan.name.replace("MetaShield ", "")}</h3>
               <p className={`mt-0.5 min-h-[2.5rem] text-sm leading-5 ${dark ? "text-brand-100/80" : "text-ink-500"}`}>{plan.tagline}</p>
 
-              {/* Price (same height on every card, with or without the free-month tag) */}
-              <div className="mt-4 sm:min-h-[8.5rem]">
+              {/* Price (same height on every card; taller only if a free offer is on) */}
+              <div className={`mt-4 ${plans.some((p) => hasFreeFirstMonth(p.id) || hasBonusMonth(p.id)) ? "sm:min-h-[8.5rem]" : ""}`}>
               {offerFree || offerBonus ? (
                 <span className="pkg-free inline-flex w-fit items-center gap-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-white shadow-md shadow-emerald-600/30">
-                  🎁 {offerFree ? "1st month free" : "+1 month free"}
+                  🎁 {offerFree ? "2 weeks free" : "+2 weeks free"}
                 </span>
               ) : null}
               <div className={`${offerFree || offerBonus ? "mt-2" : ""} flex items-baseline gap-1.5`}>
@@ -207,7 +207,7 @@ export function PackagesGrid(props: Props) {
               {offerFree ? (
                 <p className={`mt-1 text-xs font-semibold ${dark ? "text-emerald-200" : "text-emerald-700"}`}>₦0 today · no card needed · then {plan.price}/month</p>
               ) : offerBonus ? (
-                <p className={`mt-1 text-xs font-semibold ${dark ? "text-emerald-200" : "text-emerald-700"}`}>13 months for the price of 12 on your first package</p>
+                <p className={`mt-1 text-xs font-semibold ${dark ? "text-emerald-200" : "text-emerald-700"}`}>2 extra weeks free on your first package</p>
               ) : null}
               </div>
 
@@ -269,7 +269,7 @@ export function PackagesGrid(props: Props) {
                   plan={plan}
                   dark={dark}
                   isCurrent={isCurrent && !inFreeMonth}
-                  label={inFreeMonth ? `Pay ${plan.price} to keep it` : offerFree ? "Start my free month" : "Get this package"}
+                  label={inFreeMonth ? `Pay ${plan.price} to keep it` : offerFree ? "Start my free trial" : "Get this package"}
                   busyLabel={offerFree ? "Starting…" : "Opening payment…"}
                   busy={busyId === plan.id}
                   disabled={busyId !== null}
