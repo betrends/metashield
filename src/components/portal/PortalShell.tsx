@@ -309,7 +309,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
 
   if (session === "loading" || session === null) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-ink-50">
+      <div className="portal-theme flex min-h-screen items-center justify-center">
         <BrandLoader size="page" label="Loading your dashboard…" />
       </div>
     );
@@ -326,7 +326,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-ink-50">
+    <div className="portal-theme min-h-screen">
       {/* Desktop top header with email & notification bell */}
       <div className="hidden border-b border-ink-100 bg-white lg:block">
         <style>{`
@@ -461,7 +461,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
       <div className="mx-auto flex max-w-7xl">
         {/* Sidebar — fixed overlay on mobile, in-flow on desktop */}
         <aside
-          className={`fixed inset-y-0 left-0 z-40 w-72 overflow-y-auto border-r border-ink-100 bg-white px-4 py-6 transition-transform lg:relative lg:inset-auto lg:z-auto lg:w-64 lg:translate-x-0 lg:overflow-visible lg:transition-none ${
+          className={`portal-nav fixed inset-y-0 left-0 z-40 w-72 overflow-y-auto px-4 py-6 transition-transform lg:relative lg:inset-auto lg:z-auto lg:w-64 lg:translate-x-0 lg:overflow-visible lg:transition-none ${
             mobileNavOpen ? "translate-x-0 shadow-xl" : "-translate-x-full"
           } lg:block`}
         >
@@ -494,7 +494,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                   onClick={() => setMobileNavOpen(false)}
                   className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
                     active
-                      ? "bg-brand-50 text-brand-700"
+                      ? "bg-brand-600 text-white shadow-lg shadow-black/20"
                       : "text-ink-600 hover:bg-ink-50 hover:text-ink-900"
                   }`}
                 >
