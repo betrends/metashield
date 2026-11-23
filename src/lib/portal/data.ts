@@ -316,6 +316,23 @@ export async function protectHealthCheck(check: {
   }
 }
 
+// Once a client has a package: protect the accounts in their check history
+// (newest check of each account first) as far as the package covers.
+// Returns the handles newly protected.
+export async function autoProtectFromHistory(): Promise<string[]> {
+  const [checks, accounts] = await Promise.all([fetchHealthChecks(), fetchAccounts()]);
+  const done: { handle: string; platform: string }[] = [];
+  const added: string[] = [];
+  for (const check of checks) {
+    if (done.some((d) => sameAccount(d, check))) continue;
+    done.push(check);
+    if (check.accountId || accounts.some((a) => sameAccount(a, check))) continue;
+    const result = await protectHealthCheck(check);
+    if (result.ok) added.push(check.handle);
+  }
+  return added;
+}
+
 // ── Cases ─────────────────────────────────────────────────────────────
 
 type CaseRow = {
@@ -698,8 +715,9 @@ export async function deleteDocument(doc: PortalDocument): Promise<void> {
 // and attach itself to a much later, unrelated sign-up.
 const STALE_RECORD_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
-export type MigrationResult = { accountId: string | null; caseId: string | null };
-const NO_MIGRATION: MigrationResult = { accountId: null, caseId: null };
+// checkedHandle: a health check run before signing up, now in their check history.
+export type MigrationResult = { accountId: string | null; caseId: string | null; checkedHandle: string | null };
+const NO_MIGRATION: MigrationResult = { accountId: null, caseId: null, checkedHandle: null };
 
 // ── Migrating a pre-signup wizard result into the real database ───────
 // Called from every portal page that loads accounts/cases, so whichever
@@ -734,6 +752,7 @@ async function runMigration(): Promise<MigrationResult> {
   if (!user) return NO_MIGRATION;
 
   let accountId: string | null = null;
+  let checkedHandle: string | null = null;
   let caseId: string | null = null;
 
   const localAccount = getLocalAccount();
@@ -753,6 +772,7 @@ async function runMigration(): Promise<MigrationResult> {
           level: localAccount.level,
           categories: localAccount.categories,
         });
+        if (saved) checkedHandle = saved.handle;
         const [sub, existing] = await Promise.all([fetchSubscription(), fetchAccounts()]);
         if (canAddAccount(localAccount.platform, existing, sub).ok) {
           const protectedResult = await protectHealthCheck({ ...localAccount, id: saved?.id ?? null });
@@ -789,7 +809,7 @@ async function runMigration(): Promise<MigrationResult> {
     }
   }
 
-  return { accountId, caseId };
+  return { accountId, caseId, checkedHandle };
 }
 
 // ── Case workflow (documents, terms, recovery form, cancellation) ─────

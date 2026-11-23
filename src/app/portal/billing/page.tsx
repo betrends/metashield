@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/Button";
 import { getPlan, hasFreeFirstMonth, isPlanId, type PlanId } from "@/lib/portal/billing";
 import { FREE_MONTH_USED_MESSAGE, packageWhatsAppUrl, startPackage, startPackageCheckout } from "@/lib/portal/start-package";
 import { PackagesGrid } from "@/components/PackagesGrid";
+import Link from "next/link";
+import { autoProtectFromHistory, fetchAccounts, fetchHealthChecks } from "@/lib/portal/data";
 import {
   fetchSubscription,
   fetchInvoices,
@@ -49,14 +51,28 @@ export default function BillingPage() {
   const [busy, setBusy] = useState(false);
   const [freeMonthUsed, setFreeMonthUsed] = useState(false);
   const [autopay, setAutopay] = useState<Autopay | null>(null);
+  // How many accounts they've checked / have protected — to ask "which
+  // account?" when there are none.
+  const [checkedCount, setCheckedCount] = useState<number | null>(null);
+  const [protectedCount, setProtectedCount] = useState<number | null>(null);
   const searchParams = useSearchParams();
   const router = useRouter();
+  // Just signed up after checking an account (?checked=@handle).
+  const [checkedHandle] = useState<string | null>(() => searchParams.get("checked"));
 
   async function load() {
-    const [sub, inv, ap] = await Promise.all([fetchSubscription(), fetchInvoices(), fetchAutopay()]);
+    const [sub, inv, ap, checks, accounts] = await Promise.all([
+      fetchSubscription(),
+      fetchInvoices(),
+      fetchAutopay(),
+      fetchHealthChecks(),
+      fetchAccounts().catch(() => []),
+    ]);
     setSubscriptionState(sub);
     setInvoices(inv);
     setAutopay(ap);
+    setCheckedCount(checks.length);
+    setProtectedCount(accounts.length);
   }
 
   useEffect(() => {
@@ -101,8 +117,17 @@ export default function BillingPage() {
       .then((r) => r.json())
       .then((data) => {
         if (data.ok) {
-          setConfirmation(`Payment received — your ${data.planName} package is active. Next: add your accounts for protection in My Accounts.`);
-          load();
+          // The accounts they've already checked are protected straight away.
+          void autoProtectFromHistory()
+            .catch(() => [] as string[])
+            .then((added) => {
+              setConfirmation(
+                added.length
+                  ? `Payment received — your ${data.planName} package is active, and ${added.join(", ")} ${added.length > 1 ? "are" : "is"} now protected.`
+                  : `Payment received — your ${data.planName} package is active.`,
+              );
+              return load();
+            });
         } else if (data.error === "payment_not_successful") {
           setError("Your card payment wasn't completed, so nothing was charged. You can try again below.");
         } else {
@@ -235,6 +260,45 @@ export default function BillingPage() {
           {error}
         </p>
       ) : null}
+
+      {(() => {
+        const hasPackage =
+          !!subscription && (subscription.status === "active" || subscription.status === "trial");
+        // Checked an account, then signed up: it's waiting to be protected.
+        if (!hasPackage && checkedHandle && !confirmation) {
+          return (
+            <div className="mt-6 rounded-2xl border border-risk-low/30 bg-risk-low-bg p-5">
+              <p className="text-sm font-semibold text-ink-900">Your health check for {checkedHandle} is saved</p>
+              <p className="mt-0.5 text-sm text-ink-600">
+                Choose a package below. As soon as it&apos;s active, {checkedHandle} is protected automatically — no need to
+                check it again.
+              </p>
+            </div>
+          );
+        }
+        // No account checked yet: ask which one they want to protect.
+        if (checkedCount === 0 && (protectedCount ?? 0) === 0) {
+          return (
+            <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-brand-200 bg-brand-50 p-5 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-ink-900">Which account do you want to protect?</p>
+                <p className="mt-0.5 text-sm text-ink-600">
+                  {hasPackage
+                    ? "Run a quick health check on it (about 2 minutes). It's added to your package and protected automatically."
+                    : "Run a quick health check on it first (about 2 minutes). Once you choose a package, it's protected automatically."}
+                </p>
+              </div>
+              <Link
+                href="/portal/accounts/new"
+                className="inline-flex shrink-0 items-center justify-center rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90"
+              >
+                Check my account
+              </Link>
+            </div>
+          );
+        }
+        return null;
+      })()}
 
       {picked && !confirmation && (!subscription || subscription.planId !== picked.id) ? (
         <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-brand-200 bg-brand-50 p-5 sm:flex-row sm:items-center sm:justify-between">

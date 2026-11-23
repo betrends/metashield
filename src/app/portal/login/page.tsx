@@ -86,6 +86,10 @@ async function redirectAfterAuth(
     // Not an agent or check failed — fall through to client portal
   }
 
+  // A health check run before signing up goes into their check history
+  // (and is protected straight away if they already have a package).
+  const { accountId, caseId, checkedHandle } = await migratePendingLocalRecords();
+
   // Picked a package, then created an account and confirmed the email:
   // carry on to paying for it.
   const pendingPackage = takePendingPackage();
@@ -95,9 +99,12 @@ async function redirectAfterAuth(
     return;
   }
 
-  const { accountId, caseId } = await migratePendingLocalRecords();
   if (accountId) {
     router.push(`/portal/accounts/${accountId}`);
+  } else if (checkedHandle) {
+    // Checked an account, then signed up: no need to check again — straight
+    // to Packages; it's protected automatically once they pay.
+    router.push(`/portal/billing?checked=${encodeURIComponent(checkedHandle)}`);
   } else if (caseId) {
     router.push(`/portal/cases/${caseId}`);
   } else {

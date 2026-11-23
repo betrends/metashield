@@ -8,6 +8,7 @@ import { EmergencyModal } from "@/components/portal/EmergencyModal";
 import { HealthCheckHistory } from "@/components/portal/HealthCheckHistory";
 import { supportChannels } from "@/components/portal/ContactSupportMenu";
 import {
+  autoProtectFromHistory,
   fetchAccounts,
   fetchCases,
   fetchHealthChecks,
@@ -137,6 +138,17 @@ export default function PortalOverviewPage() {
       ]);
       if (cancelled) return;
       setHealthChecks(checksResult);
+      // Has a package but nothing protected yet (e.g. the package was
+      // switched on by the team): protect the accounts they've checked.
+      const hasPackage =
+        !!subscriptionResult && (subscriptionResult.status === "active" || subscriptionResult.status === "trial");
+      if (hasPackage && accountsResult.length === 0 && checksResult.some((c) => !c.accountId) && reloadKey === 0) {
+        const added = await autoProtectFromHistory().catch(() => [] as string[]);
+        if (added.length && !cancelled) {
+          setReloadKey((k) => k + 1);
+          return;
+        }
+      }
       setChecklistDone(doneResult);
       setAccounts(accountsResult);
       setCases(casesResult);
